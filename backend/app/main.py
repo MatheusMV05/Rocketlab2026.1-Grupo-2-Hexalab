@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
+from app.dashboard.router import router as dashboard_router
 
 
 @asynccontextmanager
@@ -27,8 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Registrar routers aqui conforme as features forem implementadas
-# Exemplo: app.include_router(dashboard_router)
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
 
 
 @app.get("/health", tags=["health"])
