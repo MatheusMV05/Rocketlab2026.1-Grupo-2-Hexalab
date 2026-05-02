@@ -19,13 +19,6 @@ frontend/dist-ssr/
 *.log
 npm-debug.log*
 
-# Data Engineering — dados brutos e intermediários nunca vão pro repo
-data-engineering/raw/*
-data-engineering/bronze/*
-data-engineering/silver/*
-data-engineering/gold/*
-!data-engineering/**/.gitkeep
-
 
 # OS
 .DS_Store
