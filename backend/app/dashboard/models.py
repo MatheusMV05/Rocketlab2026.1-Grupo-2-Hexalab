@@ -1,10 +1,7 @@
-"""
-Internal mock functions for the dashboard module.
-Each function will be replaced by real database queries once the corresponding module is ready.
-"""
+# Mocks internos do dashboard serão substituídos pelas queries reais quando os módulos estiverem prontos.
 
 
-# TODO: substituir pela query real — depende do módulo pedidos e clientes
+# TODO: substituir pela query real —> depende do módulo pedidos e clientes
 def mock_kpis() -> dict:
     return {
         "receita_total": 487320.50,
@@ -14,7 +11,7 @@ def mock_kpis() -> dict:
     }
 
 
-# TODO: substituir pela query real — depende do módulo pedidos
+# TODO: substituir pela query real —> depende do módulo pedidos
 def mock_vendas_mensal() -> list[dict]:
     return [
         {"mes_ano": "Jul/2024", "receita_total": 32140.00, "total_pedidos": 84},
@@ -46,7 +43,7 @@ def mock_top_produtos() -> list[dict]:
     ]
 
 
-# TODO: substituir pela query real — depende do módulo pedidos e clientes
+# TODO: substituir pela query real —> depende do módulo pedidos e clientes
 def mock_por_regiao() -> list[dict]:
     return [
         {"estado": "São Paulo", "receita_total": 142380.50, "total_pedidos": 368},
@@ -62,7 +59,7 @@ def mock_por_regiao() -> list[dict]:
     ]
 
 
-# TODO: substituir pela query real — depende do módulo pedidos
+# TODO: substituir pela query real —> depende do módulo pedidos
 def mock_status_pedidos() -> list[dict]:
     return [
         {"status": "Entregue", "total": 712},
