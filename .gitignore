@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.env
+
+# Backend DB
+backend/data/*.db
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Data Engineering — dados brutos e intermediários nunca vão pro repo
+data-engineering/raw/*
+data-engineering/bronze/*
+data-engineering/silver/*
+data-engineering/gold/*
+!data-engineering/**/.gitkeep
+
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.sw?
