@@ -13,7 +13,6 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     yield
 
-
 app = FastAPI(
     title="V-Commerce CRM 360",
     version="1.0.0",
@@ -28,6 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Registrar routers aqui conforme as features forem implementadas
+# Exemplo: app.include_router(dashboard_router)
 app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
 
 

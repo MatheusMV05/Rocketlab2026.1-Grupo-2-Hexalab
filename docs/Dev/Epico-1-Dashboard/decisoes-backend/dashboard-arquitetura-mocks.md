@@ -17,7 +17,7 @@ async def get_kpis(db: AsyncSession) -> dict:
     # TODO: substituir pela query real — depende do módulo pedidos e clientes
     return mock_kpis()
 
-# depois do swap
+# exemplo de depois do swap
 async def get_kpis(db: AsyncSession) -> dict:
     return await pedidos_service.calcular_kpis(db)
 
@@ -28,7 +28,7 @@ Para encontrar todos os pontos que ainda precisam de swap, basta buscar por `TOD
 
 ---
 
-## O que acontece com o models.py moackado do dashboard quando os módulos ficarem prontos?
+## O que acontece com o models.py do dashboard quando os módulos ficarem prontos?
 
 O `dashboard/models.py` é temporário. Ele só existe porque os outros módulos ainda não existem.
 

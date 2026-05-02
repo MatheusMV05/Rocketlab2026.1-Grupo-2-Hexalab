@@ -1,4 +1,4 @@
-# Mocks internos do dashboard serão substituídos pelas queries reais quando os módulos estiverem prontos.
+# Mocks internos do dashboard serão substituídos pelas queries reais quando os outros módulos estiverem prontos e os dados reais disponiblizados.
 
 
 # TODO: substituir pela query real —> depende do módulo pedidos e clientes
@@ -14,6 +14,7 @@ def mock_kpis() -> dict:
 # TODO: substituir pela query real —> depende do módulo pedidos
 def mock_vendas_mensal() -> list[dict]:
     return [
+        {"mes_ano": "Jun/2024", "receita_total": 28750.00, "total_pedidos": 74},
         {"mes_ano": "Jul/2024", "receita_total": 32140.00, "total_pedidos": 84},
         {"mes_ano": "Ago/2024", "receita_total": 38920.75, "total_pedidos": 101},
         {"mes_ano": "Set/2024", "receita_total": 41380.20, "total_pedidos": 109},
@@ -28,6 +29,7 @@ def mock_vendas_mensal() -> list[dict]:
     ]
 
 
+# TODO: substituir pela query real —> depende do módulo produtos e pedidos
 def mock_top_produtos() -> list[dict]:
     return [
         {"nome_produto": "Notebook UltraSlim Pro 14\"", "categoria": "Informática", "receita_total": 58430.00},
