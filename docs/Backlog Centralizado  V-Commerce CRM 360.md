@@ -141,7 +141,7 @@ v-commerce-crm-360/
 
 ---
 
-## Convenções Gerais
+## Convenções Gerais -> Devem ser discutidas mas segue a sugestão
 
 | Convenção | Valor |
 |---|---|
