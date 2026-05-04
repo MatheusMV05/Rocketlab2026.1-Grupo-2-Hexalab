@@ -1,22 +1,22 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
-from app.clientes.schemas import PaginatedClienteList, ClientePerfil, PedidoAba, AvaliacaoAba, TicketAba
+from app.clientes.schemas import ListaClientePaginada, ClientePerfil, PedidoAba, AvaliacaoAba, TicketAba
 from app.clientes.service import ClienteService
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
-@router.get("/", response_model=PaginatedClienteList, summary="Listagem e Busca de Clientes")
+@router.get("/", response_model=ListaClientePaginada, summary="Listagem e Busca de Clientes")
 async def listar_clientes(
     query: Optional[str] = Query(None, description="Busca por nome ou e-mail"),
     estado: Optional[str] = Query(None, description="Filtro por estado"),
-    page: int = Query(1, ge=1, description="Número da página"),
-    size: int = Query(10, ge=1, le=100, description="Tamanho da página")
+    pagina: int = Query(1, ge=1, description="Número da página"),
+    tamanho: int = Query(10, ge=1, le=100, description="Tamanho da página")
 ):
     """
     Lista clientes com paginação, busca por nome/email e filtro por estado.
     Feature 2.1 — Listagem e Busca de Clientes
     """
-    return await ClienteService.listar_clientes(query=query, estado=estado, page=page, size=size)
+    return await ClienteService.listar_clientes(query=query, estado=estado, pagina=pagina, tamanho=tamanho)
 
 
 @router.get("/{cliente_id}", response_model=ClientePerfil, summary="Perfil 360 do Cliente")

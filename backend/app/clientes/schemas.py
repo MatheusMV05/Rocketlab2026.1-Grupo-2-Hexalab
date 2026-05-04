@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date
 
-class ClienteList(BaseModel):
+class ClienteResumo(BaseModel):
     id: int
     nome_completo: str
     email: str
@@ -12,12 +12,12 @@ class ClienteList(BaseModel):
     total_pedidos: int
     segmento_rfm: str
 
-class PaginatedClienteList(BaseModel):
-    items: List[ClienteList]
+class ListaClientePaginada(BaseModel):
+    itens: List[ClienteResumo]
     total: int
-    page: int
-    size: int
-    pages: int
+    pagina: int
+    tamanho: int
+    paginas: int
 
 class ClientePerfil(BaseModel):
     id: int

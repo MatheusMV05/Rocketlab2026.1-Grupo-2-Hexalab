@@ -1,26 +1,26 @@
 from typing import List, Optional
-from app.clientes.schemas import ClienteList, ClientePerfil, PaginatedClienteList, PedidoAba, AvaliacaoAba, TicketAba
+from app.clientes.schemas import ClienteResumo, ClientePerfil, ListaClientePaginada, PedidoAba, AvaliacaoAba, TicketAba
 from app.clientes.repository import ClienteRepository
 
 class ClienteService:
     @staticmethod
-    async def listar_clientes(query: Optional[str] = None, estado: Optional[str] = None, page: int = 1, size: int = 10) -> PaginatedClienteList:
+    async def listar_clientes(query: Optional[str] = None, estado: Optional[str] = None, pagina: int = 1, tamanho: int = 10) -> ListaClientePaginada:
         resultados = await ClienteRepository.listar_clientes(query=query, estado=estado)
         
         total = len(resultados)
-        start = (page - 1) * size
-        end = start + size
-        paginated = resultados[start:end]
+        inicio = (pagina - 1) * tamanho
+        fim = inicio + tamanho
+        paginado = resultados[inicio:fim]
         
-        items = [ClienteList(**c) for c in paginated]
-        pages = (total + size - 1) // size if size > 0 else 0
+        itens = [ClienteResumo(**c) for c in paginado]
+        paginas = (total + tamanho - 1) // tamanho if tamanho > 0 else 0
         
-        return PaginatedClienteList(
-            items=items,
+        return ListaClientePaginada(
+            itens=itens,
             total=total,
-            page=page,
-            size=size,
-            pages=pages
+            pagina=pagina,
+            tamanho=tamanho,
+            paginas=paginas
         )
 
     @staticmethod
