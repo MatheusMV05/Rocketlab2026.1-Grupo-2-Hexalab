@@ -10,7 +10,7 @@ async def listar_clientes(
     query: Optional[str] = Query(None, description="Busca por nome ou e-mail"),
     estado: Optional[str] = Query(None, description="Filtro por estado"),
     pagina: int = Query(1, ge=1, description="Número da página"),
-    tamanho: int = Query(10, ge=1, le=100, description="Tamanho da página")
+    tamanho: int = Query(20, ge=1, le=100, description="Tamanho da página")
 ):
     """
     Lista clientes com paginação, busca por nome/email e filtro por estado.
@@ -27,7 +27,7 @@ async def obter_perfil_cliente(cliente_id: int):
     """
     cliente = await ClienteService.obter_perfil_cliente(cliente_id)
     if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        raise HTTPException(status_code=404, detail="Cliente nao encontrado.")
     return cliente
 
 
@@ -37,10 +37,7 @@ async def obter_pedidos_cliente(cliente_id: int):
     Obtém o histórico de pedidos de um cliente.
     US-07 — Aba Pedidos
     """
-    # Verificar se cliente existe
-    cliente = await ClienteService.obter_perfil_cliente(cliente_id)
-    if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    await _validar_cliente_existe(cliente_id)
     return await ClienteService.obter_pedidos_cliente(cliente_id)
 
 
@@ -50,10 +47,7 @@ async def obter_avaliacoes_cliente(cliente_id: int):
     Obtém as avaliações realizadas por um cliente.
     US-07 — Aba Avaliações
     """
-    # Verificar se cliente existe
-    cliente = await ClienteService.obter_perfil_cliente(cliente_id)
-    if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    await _validar_cliente_existe(cliente_id)
     return await ClienteService.obter_avaliacoes_cliente(cliente_id)
 
 
@@ -63,8 +57,11 @@ async def obter_tickets_cliente(cliente_id: int):
     Obtém os tickets de suporte abertos por um cliente.
     US-07 — Aba Tickets
     """
-    # Verificar se cliente existe
+    await _validar_cliente_existe(cliente_id)
+    return await ClienteService.obter_tickets_cliente(cliente_id)
+
+
+async def _validar_cliente_existe(cliente_id: int):
     cliente = await ClienteService.obter_perfil_cliente(cliente_id)
     if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return await ClienteService.obter_tickets_cliente(cliente_id)
+        raise HTTPException(status_code=404, detail="Cliente nao encontrado.")

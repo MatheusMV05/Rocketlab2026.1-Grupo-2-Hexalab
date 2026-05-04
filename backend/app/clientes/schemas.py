@@ -1,8 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import date
 
-class ClienteResumo(BaseModel):
+class ClienteListagem(BaseModel):
     id: int
     nome_completo: str
     email: str
@@ -13,7 +12,7 @@ class ClienteResumo(BaseModel):
     segmento_rfm: str
 
 class ListaClientePaginada(BaseModel):
-    itens: List[ClienteResumo]
+    itens: List[ClienteListagem]
     total: int
     pagina: int
     tamanho: int
@@ -27,13 +26,13 @@ class ClientePerfil(BaseModel):
     estado: str
     genero: str
     idade: int
-    data_cadastro: date
+    data_cadastro: str
     origem: str
     total_gasto: float
     total_pedidos: int
     ticket_medio: float
-    ultimo_pedido: Optional[date]
-    nps_medio: float
+    ultimo_pedido: Optional[str]
+    nps_medio: Optional[float]
     tickets_abertos: int
     segmento_rfm: str
 
@@ -42,7 +41,7 @@ class PedidoAba(BaseModel):
     nome_produto: str
     categoria: str
     valor: float
-    data: date
+    data: str
     status: str
 
 class AvaliacaoAba(BaseModel):
@@ -54,6 +53,6 @@ class AvaliacaoAba(BaseModel):
 class TicketAba(BaseModel):
     id: int
     tipo_problema: str
-    data_abertura: date
-    tempo_resolucao: Optional[str]
+    data_abertura: str
+    tempo_resolucao_horas: Optional[int]
     nota_avaliacao: Optional[int]
