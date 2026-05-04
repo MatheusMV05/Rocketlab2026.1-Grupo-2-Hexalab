@@ -1132,7 +1132,7 @@ Permissões por perfil
 
 ---
 
-# TIME DE FRONTEND — Referências de Design
+# TIME DE FRONTEND 
 
 ## Rotas do React Router
 
@@ -1147,7 +1147,7 @@ Permissões por perfil
 | `/chat` | `Chat.tsx` | `ChatWindow`, `SqlViewer` |
 | `/login` | (DIF) | `AuthLayout`, formulário de login |
 
-## Comportamentos obrigatórios por página
+## Comportamentos obrigatórios por página -> sugestão
 
 | Página | Comportamento |
 |---|---|
