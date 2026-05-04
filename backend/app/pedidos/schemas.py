@@ -1,22 +1,19 @@
 from pydantic import BaseModel
-from typing import List, Optional
-from datetime import date
+from typing import List
 
-class PedidoDetalhe(BaseModel):
-    id_pedido: int
-    id_cliente: int
+class PedidoItem(BaseModel):
+    id: int
     nome_cliente: str
-    id_produto: int
     nome_produto: str
     categoria: str
-    valor_pedido: float
+    valor: float
     quantidade: int
-    data_pedido: date
+    data: str
     metodo_pagamento: str
     status: str
 
 class ListaPedidoPaginada(BaseModel):
-    itens: List[PedidoDetalhe]
+    itens: List[PedidoItem]
     total: int
     pagina: int
     tamanho: int

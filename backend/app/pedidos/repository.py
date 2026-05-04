@@ -5,7 +5,6 @@ from app.pedidos.models import MOCK_PEDIDOS
 class PedidoRepository:
     @staticmethod
     async def listar_pedidos(
-        search: Optional[str] = None,
         status: Optional[str] = None,
         data_inicio: Optional[date] = None,
         data_fim: Optional[date] = None,
@@ -13,13 +12,6 @@ class PedidoRepository:
     ) -> List[Dict[str, Any]]:
         resultados = MOCK_PEDIDOS
         
-        if search:
-            termo = search.lower()
-            resultados = [
-                p for p in resultados 
-                if termo in p["nome_cliente"].lower() or termo in p["nome_produto"].lower()
-            ]
-            
         if status:
             resultados = [p for p in resultados if p["status"].lower() == status.lower()]
             
