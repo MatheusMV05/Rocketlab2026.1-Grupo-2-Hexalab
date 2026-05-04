@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
-class Product(Base):
-    __tablename__ = "products"
+class Produto(Base):
+    __tablename__ = "produtos"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(index=True)
-    category: Mapped[str] = mapped_column(index=True)
-    price: Mapped[float]
-    stock: Mapped[int]
-    is_active: Mapped[bool] = mapped_column(default=True)
+    nome: Mapped[str] = mapped_column(index=True)
+    categoria: Mapped[str] = mapped_column(index=True)
+    preco: Mapped[float]
+    estoque: Mapped[int]
+    ativo: Mapped[bool] = mapped_column(default=True)
