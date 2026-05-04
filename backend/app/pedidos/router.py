@@ -8,6 +8,7 @@ router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
 
 @router.get("/", response_model=ListaPedidoPaginada, summary="Listagem e Busca de Pedidos")
 async def listar_pedidos(
+    search: Optional[str] = Query(None, description="Busca livre por nome do cliente ou produto"),
     status: Optional[str] = Query(None, description="Filtro por status (ex: Aprovado, Pendente, Cancelado)"),
     categoria: Optional[str] = Query(None, description="Filtro por categoria de produto"),
     data_inicio: Optional[date] = Query(None, description="Data inicial do período (YYYY-MM-DD)"),
@@ -16,10 +17,11 @@ async def listar_pedidos(
     tamanho: int = Query(10, ge=1, le=100, description="Tamanho da página")
 ):
     """
-    Lista pedidos com paginação e filtros (status, categoria, data de início e fim).
+    Lista pedidos com paginação e filtros (busca livre, status, categoria, data de início e fim).
     Feature 3.1 — Listagem e Filtros de Pedidos (US-08)
     """
     return await PedidoService.listar_pedidos(
+        search=search,
         status=status,
         categoria=categoria,
         data_inicio=data_inicio,

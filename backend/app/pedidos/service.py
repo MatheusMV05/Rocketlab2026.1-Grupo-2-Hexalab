@@ -6,6 +6,7 @@ from app.pedidos.repository import PedidoRepository
 class PedidoService:
     @staticmethod
     async def listar_pedidos(
+        search: Optional[str] = None,
         status: Optional[str] = None,
         data_inicio: Optional[date] = None,
         data_fim: Optional[date] = None,
@@ -14,6 +15,7 @@ class PedidoService:
         tamanho: int = 10
     ) -> ListaPedidoPaginada:
         resultados = await PedidoRepository.listar_pedidos(
+            search=search,
             status=status,
             data_inicio=data_inicio,
             data_fim=data_fim,
