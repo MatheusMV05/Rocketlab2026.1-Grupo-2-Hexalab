@@ -1,3 +1,3 @@
-from .result import SelectorResult
+from .resultado import ResultadoSeletor
 
-__all__ = ["SelectorResult"]
+__all__ = ["ResultadoSeletor"]

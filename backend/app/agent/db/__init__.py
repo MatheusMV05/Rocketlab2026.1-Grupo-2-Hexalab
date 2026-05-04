@@ -1,3 +1,3 @@
-from .schema_reader import read_schema
+from .leitor_esquema import ler_esquema
 
-__all__ = ["read_schema"]
+__all__ = ["ler_esquema"]

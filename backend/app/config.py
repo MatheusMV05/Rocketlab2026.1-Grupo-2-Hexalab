@@ -3,7 +3,6 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # caminho usado no ambiente de desenvolvimento local de genai 
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/vcommerce.db"
     ENVIRONMENT: str = "development"
 
