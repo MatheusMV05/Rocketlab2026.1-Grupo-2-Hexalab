@@ -221,7 +221,7 @@ Framework: `pytest` + `pytest-asyncio` + `httpx.AsyncClient`.
 
 ---
 **OBS: Nomes de tabelas citados abaixo são apenas place holders enquanto não temos os nomes reais das tabelas.**
-
+**OBS: Tudo colocado no frontend é apenas uma sugestão e pode sofrer alterações dependendo da forma que o time de dev receber os componentes do time de design**
 ## ÉPICO 1 — Dashboard Analítico
 
 ### Feature 1.1 — KPIs Gerais
