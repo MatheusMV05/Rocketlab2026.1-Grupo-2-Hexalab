@@ -1,5 +1,5 @@
 from .config import Config
-from .agents.selector import SelectorAgent
-from .models.result import SelectorResult
+from .agentes.agente_seletor import AgenteSeletor
+from .models.resultado import ResultadoSeletor
 
-__all__ = ["Config", "SelectorAgent", "SelectorResult"]
+__all__ = ["Config", "AgenteSeletor", "ResultadoSeletor"]
