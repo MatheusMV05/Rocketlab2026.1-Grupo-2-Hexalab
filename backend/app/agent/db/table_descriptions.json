@@ -1,0 +1,11 @@
+{
+  "dim_consumidores": "Dimensão de consumidores/clients com identificador `id_consumidor` e atributos como nome, segmento e informações demográficas; usada para análises por cliente.",
+  "dim_produtos": "Dimensão de produtos com `id_produto`, nome, categoria e preço; fornece atributos descritivos dos itens vendidos.",
+  "dim_vendedores": "Dimensão de vendedores/comerciais com `id_vendedor`, nome e região de atuação; usada para análises por canal ou vendedor.",
+  "fat_avaliacoes_pedidos": "Fato contendo avaliações ou métricas qualificadoras associadas a pedidos (ex.: rating, comentários agregados por pedido).",
+  "fat_itens_pedidos": "Fato de itens por pedido: uma linha por item pedido com `id_pedido`, `id_produto`, quantidade e `valor_unitario`; útil para análise de mix e unidades vendidas.",
+  "fat_pedido_total": "Fato agregada por pedido com valores totais por pedido; inclui `id_pedido`, `id_consumidor` e `valor_total`. Use para análises de receita por pedido.",
+  "fat_pedidos": "Fato (registro mestre) de pedidos com informações de cabeçalho por pedido (datas, status, cliente); complemente com `fat_itens_pedidos` para detalhe por item.",
+  "fat_totalpedidos": "(sinônimo/variante) Fato com totais por pedido — ver `fat_pedido_total`.",
+  "observacao": "Edite este arquivo para ajustar descrições; o agente usa estas descrições para explicar o propósito de cada tabela ao LLM."
+}
