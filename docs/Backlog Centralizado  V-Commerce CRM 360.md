@@ -1176,9 +1176,9 @@ backend/app/agent/
 │   ├── agente_decomposer.py  # Agente 2: gera SQL com raciocínio em cadeia [TODO]
 │   └── agente_refiner.py   # Agente 3: executa SQL, corrige erros em loop [TODO]
 ├── prompts/
-│   ├── seletor.j2          # Template de prompt do sistema para Seletor (PT-BR)
-│   ├── decomposer.j2       # Template de prompt do sistema para Decomposer [TODO]
-│   └── refiner.j2          # Template de prompt do sistema para Refiner [TODO]
+│   ├── seletor.j2          # Template de prompt do sistema para Seletor 
+│   ├── decompositor.j2       # Template de prompt do sistema para Decomposer 
+│   └── refinador.j2          # Template de prompt do sistema para Refiner 
 ├── db/
 │   ├── leitor_esquema.py   # Lê esquema do banco → retorna string DDL (PT-BR)
 │   ├── descricao_tabelas.json  # Cache de metadados das tabelas
@@ -1310,7 +1310,7 @@ Regras obrigatórias:
 ```
 
 **Contrato**
-```
+``` 
 POST /api/agent/chat
 ```
 Request body
