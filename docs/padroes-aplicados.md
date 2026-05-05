@@ -41,7 +41,7 @@ Todas as mensagens de commit devem seguir o padrão [Conventional Commits](https
 | `docs` | Alterações apenas em documentação |
 | `chore` | Build, atualização de dependências, configuração |
 | `style` | Formatação, ponto e vírgula faltando (sem mudança de lógica) |
-| `merge` | Commit gerado ao integrar uma branch via PR (criado automaticamente pelo GitHub) |
+| `merge` | Commit gerado ao integrar uma branch |
 
 ### Escopo (opcional)
 
