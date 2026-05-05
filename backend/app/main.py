@@ -29,6 +29,8 @@ app.add_middleware(
 
 # Registrar routers aqui conforme as features forem implementadas
 # Exemplo: app.include_router(dashboard_router)
+from app.tickets.router import roteador as tickets_router
+app.include_router(tickets_router, prefix="/api")
 
 
 @app.get("/health", tags=["health"])
