@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.tickets.repository import buscar_tickets
-from app.tickets.schemas import PaginatedTicketList
+from app.tickets.schemas import ListaTicketPaginada
 from app.tickets.service import processar_tickets
 
 roteador = APIRouter(tags=["tickets"])
@@ -25,7 +25,7 @@ def _parsear_data(valor: Optional[str], nome_campo: str) -> Optional[date]:
         )
 
 
-@roteador.get("/tickets", response_model=PaginatedTicketList)
+@roteador.get("/tickets", response_model=ListaTicketPaginada)
 async def listar_tickets(
     tipo_problema: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -35,7 +35,7 @@ async def listar_tickets(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     sessao: AsyncSession = Depends(get_db),
-) -> PaginatedTicketList:
+) -> ListaTicketPaginada:
     inicio = _parsear_data(data_inicio, "data_inicio")
     fim = _parsear_data(data_fim, "data_fim")
 

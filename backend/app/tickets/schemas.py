@@ -23,9 +23,9 @@ class TicketItem(BaseModel):
     prioridade: str
 
 
-class PaginatedTicketList(BaseModel):
-    items: List[TicketItem]
+class ListaTicketPaginada(BaseModel):
+    itens: List[TicketItem]
     total: int
-    page: int
-    size: int
-    pages: int
+    pagina: int
+    tamanho: int
+    paginas: int

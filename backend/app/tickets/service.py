@@ -3,7 +3,7 @@ from datetime import date
 from typing import Optional
 
 from app.tickets.models import GoldTickets
-from app.tickets.schemas import PaginatedTicketList, TicketItem
+from app.tickets.schemas import ListaTicketPaginada, TicketItem
 
 
 def calcular_prioridade(tempo_resolucao_horas: Optional[int]) -> str:
@@ -26,7 +26,7 @@ def processar_tickets(
     pagina: int,
     tamanho: int,
     total: int,
-) -> PaginatedTicketList:
+) -> ListaTicketPaginada:
     itens = [
         TicketItem(
             id=ticket.id,
@@ -46,10 +46,10 @@ def processar_tickets(
 
     paginas = math.ceil(total / tamanho) if total > 0 else 0
 
-    return PaginatedTicketList(
-        items=itens,
+    return ListaTicketPaginada(
+        itens=itens,
         total=total,
-        page=pagina,
-        size=tamanho,
-        pages=paginas,
+        pagina=pagina,
+        tamanho=tamanho,
+        paginas=paginas,
     )
