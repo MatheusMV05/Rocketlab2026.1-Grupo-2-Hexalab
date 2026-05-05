@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.produtos.models import Produto
 
-async def obter_produtos(db: AsyncSession, categoria: str | None, ativo: bool | None, limite: int, salto: int):
+async def obter_produtos_paginados(db: AsyncSession, categoria: str | None, ativo: bool | None, page: int, size: int):
     query = select(Produto)
     
     if categoria is not None:
@@ -11,9 +11,17 @@ async def obter_produtos(db: AsyncSession, categoria: str | None, ativo: bool | 
     if ativo is not None:
         query = query.where(Produto.ativo == ativo)
         
-    query = query.limit(limite).offset(salto)
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    offset = (page - 1) * size
+    query = query.limit(size).offset(offset)
+    
     resultado = await db.execute(query)
-    return resultado.scalars().all()
+    produtos = resultado.scalars().all()
+    
+    return produtos, total
 
 
 async def obter_produto_por_id(db: AsyncSession, produto_id: int):

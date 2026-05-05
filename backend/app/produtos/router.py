@@ -2,20 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.produtos import service
-from app.produtos.schemas import ProdutoCriar, ProdutoAtualizar, ProdutoResponse, ProdutoMetricasResponse
+from app.produtos.schemas import ProdutoCriar, ProdutoAtualizar, ProdutoResponse, ProdutoPaginaResponse
 from app.database import get_db
 
 router = APIRouter(prefix="/produtos", tags=["Gestão de Produtos"])
 
-@router.get("/", response_model=list[ProdutoMetricasResponse])
+@router.get("/", response_model=ProdutoPaginaResponse)
 async def listar_produtos(
     categoria: str | None = None,
     ativo: bool | None = None,
-    limite: int = Query(10, ge=1),
-    salto: int = Query(0, ge=0),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1),
     db: AsyncSession = Depends(get_db)
 ):
-    return await service.listar_produtos(db, categoria, ativo, limite, salto)
+    return await service.listar_produtos(db, categoria, ativo, page, size)
 
 
 @router.post("/", response_model=ProdutoResponse, status_code=status.HTTP_201_CREATED)

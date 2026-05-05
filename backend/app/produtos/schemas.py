@@ -1,20 +1,20 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 class ProdutoBase(BaseModel):
-    nome: str = Field(min_length=1)
+    nome_produto: str = Field(min_length=1)
     categoria: str = Field(min_length=1)
     preco: float = Field(gt=0)
-    estoque: int = Field(ge=0)
+    estoque_disponivel: int = Field(ge=0)
     ativo: bool = True
 
 class ProdutoCriar(ProdutoBase): 
     pass
 
 class ProdutoAtualizar(BaseModel):
-    nome: str | None = Field(None, min_length=1)
+    nome_produto: str | None = Field(None, min_length=1)
     categoria: str | None = None
     preco: float | None = Field(None, gt=0)
-    estoque: int | None = Field(None, ge=0)
+    estoque_disponivel: int | None = Field(None, ge=0)
     ativo: bool | None = None
 
 class ProdutoResponse(ProdutoBase):
@@ -22,7 +22,13 @@ class ProdutoResponse(ProdutoBase):
     model_config = ConfigDict(from_attributes=True)
 
 class ProdutoMetricasResponse(ProdutoResponse):
-    receita_total: float = 0.0
-    total_vendas: int = 0
-    avaliacao_media: float = 5.0
-    total_tickets: int = 0
+    receita_total: float
+    total_vendas: int
+    avaliacao_media: float
+    total_tickets: int
+
+class ProdutoPaginaResponse(BaseModel):
+    items: list[ProdutoMetricasResponse]
+    total: int
+    page: int
+    size: int

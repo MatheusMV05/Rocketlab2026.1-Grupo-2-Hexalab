@@ -5,8 +5,8 @@ class Produto(Base):
     __tablename__ = "produtos"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    nome: Mapped[str] = mapped_column(index=True)
+    nome_produto: Mapped[str] = mapped_column(index=True)
     categoria: Mapped[str] = mapped_column(index=True)
     preco: Mapped[float]
-    estoque: Mapped[int]
+    estoque_disponivel: Mapped[int]
     ativo: Mapped[bool] = mapped_column(default=True)
