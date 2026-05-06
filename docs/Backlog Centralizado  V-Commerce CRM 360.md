@@ -436,7 +436,7 @@ Response 200
 **Backend**
 - Criar `models.py` com ORM mapeando `gold_clientes_360`
 - Criar `repository.py` com query paginada aplicando filtro `query` com `LOWER()` sobre `nome_completo` e `email` e filtro `estado` com match exato
-- Criar `schemas.py` com `ClienteList` e `PaginatedClienteList` (items, total, page, size, pages)
+- Criar `schemas.py` com `ClienteList` e `ListaClientePaginada` (items, total, page, size, pages)
 - Criar `router.py` com `GET /api/clientes` validando `page >= 1` e `1 <= size <= 100`, retornando `items: []` com 200 quando não houver resultados
 
 **Frontend**
@@ -659,14 +659,14 @@ Response 404 (todos os três endpoints)
 - Criar `models.py` com ORM mapeando `gold_pedidos`
 - Criar `repository.py` com query paginada aplicando filtros `status` e `categoria` com match exato e filtros `data_inicio` e `data_fim` com `>=` e `<=`
 - Criar `service.py` validando que `data_fim >= data_inicio` quando ambos forem informados
-- Criar `schemas.py` com `PedidoItem` e `PaginatedPedidoList`
+- Criar `schemas.py` com `PedidoItem` e `ListaPedidoPaginada`
 - Criar `router.py` com `GET /api/pedidos` validando `page`, `size` e datas no formato `DD-MM-YYYY`
 
 **Frontend**
 - Criar molecule `DateRangePicker.tsx` com dois inputs de data validando que `data_fim >= data_inicio` antes de submeter
 - Criar organism `PedidoTable.tsx` com colunas ID, cliente, produto, categoria, valor, quantidade, data, método de pagamento e status com `Badge` colorido
 - Criar hook `usePedidos(filters)` em `hooks/usePedidos.ts`
-- Adicionar tipagem `PedidoItem` e `PaginatedPedidoList` em `types/pedidos.ts`
+- Adicionar tipagem `PedidoItem` e `ListaPedidoPaginada` em `types/pedidos.ts`
 - Compor `PedidoTable`, `FilterSelect`, `DateRangePicker` e `Pagination` na página `Pedidos.tsx`
 
 **Testes**
@@ -730,7 +730,7 @@ Response 200
 - Criar `models.py` com ORM mapeando `gold_produtos_performance`
 - Criar `repository.py` com query paginada aplicando filtros `categoria` e `ativo`
 - `media_avaliacao` arredondada para 1 casa decimal; retornar `null` se produto sem avaliações
-- Criar `schemas.py` com `ProdutoItem` e `PaginatedProdutoList`
+- Criar `schemas.py` com `ProdutoItem` e `ListaPedidoPaginada`
 - Criar `router.py` com `GET /api/produtos` validando `page`, `size` e que `ativo` seja bool
 
 **Frontend**
@@ -738,7 +738,7 @@ Response 200
 - Aplicar `Badge` de status: `Ativo` = verde, `Inativo` = cinza
 - Adicionar `FilterSelect` de categoria e de status ativo/inativo
 - Criar hook `useProdutos(filters)` em `hooks/useProdutos.ts`
-- Adicionar tipagem `ProdutoItem` e `PaginatedProdutoList` em `types/produtos.ts`
+- Adicionar tipagem `ProdutoItem` e `ListaPedidoPaginada` em `types/produtos.ts`
 - Compor `ProdutoGrid` na página `Produtos.tsx`
 
 **Testes**
@@ -934,7 +934,7 @@ Response 404
 - Criar `models.py` com ORM mapeando `gold_tickets`
 - Criar `repository.py` com query paginada aplicando filtros `tipo_problema`, `status` e `agente` com `LOWER()` e `data_inicio`/`data_fim` com `>=` e `<=`
 - Criar `service.py` calculando campo `prioridade` por `tempo_resolucao_horas`: `Alta` se > 72 ou `null`, `Media` se 24–72, `Baixa` se < 24; campo nunca retorna `null`
-- Criar `schemas.py` com `TicketItem` incluindo `prioridade` e `PaginatedTicketList`
+- Criar `schemas.py` com `TicketItem` incluindo `prioridade` e `ListaTicketPaginada`
 - Criar `router.py` com `GET /api/tickets` validando `page`, `size` e datas
 
 **Frontend**
@@ -943,7 +943,7 @@ Response 404
 - Destacar visualmente linhas com `prioridade = Alta` com borda ou fundo diferenciado
 - Adicionar `FilterSelect` de tipo problema, status e agente e `DateRangePicker` de período
 - Criar hook `useTickets(filters)` em `hooks/useTickets.ts`
-- Adicionar tipagem `TicketItem` e `PaginatedTicketList` em `types/tickets.ts`
+- Adicionar tipagem `TicketItem` e `ListaTicketPaginada` em `types/tickets.ts`
 - Compor `TicketTable` com filtros e `Pagination` na página `Tickets.tsx`
 
 **Testes**
