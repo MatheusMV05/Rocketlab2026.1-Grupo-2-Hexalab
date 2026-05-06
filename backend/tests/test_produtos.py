@@ -8,12 +8,11 @@ def test_listar_produtos():
     response = client.get("/produtos/")
     assert response.status_code == 200
     data = response.json()
-    # Verifica a estrutura de paginação do contrato
-    assert "items" in data
+    assert "itens" in data      
     assert "total" in data
-    assert "page" in data
-    assert "size" in data
-    assert isinstance(data["items"], list)
+    assert "pagina" in data   
+    assert "tamanho" in data  
+    assert isinstance(data["itens"], list) 
 
 # --- 2. TESTE DE SUCESSO NA CRIAÇÃO (Status 201) ---
 def test_criar_produto_com_sucesso():

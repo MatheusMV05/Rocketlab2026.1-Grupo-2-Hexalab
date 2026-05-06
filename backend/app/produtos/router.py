@@ -11,11 +11,11 @@ router = APIRouter(prefix="/produtos", tags=["Gestão de Produtos"])
 async def listar_produtos(
     categoria: str | None = None,
     ativo: bool | None = None,
-    page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1),
+    pagina: int = Query(1, ge=1),   
+    tamanho: int = Query(10, ge=1), 
     db: AsyncSession = Depends(get_db)
 ):
-    return await service.listar_produtos(db, categoria, ativo, page, size)
+    return await service.listar_produtos(db, categoria, ativo, pagina, tamanho)
 
 
 @router.post("/", response_model=ProdutoResponse, status_code=status.HTTP_201_CREATED)

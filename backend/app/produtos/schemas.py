@@ -28,7 +28,7 @@ class ProdutoMetricasResponse(ProdutoResponse):
     total_tickets: int
 
 class ProdutoPaginaResponse(BaseModel):
-    items: list[ProdutoMetricasResponse]
+    itens: list[ProdutoMetricasResponse] 
     total: int
-    page: int
-    size: int
+    pagina: int    
+    tamanho: int 

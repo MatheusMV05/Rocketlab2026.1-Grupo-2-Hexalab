@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.produtos import repository
 from app.produtos.schemas import ProdutoCriar, ProdutoAtualizar, ProdutoMetricasResponse, ProdutoPaginaResponse
 
-async def listar_produtos(db: AsyncSession, categoria: str | None, ativo: bool | None, page: int, size: int):
-    produtos_db, total = await repository.obter_produtos_paginados(db, categoria, ativo, page, size)
+async def listar_produtos(db: AsyncSession, categoria: str | None, ativo: bool | None, pagina: int, tamanho: int):
+    produtos_db, total = await repository.obter_produtos_paginados(db, categoria, ativo, pagina, tamanho)
     
-    items = []
+    itens = [] 
     for produto in produtos_db:
         produto_dict = {
             "id": produto.id,
@@ -21,13 +21,13 @@ async def listar_produtos(db: AsyncSession, categoria: str | None, ativo: bool |
             "avaliacao_media": round(random.uniform(3.5, 5.0), 1),
             "total_tickets": random.randint(0, 3)
         }
-        items.append(ProdutoMetricasResponse(**produto_dict))
+        itens.append(ProdutoMetricasResponse(**produto_dict)) 
         
     return ProdutoPaginaResponse(
-        items=items,
+        itens=itens, 
         total=total,
-        page=page,
-        size=size
+        pagina=pagina,  
+        tamanho=tamanho 
     )
 
 

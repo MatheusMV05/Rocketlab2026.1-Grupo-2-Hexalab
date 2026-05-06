@@ -3,7 +3,7 @@ from sqlalchemy import select, func
 
 from app.produtos.models import Produto
 
-async def obter_produtos_paginados(db: AsyncSession, categoria: str | None, ativo: bool | None, page: int, size: int):
+async def obter_produtos_paginados(db: AsyncSession, categoria: str | None, ativo: bool | None, pagina: int, tamanho: int):
     query = select(Produto)
     
     if categoria is not None:
@@ -15,8 +15,8 @@ async def obter_produtos_paginados(db: AsyncSession, categoria: str | None, ativ
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    offset = (page - 1) * size
-    query = query.limit(size).offset(offset)
+    offset = (pagina - 1) * tamanho
+    query = query.limit(tamanho).offset(offset)
     
     resultado = await db.execute(query)
     produtos = resultado.scalars().all()
