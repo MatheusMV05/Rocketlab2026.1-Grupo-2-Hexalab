@@ -446,7 +446,7 @@ Response 200
 - Criar molecule `Pagination.tsx` com controles anterior, próxima e exibição do total de resultados
 - Criar organism `ClienteTable.tsx` com colunas nome, email, cidade, estado, total gasto, total pedidos e segmento RFM, navegando para `/clientes/:id` ao clicar em uma linha
 - Criar hook `useClientes(filters)` em `hooks/useClientes.ts`
-- Adicionar tipagem `ClienteList` e `PaginatedClienteList` em `types/clientes.ts`
+- Adicionar tipagem `ClienteList` e `ListaClientePaginada` em `types/clientes.ts`
 - Compor `ClienteTable`, `SearchBar`, `FilterSelect` e `Pagination` na página `Clientes.tsx`
 
 **Testes**
@@ -730,7 +730,7 @@ Response 200
 - Criar `models.py` com ORM mapeando `gold_produtos_performance`
 - Criar `repository.py` com query paginada aplicando filtros `categoria` e `ativo`
 - `media_avaliacao` arredondada para 1 casa decimal; retornar `null` se produto sem avaliações
-- Criar `schemas.py` com `ProdutoItem` e `ListaPedidoPaginada`
+- Criar `schemas.py` com `ProdutoItem` e `ListaProdutoPaginada`
 - Criar `router.py` com `GET /api/produtos` validando `page`, `size` e que `ativo` seja bool
 
 **Frontend**
@@ -738,7 +738,7 @@ Response 200
 - Aplicar `Badge` de status: `Ativo` = verde, `Inativo` = cinza
 - Adicionar `FilterSelect` de categoria e de status ativo/inativo
 - Criar hook `useProdutos(filters)` em `hooks/useProdutos.ts`
-- Adicionar tipagem `ProdutoItem` e `ListaPedidoPaginada` em `types/produtos.ts`
+- Adicionar tipagem `ProdutoItem` e `ListaProdutoPaginada` em `types/produtos.ts`
 - Compor `ProdutoGrid` na página `Produtos.tsx`
 
 **Testes**
