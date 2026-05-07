@@ -63,7 +63,7 @@ v-commerce-crm-360/
 │   ├── requirements.txt
 │   └── .env.example
 │
-├── frontend/ -> sugestão usando Atomic Design
+├── frontend/ -> os tsx e ts dentro de cada diretorio pode sofrer alterações, eles servem apenas um exemplo de como deve ficar organizado e não uma regra estrita de implemnentação 
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── Dashboard.tsx
@@ -77,7 +77,7 @@ v-commerce-crm-360/
 │   │   ├── components/
 │   │   │   ├── atoms/
 │   │   │   │   ├── dashboard/
-│   │   │   │   │   └── CartaoKpi.tsx
+│   │   │   │   │   └── CartaoKpi.tsx 
 │   │   │   │   └── compartilhado/             # atoms reutilizados em 2+ páginas
 │   │   │   │       ├── Botao.tsx
 │   │   │   │       ├── Etiqueta.tsx
