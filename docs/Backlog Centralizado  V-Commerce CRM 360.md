@@ -1178,6 +1178,70 @@ Permissões por perfil
 
 ---
 
+## Testes de Frontend — Cypress (E2E)
+
+Framework: `Cypress` para testes end-to-end do frontend contra o backend real rodando.
+Os testes rodam com o frontend **e** o backend de pé sem mocks de API.
+US só está "done" quando os testes Cypress do happy path passam.
+Cada US cobre **1 happy path** + **1 cenário de erro**.
+
+### Pré-requisitos para rodar
+
+- Backend rodando em `http://localhost:8000`
+- Frontend rodando em `http://localhost:5173`
+- Banco seed aplicado (`python seed.py`)
+
+### Estrutura de Pastas
+
+```
+frontend/
+└── cypress/
+    ├── e2e/
+    │   ├── dashboard.cy.ts
+    │   ├── clientes.cy.ts
+    │   ├── cliente-perfil.cy.ts
+    │   ├── pedidos.cy.ts
+    │   ├── produtos.cy.ts
+    │   ├── tickets.cy.ts
+    │   └── chat.cy.ts
+    └── support/
+        ├── commands.ts           # comandos customizados reutilizáveis
+        └── e2e.ts
+```
+
+### Convenções
+
+| Convenção | Valor |
+|---|---|
+| `data-cy` | Atributos obrigatórios em elementos interativos testados (ex: `data-cy="botao-novo-produto"`) |
+| Asserções | Sempre verificar visibilidade (`be.visible`) e conteúdo (`contain`) |
+| Estado de carregamento | Aguardar skeleton desaparecer antes de asserções de conteúdo |
+| Seleção de elementos | Usar `data-cy` — nunca classes CSS ou texto puro como seletor primário |
+| Dados de teste | Usar dados reais do banco seed — sem hardcode de IDs frágeis |
+
+### Cobertura por Página
+
+| Página | Testes obrigatórios |
+|---|---|
+| `Dashboard` | KPIs renderizados; gráficos visíveis; tabela de regiões com dados |
+| `Clientes` | Listagem carregada; busca com debounce atualiza tabela; paginação funciona; clique em linha navega para perfil |
+| `ClientePerfil` | Dados do cabeçalho visíveis; abas (Pedidos, Avaliações, Tickets) trocam sem reload; campos null exibem `—` |
+| `Pedidos` | Listagem carregada; filtro de status atualiza tabela; validação `data_fim < data_inicio` bloqueia envio |
+| `Produtos` | Grade carregada; modal de criação abre e fecha; confirmação de exclusão exibe antes de deletar |
+| `Tickets` | Listagem carregada; linha de prioridade Alta tem destaque visual; filtro de prioridade funciona |
+| `Chat` | Sugestões visíveis; envio por Enter; `VisualizadorSql` colapsável aparece quando sql_used não é null |
+
+### Scripts do package.json
+
+
+"scripts": {
+  "cy:open": "cypress open",
+  "cy:run": "cypress run"
+}
+
+
+---
+
 # TIME DE GEN AI — Agente Text-to-SQL
 ## Localização e Arquitetura Atual
 
