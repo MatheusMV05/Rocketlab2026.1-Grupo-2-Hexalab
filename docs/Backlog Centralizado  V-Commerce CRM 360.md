@@ -43,7 +43,7 @@ v-commerce-crm-360/
 │   │   ├── produtos/                    # mesma estrutura — inclui CRUD (POST/PUT/DELETE)
 │   │   ├── tickets/                     # mesma estrutura — service calcula `prioridade`
 │   │   │
-│   │   └── agent/
+│   │   └── agentes/
 │   │       ├── __init__.py
 │   │       ├── router.py                # POST /api/agent/chat
 │   │       ├── agent.py                 # lógica Text-to-SQL, guardrails, execução
@@ -1166,14 +1166,54 @@ Permissões por perfil
 ---
 
 # TIME DE GEN AI — Agente Text-to-SQL
-**OBS: time de genAI por favor alterar qualquer coisa que estiver errada**
-## Localização no repositório
+## Localização e Arquitetura Atual
 
 ```
 backend/app/agent/
-├── router.py      # POST /api/agent/chat — integrado ao backend FastAPI
-├── agent.py       # lógica Text-to-SQL, guardrails, execução de query, memória
-└── prompts.py     # system prompt com schema completo do banco
+├── agentes/
+│   ├── agente_base.py      # Classe base abstrata — todos os agentes herdam disso
+│   ├── agente_seletor.py   # Agente 1: filtra esquema do banco de dados (Seletor)
+│   ├── agente_decomposer.py  # Agente 2: gera SQL com raciocínio em cadeia [TODO]
+│   └── agente_refiner.py   # Agente 3: executa SQL, corrige erros em loop [TODO]
+├── prompts/
+│   ├── seletor.j2          # Template de prompt do sistema para Seletor 
+│   ├── decompositor.j2       # Template de prompt do sistema para Decomposer 
+│   └── refinador.j2          # Template de prompt do sistema para Refiner 
+├── db/
+│   ├── leitor_esquema.py   # Lê esquema do banco → retorna string DDL (PT-BR)
+│   ├── descricao_tabelas.json  # Cache de metadados das tabelas
+│   └── executor.py         # Executa SQL → retorna ExecutionResult [TODO]
+├── few_shots/
+│   ├── examples.yaml       # Pares pergunta→SQL curados [TODO]
+│   └── retriever.py        # BuscadorExemplos: busca por similaridade de embedding [TODO]
+├── models/
+│   ├── resultado.py        # ResultadoSeletor, ... dataclasses (PT-BR)
+│   └── esquema.py          # EsquemaBanco, EsquemaTabela, EsquemaColuna [TODO]
+├── tests/
+│   ├── teste_agente_seletor.py
+│   ├── teste_leitor_esquema.py
+│   ├── teste_agente_decomposer.py  [TODO]
+│   ├── teste_agente_refiner.py     [TODO]
+│   └── teste_pipeline_e2e.py       [TODO]
+├── run_selector_local.py   # Executor local para desenvolvimento do Seletor
+├── config.py               # Dataclass Config (lê variáveis de ambiente) — PT-BR
+├── __init__.py
+├── banco.db                # Banco de dados SQLite para desenvolvimento
+├── .env                    # MISTRAL_API_KEY — nunca fazer commit
+└── [FUTURO] orquestrador.py  # Orquestrador — único ponto de entrada público [TODO]
+```
+
+## Fluxo de Dados (Atual → Futuro)
+
+```
+pergunta_do_usuario + caminho_db
+  → leitor_esquema(caminho_db)              → esquema_completo: str
+  → AgenteSeletor.run()                    → ResultadoSeletor.esquema_filtrado
+  → [FUTURO] BuscadorExemplos.recuperar()   → exemplos: List[dict]
+  → [FUTURO] AgenteDecomposer.run()        → ResultadoDecomposer.sql + .raciocinio
+  → [FUTURO] AgenteRefiner.run()           → ResultadoRefiner.sql + .sucesso
+  → [FUTURO] Orquestrador.run() retorna ResultadoPipeline
+
 ```
 
 ## Arquitetura do Agente
@@ -1183,47 +1223,52 @@ Mensagem do usuário
         ↓
 POST /api/agent/chat  (router.py)
         ↓
-Guardrail de escrita  (agent.py)
+Agente extrator de schemas (agente_seletor.py)
+— filtra apenas tabelas relevantes ao contexto
+        ↓
+Buscador de Few-Shots (few_shots/retriever.py)
+— recupera exemplos similares para in-context learning
+        ↓
+Agente Decomposer (agente_decomposer.py)
+— gera SQL com raciocínio em cadeia
+        ↓
+Guardrail de bloqueio de escrita (agent.py)
 — rejeita INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/CREATE → 400
         ↓
-PydanticAI Agent  (agent.py)
-  ├── System Prompt  (prompts.py) → schema completo + regras de negócio
-  ├── Tool: execute_sql(query: str) → list[dict], máx 100 linhas, timeout 30s
-  └── Tool: get_schema() → str
+Agente Refinador (agente_refiner.py)
+— testa a query, executa, e corrige erros se necessário
         ↓
-LLM (Gemini 2.5 Flash ou similar)
-  ├── Gera SQL válido para o SQLite local
-  ├── Detecta se pergunta está fora do escopo
-  └── Formata resposta em português claro
-        ↓
-{ answer, sql_used, data[], out_of_scope }
+{ resposta, sql_usado, dados[], fora_do_escopo }
 ```
 
-## System Prompt (estrutura base — detalhar em `prompts.py`)
+## System Prompt (estrutura base — implementar em `prompts`)
 
 ```
-Você é o assistente de dados da V-Commerce.
-Você tem acesso SOMENTE às seguintes tabelas: [SCHEMA COMPLETO AQUI]
+Você é o assistente de dados conversacional da V-Commerce.
+Você tem acesso APENAS às seguintes tabelas: [SCHEMA COMPLETO AQUI]
 
 Regras obrigatórias:
 1. Gere APENAS queries SELECT — jamais modifique dados
 2. Limite resultados a 100 linhas por padrão (use LIMIT 100)
-3. Se a pergunta estiver fora do escopo, retorne out_of_scope: true
-4. Explique brevemente qual dado foi consultado
+3. Se a pergunta estiver fora do escopo (ex: política, privacidade pessoal), 
+   retorne: "Desculpe, não consigo responder essa pergunta." com fora_do_escopo: true
+4. Explique brevemente qual dado foi consultado e de quais tabelas
 5. Formate valores monetários em R$ com 2 casas decimais
-6. Responda sempre em português brasileiro
+6. Formate datas no padrão DD-MM-YYYY
+7. Responda sempre em português brasileiro (PT-BR)
+8. Se houver ambiguidade, peça esclarecimento antes de gerar SQL
 ```
 
 ## Guardrails
 
-| Guardrail | Implementação |
-|---|---|
-| Bloqueio de escrita | Verificação por token isolado (case-insensitive) antes de chamar o modelo |
-| Palavras bloqueadas | `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `CREATE` |
-| Out-of-scope | Detectado via system prompt; `out_of_scope: true` no response |
-| Timeout SQL | 30 segundos na execução da query |
-| Limite de dados | `LIMIT 100` aplicado em toda query antes de executar |
-| Memória de sessão | Últimas 10 mensagens por `session_id`, em memória, sem persistência (DIF) |
+| Guardrail | Implementação | Comportamento |
+|---|---|---|
+| Bloqueio de escrita | Verificação por token isolado (case-insensitive) na mensagem antes de chamar LLM | Retorna 400 com mensagem "Query bloqueada por razões de segurança" |
+| Palavras bloqueadas | `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `CREATE` | Qualquer uma dessas palavras na query gerada = rejeição |
+| Out-of-scope | Detectado via system prompt; flag `fora_do_escopo: true` na resposta | Resposta amigável sem SQL quando detectado |
+| Timeout SQL | 30 segundos na execução da query (timeout enforced no executor.py) | Retorna erro amigável: "A consulta demorou muito. Tente refinar a pergunta." |
+| Limite de dados | `LIMIT 100` aplicado em toda query SELECT antes de executar | Previne consumo excessivo de memória e timeout |
+| Memória de sessão | Últimas 10 mensagens por `session_id`, armazenadas em memória (sem persistência) | Permite contexto conversacional; limpa automaticamente após 1 hora de inatividade (DIF) |
 
 ---
 
@@ -1265,7 +1310,7 @@ Regras obrigatórias:
 ```
 
 **Contrato**
-```
+``` 
 POST /api/agent/chat
 ```
 Request body

@@ -80,7 +80,7 @@ class AgenteSeletor(AgenteBase):
             from pathlib import Path
             import json
 
-            caminho_descricoes = Path(__file__).resolve().parents[1] / "db" / "table_descriptions.json"
+            caminho_descricoes = Path(__file__).resolve().parents[1] / "db" / "descricao_tabelas.json"
             logger.debug(
                 "AgenteSeletor.run: caminho_descricoes=%s existe=%s",
                 caminho_descricoes,
