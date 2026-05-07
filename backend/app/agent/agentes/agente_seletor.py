@@ -1,0 +1,224 @@
+from __future__ import annotations
+
+import logging
+import re
+
+from app.agent.agentes.agente_base import AgenteBase
+from app.agent.models.resultado import ResultadoSeletor
+
+# Detecta qualquer instrução CREATE TABLE na saída do LLM, independente de maiúsculas,
+# minúsculas ou espaços extras.
+_PADRAO_CREATE_TABLE = re.compile(r"CREATE\s+TABLE", re.IGNORECASE)
+
+# Captura o nome da tabela após CREATE TABLE, tolerando:
+# - IF NOT EXISTS opcional
+# - identificadores entre crase, aspas duplas ou colchetes
+# - nomes com letras, números e underscore
+_PADRAO_NOME_TABELA = re.compile(
+    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)",
+    re.IGNORECASE,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class AgenteSeletor(AgenteBase):
+    """Agente 1 da pipeline MAC-SQL - filtra o esquema do banco de dados.
+
+    Recebe o esquema DDL completo do banco e a pergunta do usuário e pede ao LLM
+    que devolva apenas as tabelas e colunas necessárias para responder à pergunta.
+    Isso reduz o contexto enviado ao Decompositor, diminuindo custo de tokens e ruído.
+
+    O agente aplica um fallback automático: se o LLM não devolver DDL válido
+    (sem nenhum ``CREATE TABLE``), o esquema completo é usado no lugar, garantindo
+    que a pipeline não pare por uma saída inesperada.
+
+    Example::
+
+        agente = AgenteSeletor(config=Config())
+        resultado = agente.run(
+            esquema_completo="CREATE TABLE orders (...); CREATE TABLE customers (...);",
+            pergunta="Quais tabelas preciso para listar pedidos do mês passado?",
+        )
+        print(resultado.tabelas_selecionadas)  # ["orders"]
+        print(resultado.tokens_usados)  # ex: 2847
+    """
+
+    def run(self, esquema_completo: str, pergunta: str) -> ResultadoSeletor:
+        """Filtra o esquema e retorna apenas as tabelas relevantes para a pergunta.
+
+        Fluxo:
+        1. Renderiza o prompt de sistema ``prompts/seletor.j2`` com o esquema completo.
+        2. Envia a pergunta como mensagem do usuário ao LLM.
+        3. Valida se a saída contém pelo menos um ``CREATE TABLE``.
+        4. Se a validação falhar, faz fallback para o esquema completo.
+        5. Extrai os nomes das tabelas presentes no DDL resultante.
+
+        Args:
+            esquema_completo: DDL completo do banco de dados, contendo todos os
+                statements ``CREATE TABLE``.
+            pergunta: Pergunta original do usuário em linguagem natural.
+
+        Returns:
+            ``ResultadoSeletor`` com:
+            - ``esquema_filtrado``: DDL com apenas as tabelas relevantes ou o
+              esquema completo em fallback.
+            - ``tabelas_selecionadas``: lista com os nomes das tabelas
+              identificadas no DDL filtrado.
+            - ``tokens_usados``: total de tokens consumidos nesta chamada.
+        """
+        logger.debug("AgenteSeletor.run: tamanho do esquema=%d", len(esquema_completo or ""))
+        blocos_originais = self._extrair_blocos_tabelas(esquema_completo)
+        resumo_esquema: dict[str, dict[str, object]] = {}
+        for nome_tabela, bloco in blocos_originais.items():
+            resumo_esquema[nome_tabela] = {
+                "colunas": self._extrair_nomes_colunas(bloco),
+                "descricao": "",
+            }
+
+        try:
+            from pathlib import Path
+            import json
+
+            caminho_descricoes = Path(__file__).resolve().parents[1] / "db" / "descricao_tabelas.json"
+            logger.debug(
+                "AgenteSeletor.run: caminho_descricoes=%s existe=%s",
+                caminho_descricoes,
+                caminho_descricoes.exists(),
+            )
+            if caminho_descricoes.exists():
+                with open(caminho_descricoes, "r", encoding="utf8") as arquivo:
+                    mapa_descricoes = json.load(arquivo)
+                logger.debug("AgenteSeletor.run: carregou %d descricoes", len(mapa_descricoes))
+                for nome_tabela, descricao in mapa_descricoes.items():
+                    if nome_tabela in resumo_esquema:
+                        resumo_esquema[nome_tabela]["descricao"] = descricao
+                        logger.debug("AgenteSeletor.run: definiu descricao para a tabela %s", nome_tabela)
+        except Exception as erro:
+            # Não é fatal: se as descrições não puderem ser lidas, continuamos com o resumo vazio.
+            logger.debug("AgenteSeletor.run: falha ao carregar descricoes: %s", erro)
+
+        prompt_sistema = self._render(
+            "seletor",
+            schema=esquema_completo,
+            question=pergunta,
+            schema_summary=resumo_esquema,
+        )
+        logger.debug("AgenteSeletor.run: prévia do prompt de sistema:\n%s", (prompt_sistema or "")[:2000])
+
+        esquema_filtrado, tokens_usados = self._call_llm(
+            sistema=prompt_sistema,
+            usuario=pergunta,
+        )
+        logger.debug(
+            "AgenteSeletor.run: tokens_usados=%s; tamanho da saída=%d",
+            tokens_usados,
+            len(esquema_filtrado or ""),
+        )
+        logger.debug("AgenteSeletor.run: prévia da saída do LLM:\n%s", (esquema_filtrado or "")[:2000])
+
+        if not _PADRAO_CREATE_TABLE.search(esquema_filtrado or ""):
+            logger.info("AgenteSeletor: saída do LLM não contém CREATE TABLE; usando fallback com esquema completo")
+            esquema_filtrado = esquema_completo
+            tabelas_selecionadas = self._extrair_tabelas(esquema_filtrado)
+            return ResultadoSeletor(
+                esquema_filtrado=esquema_filtrado,
+                tabelas_selecionadas=tabelas_selecionadas,
+                tokens_usados=tokens_usados,
+            )
+
+        tabelas_candidatas = self._extrair_tabelas(esquema_filtrado)
+        logger.debug("AgenteSeletor: tabelas candidatas vindas do LLM=%s", tabelas_candidatas)
+
+        blocos_validados: list[str] = []
+        tabelas_validadas: list[str] = []
+        for tabela in tabelas_candidatas:
+            if tabela in blocos_originais:
+                blocos_validados.append(blocos_originais[tabela])
+                tabelas_validadas.append(tabela)
+
+        logger.debug("AgenteSeletor: tabelas validadas após conferência=%s", tabelas_validadas)
+
+        if not blocos_validados:
+            logger.info("AgenteSeletor: nenhum bloco CREATE TABLE validado; usando fallback com esquema completo")
+            esquema_filtrado = esquema_completo
+            tabelas_selecionadas = self._extrair_tabelas(esquema_completo)
+        else:
+            esquema_filtrado = "\n\n".join(blocos_validados)
+            tabelas_selecionadas = tabelas_validadas
+            logger.info("AgenteSeletor: retornando esquema filtrado validado com tabelas=%s", tabelas_selecionadas)
+
+        return ResultadoSeletor(
+            esquema_filtrado=esquema_filtrado,
+            tabelas_selecionadas=tabelas_selecionadas,
+            tokens_usados=tokens_usados,
+        )
+
+    @staticmethod
+    def _extrair_nomes_colunas(bloco_tabela: str) -> list[str]:
+        """Extrai os nomes das colunas de um bloco ``CREATE TABLE``.
+
+        A função procura o primeiro par de parênteses e captura o conteúdo até o
+        fechamento correspondente, tentando extrair identificadores válidos de
+        coluna no início de cada linha. Retorna lista vazia se não conseguir
+        localizar colunas.
+        """
+        correspondencia = re.search(r"\(([\s\S]*?)\)\s*;?$", bloco_tabela)
+        if not correspondencia:
+            return []
+        bloco_colunas = correspondencia.group(1)
+        colunas: list[str] = []
+        for linha in bloco_colunas.splitlines():
+            linha = linha.strip().rstrip(",")
+            if not linha:
+                continue
+            # Ignora constraints e definições de chave que não começam com identificador.
+            correspondencia_coluna = re.match(r"[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)", linha)
+            if correspondencia_coluna:
+                colunas.append(correspondencia_coluna.group(1))
+        return colunas
+
+    @staticmethod
+    def _extrair_blocos_tabelas(esquema_ddl: str) -> dict[str, str]:
+        """Extrai blocos completos ``CREATE TABLE ...;`` do DDL.
+
+        Retorna um dicionário mapeando ``nome_tabela`` -> bloco DDL (incluindo o
+        ponto e vírgula final). Usa ``DOTALL`` para capturar quebras de linha dentro
+        do conteúdo dos parênteses da definição de colunas.
+        """
+        padrao = re.compile(
+            r"(CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)[\s\S]*?;)",
+            re.IGNORECASE,
+        )
+        blocos: dict[str, str] = {}
+        for correspondencia in padrao.finditer(esquema_ddl):
+            bloco = correspondencia.group(1).strip()
+            nome_tabela = correspondencia.group(2)
+            blocos[nome_tabela] = bloco
+        return blocos
+
+    @staticmethod
+    def _extrair_tabelas(esquema_ddl: str) -> list[str]:
+        """Extrai os nomes de todas as tabelas definidas em um DDL.
+
+        Usa ``_PADRAO_NOME_TABELA`` para encontrar cada ``CREATE TABLE`` e
+        capturar o nome que o segue, tolerando modificadores opcionais como
+        ``IF NOT EXISTS`` e diferentes formas de citação de identificadores.
+
+        Args:
+            esquema_ddl: String DDL contendo um ou mais statements ``CREATE TABLE``.
+
+        Returns:
+            Lista com os nomes das tabelas na ordem em que aparecem no DDL.
+            Retorna lista vazia se nenhum ``CREATE TABLE`` for encontrado.
+
+        Example::
+
+            ddl = '''
+                CREATE TABLE orders (id INTEGER PRIMARY KEY);
+                CREATE TABLE IF NOT EXISTS `customers` (id INTEGER);
+            '''
+            AgenteSeletor._extrair_tabelas(ddl)
+            # ["orders", "customers"]
+        """
+        return [correspondencia.group(1) for correspondencia in _PADRAO_NOME_TABELA.finditer(esquema_ddl)]

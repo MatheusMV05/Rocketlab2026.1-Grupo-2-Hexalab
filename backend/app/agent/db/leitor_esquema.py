@@ -4,7 +4,7 @@ import sqlite3
 from pathlib import Path
 
 
-def read_schema(db_path: str | Path) -> str:
+def ler_esquema(db_path: str | Path) -> str:
     """Lê o DDL de tabelas e views de um banco SQLite.
 
     A função conecta ao banco SQLite indicado por ``db_path`` e consulta
@@ -12,7 +12,7 @@ def read_schema(db_path: str | Path) -> str:
     (excluindo objetos internos cujo nome começa com ``sqlite_``).
 
     Retorna uma única string contendo os blocos DDL encontrados (cada
-    bloco terminando em ``;``) separados por duas quebras de linha —
+    bloco terminando em ``;``) separados por duas quebras de linha -
     formato adequado para inclusão em prompts ou para processamento
     por agentes da pipeline.
 
@@ -35,15 +35,15 @@ def read_schema(db_path: str | Path) -> str:
           execuções.
 
     Exemplo:
-        >>> read_schema('data/my.db')
+        >>> ler_esquema('data/my.db')
         'CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);\n\nCREATE TABLE orders (id INTEGER, customer_id INTEGER);'
     """
-    path = Path(db_path)
-    if not path.exists():
-        raise FileNotFoundError(f"SQLite database not found: {path}")
+    caminho = Path(db_path)
+    if not caminho.exists():
+        raise FileNotFoundError(f"Banco SQLite não encontrado: {caminho}")
 
-    with sqlite3.connect(path) as connection:
-        rows = connection.execute(
+    with sqlite3.connect(caminho) as conexao:
+        linhas = conexao.execute(
             """
             SELECT sql
             FROM sqlite_master
@@ -54,11 +54,11 @@ def read_schema(db_path: str | Path) -> str:
             """
         ).fetchall()
 
-    ddl_blocks = []
-    for (sql,) in rows:
+    blocos_ddl = []
+    for (sql,) in linhas:
         block = sql.strip()
         if not block.endswith(";"):
             block += ";"
-        ddl_blocks.append(block)
+        blocos_ddl.append(block)
 
-    return "\n\n".join(ddl_blocks)
+    return "\n\n".join(blocos_ddl)
