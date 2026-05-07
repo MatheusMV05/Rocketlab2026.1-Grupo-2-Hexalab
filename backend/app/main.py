@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-
+from app.produtos.router import router as produtos_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -31,7 +31,7 @@ app.add_middleware(
 # Exemplo: app.include_router(dashboard_router)
 from app.clientes.router import router as clientes_router
 app.include_router(clientes_router)
-
+app.include_router(produtos_router)
 
 @app.get("/health", tags=["health"])
 async def health():
