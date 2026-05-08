@@ -1,3 +1,3 @@
-from .resultado import ResultadoSeletor
+from .resultado import ResultadoDecompositor, ResultadoSeletor
 
-__all__ = ["ResultadoSeletor"]
+__all__ = ["ResultadoSeletor", "ResultadoDecompositor"]

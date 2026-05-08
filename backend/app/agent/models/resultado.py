@@ -28,3 +28,18 @@ class ResultadoSeletor:
     esquema_filtrado: str
     tabelas_selecionadas: list[str]
     tokens_usados: int
+
+
+@dataclass
+class ResultadoDecompositor:
+    """Resultado retornado por `AgenteDecompositor`.
+
+    Attributes:
+        sql: Consulta SQL final gerada para execução.
+        raciocinio: Explicação textual do plano lógico usado para montar o SQL.
+        tokens_usados: Total de tokens consumidos na chamada ao LLM.
+    """
+
+    sql: str
+    raciocinio: str
+    tokens_usados: int
