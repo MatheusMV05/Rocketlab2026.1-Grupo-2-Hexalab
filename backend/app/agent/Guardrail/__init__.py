@@ -1,4 +1,4 @@
-from .sql_guardrail import (
+from .guardrail import (
 	validar_input_usuario,
 	validar_sql_somente_leitura,
 )

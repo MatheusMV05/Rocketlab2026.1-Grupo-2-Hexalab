@@ -1,38 +1,44 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
 
-from app.agent.Guardrail.sql_guardrail import validar_sql_somente_leitura
+from pydantic_ai import Agent
+
+from app.agent.Guardrail.guardrail import validar_sql_somente_leitura
 from app.agent.agentes.agente_base import AgenteBase
+from app.agent.contexto import ContextoAgente
 from app.agent.few_shots.fewshot_retriever import FewShotRetriever
-from app.agent.models.resultado import ResultadoDecompositor
+from app.agent.few_shots.modelos import ExemploFewShot
+from app.agent.models.resultado import ResultadoDecompositor, ResultadoDecompositorLLM
+from app.agent.config import Config
 
 logger = logging.getLogger(__name__)
-# Esses blocos existem para conseguir capturar na resposta do agente as partes de raciocinio, sql e validação de sql, esses regex serão usados APENAS na saida do LLM
-_PADRAO_BLOCO_REASONING = re.compile(
-	r"<reasoning>\s*(.*?)\s*</reasoning>",
-	re.IGNORECASE | re.DOTALL,
-)
-_PADRAO_BLOCO_SQL = re.compile(
-	r"<sql>\s*(.*?)\s*</sql>",
-	re.IGNORECASE | re.DOTALL,
-)
-_PADRAO_SQL_FALLBACK = re.compile(
-	r"\b(?:WITH|SELECT)\b[\s\S]*",
-	re.IGNORECASE,
-)
 
 
 class AgenteDecompositor(AgenteBase):
 	"""Agente responsável por decompor pergunta complexa e gerar SQL final.
 
 	O agente delega a geração ao LLM usando o template `decompositor.j2` e
-	aplica parsing robusto na resposta para extrair os blocos `<reasoning>` e
-	`<sql>`. A saída SQL é sanitizada e validada para manter o contrato de
-	consulta somente leitura.
+	aplica saída estruturada (PydanticAI) para obter o raciocínio e o SQL.
+	A saída SQL é sanitizada e validada para manter o contrato de consulta
+	somente leitura.
 	"""
+
+	def __init__(self, config: Config | None = None) -> None:
+		super().__init__(config)
+		if self._agent is not None:
+			self._agent = Agent(
+				self._agent.model,
+				deps_type=ContextoAgente,
+				result_type=ResultadoDecompositorLLM,
+			)
+
+			@self._agent.system_prompt
+			def get_system_prompt(ctx):
+				return ctx.deps.sistema
 
 	def run(
 		self,
@@ -59,13 +65,31 @@ class AgenteDecompositor(AgenteBase):
 			examples=exemplos_normalizados,
 		)
 
-		resposta, tokens_usados = self._call_llm(
-			sistema=prompt_sistema,
-			usuario=pergunta,
-		)
+		if self._agent is None:
+			return ResultadoDecompositor(
+				sql="",
+				raciocinio="Raciocínio não informado pelo modelo.",
+				tokens_usados=0,
+			)
 
-		raciocinio, sql = self._extrair_blocos_resposta(resposta)
-		sql_limpo = self._sanitizar_sql(sql)
+		deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
+		try:
+			resultado = self._agent.run_sync(pergunta, deps=deps)
+			dados = resultado.data
+			uso = resultado.usage()
+			tokens_usados = uso.total_tokens if uso else 0
+			raciocinio = str(dados.reasoning).strip()
+			sql_limpo = self._sanitizar_sql(str(dados.sql))
+		except Exception as erro:
+			logger.warning(
+				"AgenteDecompositor.run: falha na saída estruturada do PydanticAI (%s).",
+				erro,
+			)
+			return ResultadoDecompositor(
+				sql="",
+				raciocinio="Raciocínio não informado pelo modelo.",
+				tokens_usados=0,
+			)
 
 		if not validar_sql_somente_leitura(sql_limpo):
 			logger.warning(
@@ -83,7 +107,9 @@ class AgenteDecompositor(AgenteBase):
 		)
 
 	@staticmethod
-	def _normalizar_exemplos(exemplos: list[dict[str, Any]] | None) -> list[dict[str, str]]:
+	def _normalizar_exemplos(
+		exemplos: list[ExemploFewShot | dict[str, Any]] | None,
+	) -> list[dict[str, str]]:
 		"""Normaliza exemplos few-shot para formato esperado pelo template Jinja2.
 
 		Garante que cada exemplo tenha as chaves obrigatórias `question` e `sql`,
@@ -103,11 +129,16 @@ class AgenteDecompositor(AgenteBase):
 
 		normalizados: list[dict[str, str]] = []
 		for item in exemplos:
-			if not isinstance(item, dict):
+			if isinstance(item, ExemploFewShot):
+				pergunta = item.question.strip()
+				sql = item.sql.strip()
+				raciocinio = item.reasoning.strip()
+			elif isinstance(item, dict):
+				pergunta = str(item.get("question") or item.get("input") or "").strip()
+				sql = str(item.get("sql") or item.get("output") or "").strip()
+				raciocinio = str(item.get("reasoning") or item.get("explanation") or "").strip()
+			else:
 				continue
-			pergunta = str(item.get("question", "")).strip()
-			sql = str(item.get("sql", "")).strip()
-			raciocinio = str(item.get("reasoning", "")).strip()
 			if not pergunta or not sql:
 				continue
 			normalizados.append(
@@ -144,43 +175,6 @@ class AgenteDecompositor(AgenteBase):
 			logger.debug("AgenteDecompositor: few-shot retriever indisponível (%s)", erro)
 
 		return []
-
-	@staticmethod
-	def _extrair_blocos_resposta(resposta: str) -> tuple[str, str]:
-		"""Extrai blocos `<reasoning>` e `<sql>` da resposta do LLM.
-
-		Tenta localizar tags XML estruturadas `<reasoning>...</reasoning>` e
-		`<sql>...</sql>`. Se a tag SQL não existir, aplica fallback com regex
-		para detectar SQL por início com SELECT ou WITH. Se nenhum bloco for
-		encontrado, retorna tupla vazia.
-
-		Args:
-			resposta: String retornada pelo LLM (pode estar vazia ou malformada).
-
-		Returns:
-			Tupla `(raciocinio, sql)` com strings extraídas e limpas. Ambas
-			podem ser vazias se parsing falhar.
-		"""
-		texto = (resposta or "").strip()
-		if not texto:
-			return "", ""
-
-		correspondencia_reasoning = _PADRAO_BLOCO_REASONING.search(texto)
-		correspondencia_sql = _PADRAO_BLOCO_SQL.search(texto)
-
-		raciocinio = (
-			correspondencia_reasoning.group(1).strip() if correspondencia_reasoning else ""
-		)
-		sql = correspondencia_sql.group(1).strip() if correspondencia_sql else ""
-
-		if sql:
-			return raciocinio, sql
-
-		fallback_sql = _PADRAO_SQL_FALLBACK.search(texto)
-		if fallback_sql:
-			return raciocinio, fallback_sql.group(0).strip()
-
-		return raciocinio, ""
 
 	@staticmethod
 	def _sanitizar_sql(sql: str) -> str:

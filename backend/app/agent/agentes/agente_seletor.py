@@ -136,9 +136,8 @@ class AgenteSeletor(AgenteBase):
             )
 
         try:
-            # PydanticAI precisa de event loop mesmo em run_sync em certos contextos.
-            # Usamos asyncio.run() para garantir execução segura em threads sem loop ativo.
-            resultado = asyncio.run(self._agent.run(pergunta, deps=deps))
+            # Usamos run_sync diretamente. O PydanticAI gerencia o loop interno.
+            resultado = self._agent.run_sync(pergunta, deps=deps)
             dados = resultado.data  # Será do tipo ResultadoSeletorLLM
             uso = resultado.usage()
             tokens_usados = uso.total_tokens if uso else 0

@@ -1,0 +1,62 @@
+# Exemplos para guiar a task, refazer com pelo menos 20 amostras
+- question: "Qual produto com mais lucro no ultimo mes"
+  reasoning: |
+    Para encontrar o produto com mais lucro no último mês, precisamos:
+    1. Juntar a tabela de fatos 'fat_pedidos' com as dimensões 'dim_produtos' e 'dim_data'.
+    2. Filtrar as datas para incluir apenas o mês anterior completo.
+    3. Agrupar pelo nome do produto e somar a 'receita_liquida_brl'.
+    4. Ordenar de forma decrescente pela receita e pegar apenas o 1º registro.
+  sql: |
+    SELECT
+      p.nome_produto,
+      SUM(f.receita_liquida_brl) AS lucro_total
+    FROM fat_pedidos f
+    INNER JOIN dim_produtos p ON p.id_produto = f.id_produto
+    INNER JOIN dim_data d ON d.sk_data = f.sk_data_pedido
+    WHERE d.data_completa >= date('now', 'start of month', '-1 month')
+      AND d.data_completa < date('now', 'start of month')
+    GROUP BY p.nome_produto
+    ORDER BY lucro_total DESC
+    LIMIT 1
+
+- question: "Quais foram os 5 clientes com maior receita no ultimo mes"
+  reasoning: |
+    Para identificar os 5 clientes com maior receita no mês passado, o processo é:
+    1. Unir 'fat_pedidos' com 'dim_clientes' e 'dim_data'.
+    2. Aplicar o filtro na data para trazer apenas resultados do último mês.
+    3. Agrupar pelo ID e nome/sobrenome do cliente, agregando a soma de 'receita_liquida_brl'.
+    4. Ordenar o resultado do maior para o menor e limitar aos top 5.
+  sql: |
+    SELECT
+      c.id_cliente,
+      c.nome,
+      c.sobrenome,
+      SUM(f.receita_liquida_brl) AS receita_total
+    FROM fat_pedidos f
+    INNER JOIN dim_clientes c ON c.id_cliente = f.id_cliente
+    INNER JOIN dim_data d ON d.sk_data = f.sk_data_pedido
+    WHERE d.data_completa >= date('now', 'start of month', '-1 month')
+      AND d.data_completa < date('now', 'start of month')
+    GROUP BY c.id_cliente, c.nome, c.sobrenome
+    ORDER BY receita_total DESC
+    LIMIT 5
+
+- question: "Qual categoria de produto teve maior receita no ultimo mes"
+  reasoning: |
+    Para descobrir qual categoria de produtos gerou mais receita no mês anterior, vamos:
+    1. Relacionar 'fat_pedidos' com 'dim_produtos' (para trazer a categoria) e 'dim_data'.
+    2. Obter as linhas referentes estritamente ao mês passado via campos de data.
+    3. Agrupar por categoria e somar o campo 'receita_liquida_brl'.
+    4. Ordenar descendentemente pela soma e retornar apenas 1 categoria.
+  sql: |
+    SELECT
+      p.categoria,
+      SUM(f.receita_liquida_brl) AS receita_total
+    FROM fat_pedidos f
+    INNER JOIN dim_produtos p ON p.id_produto = f.id_produto
+    INNER JOIN dim_data d ON d.sk_data = f.sk_data_pedido
+    WHERE d.data_completa >= date('now', 'start of month', '-1 month')
+      AND d.data_completa < date('now', 'start of month')
+    GROUP BY p.categoria
+    ORDER BY receita_total DESC
+    LIMIT 1

@@ -18,6 +18,17 @@ class ResultadoSeletorLLM(BaseModel):
     )
 
 
+class ResultadoDecompositorLLM(BaseModel):
+    """Saída estruturada retornada pelo PydanticAI no agente decompositor."""
+
+    reasoning: str = Field(
+        description="Raciocínio passo a passo usado para montar a consulta SQL."
+    )
+    sql: str = Field(
+        description="Consulta SQL somente leitura pronta para execução."
+    )
+
+
 @dataclass
 class ResultadoSeletor:
     """Resultado retornado por `AgenteSeletor`.
