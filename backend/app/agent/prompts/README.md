@@ -16,7 +16,7 @@ de linguagem e mudanças de lógica apareçam em diffs separados no Git.
 
 ## Uso
 
-- Os templates são renderizados via Jinja2 por cada agente (ver `BaseAgent._render`).
+- Os templates são renderizados via Jinja2 por cada agente (ver `AgenteBase._render`).
 - Mantenha os templates focados: forneça apenas as variáveis necessárias
   (`schema`, `question`, `examples`, etc.).
 - **Nunca coloque strings de prompt dentro de arquivos `.py`** — toda
@@ -26,9 +26,9 @@ de linguagem e mudanças de lógica apareçam em diffs separados no Git.
 
 | Template | Variáveis injetadas |
 |---|---|
-| `selector.j2` | `{{ schema }}`, `{{ question }}` |
+| `selector.j2` | `{{ schema }}`, `{{ question }}`, `{{ schema_summary }}` |
 | `decomposer.j2` | `{{ schema }}`, `{{ question }}`, `{{ examples }}` |
-| `refiner.j2` | `{{ schema }}`, `{{ question }}`, `{{ previous_sql }}`, `{{ execution_result }}` |
+| `refiner.j2` | `{{ schema }}`, `{{ question }}`, `{{ candidate_sql }}` |
 
 Se uma variável referenciada no template não for passada na chamada,
 o ambiente Jinja2 está configurado com `StrictUndefined` e vai lançar
@@ -57,7 +57,7 @@ Sua tarefa:
 - Preservar os nomes das tabelas e colunas exatamente como aparecem no esquema, sem traduções ou abreviações.
 - Usar os tipos e nomes das colunas da tabela para garantir precisão na resposta.
 
-squema completo de entrada:
+Esquema completo de entrada:
 {{ schema }}
 PERGUNTA DO USUÁRIO: {{ question }}
 
@@ -141,8 +141,8 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 def test_selector_prompt_renders_schema():
     env = Environment(
-        loader=FileSystemLoader("prompts/"),
-        undefined=StrictUndefined,
+      loader=FileSystemLoader("prompts/"),
+      undefined=StrictUndefined,
     )
     rendered = env.get_template("selector.j2").render(
         schema="CREATE TABLE orders (id INTEGER PRIMARY KEY);",

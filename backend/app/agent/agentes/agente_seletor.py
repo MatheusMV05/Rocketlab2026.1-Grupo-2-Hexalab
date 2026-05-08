@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 
+from pydantic_ai import Agent
+
 from app.agent.agentes.agente_base import AgenteBase
-from app.agent.models.resultado import ResultadoSeletor
+from app.agent.contexto import ContextoAgente
+from app.agent.models.resultado import ResultadoSeletor, ResultadoSeletorLLM
+from app.agent.config import Config
 
 # Detecta qualquer instrução CREATE TABLE na saída do LLM, independente de maiúsculas,
 # minúsculas ou espaços extras.
@@ -43,6 +48,20 @@ class AgenteSeletor(AgenteBase):
         print(resultado.tabelas_selecionadas)  # ["orders"]
         print(resultado.tokens_usados)  # ex: 2847
     """
+
+    def __init__(self, config: Config | None = None) -> None:
+        super().__init__(config)
+        # Sobrescrevemos o _agent da base para tipar o result_type especificamente para este agente.
+        if self._agent is not None:
+            self._agent = Agent(
+                self._agent.model,
+                deps_type=ContextoAgente,
+                result_type=ResultadoSeletorLLM,
+            )
+
+            @self._agent.system_prompt
+            def get_system_prompt(ctx) -> str:
+                return ctx.deps.sistema
 
     def run(self, esquema_completo: str, pergunta: str) -> ResultadoSeletor:
         """Filtra o esquema e retorna apenas as tabelas relevantes para a pergunta.
@@ -106,16 +125,36 @@ class AgenteSeletor(AgenteBase):
         )
         logger.debug("AgenteSeletor.run: prévia do prompt de sistema:\n%s", (prompt_sistema or "")[:2000])
 
-        esquema_filtrado, tokens_usados = self._call_llm(
-            sistema=prompt_sistema,
-            usuario=pergunta,
-        )
-        logger.debug(
-            "AgenteSeletor.run: tokens_usados=%s; tamanho da saída=%d",
-            tokens_usados,
-            len(esquema_filtrado or ""),
-        )
-        logger.debug("AgenteSeletor.run: prévia da saída do LLM:\n%s", (esquema_filtrado or "")[:2000])
+        deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
+
+        if self._agent is None:
+            logger.info("AgenteSeletor: cliente PydanticAI indisponível, usando fallback com esquema completo")
+            return ResultadoSeletor(
+                esquema_filtrado=esquema_completo,
+                tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
+                tokens_usados=0,
+            )
+
+        try:
+            # PydanticAI precisa de event loop mesmo em run_sync em certos contextos.
+            # Usamos asyncio.run() para garantir execução segura em threads sem loop ativo.
+            resultado = asyncio.run(self._agent.run(pergunta, deps=deps))
+            dados = resultado.data  # Será do tipo ResultadoSeletorLLM
+            uso = resultado.usage()
+            tokens_usados = uso.total_tokens if uso else 0
+            
+            esquema_filtrado = "\n\n".join(dados.blocos_ddl)
+            logger.debug(
+                "AgenteSeletor.run: tokens_usados=%s; tabelas extraidas via Pydantic=%d",
+                tokens_usados,
+                len(dados.blocos_ddl),
+            )
+        except Exception as e:
+            logger.warning("AgenteSeletor.run: falha na extração estruturada do PydanticAI (%s). Fallback ativado.", e)
+            esquema_filtrado = esquema_completo
+            tokens_usados = 0
+
+        logger.debug("AgenteSeletor.run: prévia da saída concatenada:\n%s", (esquema_filtrado or "")[:2000])
 
         if not _PADRAO_CREATE_TABLE.search(esquema_filtrado or ""):
             logger.info("AgenteSeletor: saída do LLM não contém CREATE TABLE; usando fallback com esquema completo")

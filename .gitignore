@@ -36,4 +36,4 @@ Thumbs.db
 *.suo
 *.sw?
 
-run_selector_local.py
+scripts/
