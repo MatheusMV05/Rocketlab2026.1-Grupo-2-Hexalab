@@ -31,16 +31,16 @@ CREATE TABLE customers (
     name TEXT,
     email TEXT
 );
+```
+
 Importante: o texto acima é um exemplo do formato — a sua saída deve conter somente blocos CREATE TABLE copiados/modificados a partir do esquema de entrada, nunca linhas ou identificadores inventados.
 
 {% if schema_summary %}
 <schema_summary>
 Visão geral das tabelas e colunas disponíveis:
-{% for tabela, detalhes in schema_summary.items() %}
+{% for tabela, info in schema_summary.items() %}
+{{ tabela }}({{ info.colunas | join(", ") }}){% if info.descricao %} — {{ info.descricao }}{% endif %}
 
-Tabela: {{ tabela }}
-{% if detalhes.descricao %}Descrição: {{ detalhes.descricao }}{% endif %}
-Colunas: {{ detalhes.colunas | join(', ') }}
 {% endfor %}
 </schema_summary>
 {% endif %}
