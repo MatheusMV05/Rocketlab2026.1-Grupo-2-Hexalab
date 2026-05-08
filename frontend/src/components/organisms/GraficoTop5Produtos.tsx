@@ -9,10 +9,9 @@ import {
   LabelList,
 } from 'recharts'
 import { useTopProdutos } from '../../hooks/useDashboard'
+import { useState } from 'react'
 import { TagVariacao } from '../atoms/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
-import { DropdownFiltro } from '../atoms/DropdownFiltro'
-import { useState } from 'react'
 import { formatarReais } from '../../utils/formatadores'
 
 interface Props {
@@ -40,37 +39,52 @@ export function GraficoTop5Produtos({ filtros, onFiltrosChange }: Props) {
   const isReceita = tipoDado === 'Receita'
 
   return (
-    <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 h-full flex flex-col">
-      {/* Filtro absoluto no topo direito */}
-      <div className="absolute top-3 right-3">
-        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+    <div className="bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 h-full flex flex-col">
+      {/* Cabeçalho: título à esquerda, filtros à direita */}
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <h3 className="text-[18px] font-bold text-[#1d5358] min-w-0">
+          Top 5 Produtos Mais Vendidos
+        </h3>
+        <div className="shrink-0">
+          <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+        </div>
       </div>
 
-      {/* Cabeçalho */}
-      <div className="mb-2 pr-4">
-        <h3 className="text-[18px] font-bold text-[#1d5358]">Top 5 Produtos Mais Vendidos</h3>
-        <div className="flex items-center gap-2 mt-1">
-          <DropdownFiltro
-            label="Dados"
-            opcoes={['Receita', 'Volume']}
-            valor={tipoDado}
-            onChange={setTipoDado}
-            rotulo="Dados"
+      {/* Toggle Receita / Volume — botões do SVG (175px cada, gap 21px) */}
+      <div className="flex gap-[21px] mb-2">
+        {(['Receita', 'Volume'] as const).map((modo) => (
+          <button
+            key={modo}
+            onClick={() => setTipoDado(modo)}
+            className={`h-[28px] w-[175px] text-[13px] font-medium rounded-[4px] border-2 transition-colors ${
+              tipoDado === modo
+                ? 'bg-white border-[#e0e0e0] text-[#262626]'
+                : 'bg-[#f6f7f9] border-[#e0e0e0] text-[#262626]'
+            }`}
+          >
+            {modo}
+          </button>
+        ))}
+      </div>
+
+      {/* Subtítulo com total */}
+      <div className="flex items-center gap-1 mb-2 text-[11px]">
+        <span className="text-[#343434] font-medium">
+          {isReceita ? 'Receita Total dos Top 5:' : 'Volume Total dos Top 5:'}
+        </span>
+        <span className="font-bold text-[#343434]">
+          {receitaTotal > 0
+            ? isReceita
+              ? `R$ ${receitaTotal.toLocaleString('pt-BR')}`
+              : `${top5.reduce((s, i) => s + Math.round(i.receita_total / 100), 0).toLocaleString('pt-BR')} un.`
+            : '—'}
+        </span>
+        {receitaTotal > 0 && (
+          <TagVariacao
+            valor={isReceita ? '+12%/ABR' : '-2%/ABR'}
+            tipo={isReceita ? 'bom' : 'ruim'}
           />
-        </div>
-        <div className="flex items-center gap-1 mt-1 text-[11px]">
-          <span className="text-[#343434] font-medium">
-            {isReceita ? 'Receita Total dos Top 5:' : 'Volume Total dos Top 5:'}
-          </span>
-          <span className="font-bold text-[#343434]">
-            {receitaTotal > 0
-              ? isReceita
-                ? `R$ ${receitaTotal.toLocaleString('pt-BR')}`
-                : `${top5.reduce((s, i) => s + Math.round(i.receita_total / 100), 0).toLocaleString('pt-BR')} un.`
-              : '—'}
-          </span>
-          {receitaTotal > 0 && <TagVariacao valor={isReceita ? '+12%/ABR' : '-2%/ABR'} tipo={isReceita ? 'bom' : 'ruim'} />}
-        </div>
+        )}
       </div>
 
       {/* Gráfico */}

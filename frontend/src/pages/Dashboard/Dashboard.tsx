@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { TrendingUp, ShoppingCart, DollarSign, Smile } from 'lucide-react'
 import { LayoutPrincipal } from '../../components/templates/LayoutPrincipal'
 import { CardKpi } from '../../components/molecules/CardKpi'
-import { FiltroPeriodo, type FiltrosPeriodo } from '../../components/molecules/FiltroPeriodo'
+import { type FiltrosPeriodo } from '../../components/molecules/FiltroPeriodo'
 import { GraficoReceitaMensal } from '../../components/organisms/GraficoReceitaMensal'
 import { GraficoTaxaSatisfacao } from '../../components/organisms/GraficoTaxaSatisfacao'
 import { GraficoDistribuicaoPedidos } from '../../components/organisms/GraficoDistribuicaoPedidos'
@@ -54,14 +54,8 @@ export default function Dashboard() {
 
   return (
     <LayoutPrincipal titulo="DASHBOARD">
-      {/* Filtro global — alinhado à direita */}
-      <div className="flex items-center justify-end gap-3 mb-5">
-        <span className="text-[14px] font-medium text-[#666]">Filtros globais:</span>
-        <FiltroPeriodo filtros={filtrosGlobais} onChange={setFiltrosGlobais} />
-      </div>
-
-      {/* Cards KPI */}
-      <div className="flex gap-4 mb-5">
+      {/* Cards KPI — gap 14px conforme SVG; mt-[64px] para atingir y=199 do SVG (py-6 já dá 24px + 64 = 88px) */}
+      <div className="grid grid-cols-4 gap-[14px] mt-[64px] mb-[41px]">
         {cardsKpi.map((card) => (
           <CardKpi
             key={card.titulo}
@@ -74,25 +68,25 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Linha 1: Receita Mensal + Taxa de Satisfação */}
-      <div className="grid grid-cols-2 gap-[60px] mb-4" style={{ height: 510 }}>
+      {/* Linha 1: Receita Mensal (578×433) + Taxa de Satisfação (578×433) */}
+      <div className="grid grid-cols-2 gap-[62px] mb-[46px]" style={{ height: 435 }}>
         <GraficoReceitaMensal filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
         <GraficoTaxaSatisfacao filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
       </div>
 
-      {/* Linha 2: Matriz de Satisfação vs Performance (largura total) */}
-      <div className="mb-4" style={{ height: 487 }}>
+      {/* Linha 2: Matriz de Satisfação vs Performance — largura total (1214×487) */}
+      <div className="mb-[44px]" style={{ height: 487 }}>
         <MatrizSatisfacaoPerformance filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
       </div>
 
-      {/* Linha 3: Distribuição de Pedidos + Top 5 Produtos */}
-      <div className="grid grid-cols-2 gap-[60px] mb-4" style={{ height: 417 }}>
+      {/* Linha 3: Distribuição de Pedidos (578×417) + Top 5 Produtos (578×417) */}
+      <div className="grid grid-cols-2 gap-[62px] mb-[46px]" style={{ height: 417 }}>
         <GraficoDistribuicaoPedidos filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
         <GraficoTop5Produtos filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
       </div>
 
-      {/* Linha 4: Lista de Entregas (largura total) */}
-      <div className="mb-4">
+      {/* Linha 4: Lista de Entregas — largura total */}
+      <div>
         <ListaEntregas />
       </div>
     </LayoutPrincipal>

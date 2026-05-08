@@ -76,19 +76,21 @@ export function GraficoTaxaSatisfacao({ filtros, onFiltrosChange }: Props) {
   const metaBoxY = GCY - (OUTER_R + 9) * msin
 
   return (
-    <div className="bg-white border-2 border-[#e0e0e0] rounded-[5px] px-4 pt-3 pb-6 h-full flex flex-col">
-      {/* Cabeçalho: título à esquerda, filtros à direita */}
-      <div className="flex items-start justify-between gap-3 mb-1">
-        <h3 className="text-[18px] font-bold text-[#1d5358] leading-snug min-w-0">
+    <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
+      {/* Filtros: absoluto y=13 do card, alinhado à direita — conforme SVG */}
+      <div className="absolute top-[13px] right-[14px]">
+        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+      </div>
+
+      {/* Título: abaixo dos filtros — pt-[50px] posiciona abaixo do filtro (y=41) */}
+      <div className="px-4 pt-[50px] pb-1">
+        <h3 className="text-[18px] font-bold text-[#1d5358] leading-snug">
           Taxa de satisfação (sentimento positivo)
         </h3>
-        <div className="shrink-0">
-          <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
-        </div>
       </div>
 
       {/* Gauge SVG */}
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 pb-4">
         <svg
           viewBox="0 0 560 215"
           width="100%"

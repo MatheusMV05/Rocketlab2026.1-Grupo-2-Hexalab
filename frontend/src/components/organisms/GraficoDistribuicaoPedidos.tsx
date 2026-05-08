@@ -49,21 +49,21 @@ export function GraficoDistribuicaoPedidos({ filtros, onFiltrosChange }: Props) 
   }))
 
   return (
-    <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 h-full flex flex-col">
-      {/* Filtro absoluto no topo direito */}
-      <div className="absolute top-3 right-3">
-        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
-      </div>
-
-      {/* Cabeçalho */}
-      <div className="mb-2 pr-4">
-        <h3 className="text-[18px] font-bold text-[#1d5358]">
-          Distribuição de pedidos por status
-        </h3>
-        <div className="flex items-center gap-1 mt-1 text-[11px]">
-          <span className="text-[#343434] font-medium">Total de pedidos no mês:</span>
-          <span className="font-bold text-[#343434]">{total || '—'}</span>
-          {total > 0 && <TagVariacao valor="+12%/ABR" tipo="bom" />}
+    <div className="bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 h-full flex flex-col">
+      {/* Cabeçalho: título à esquerda, filtros à direita */}
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0">
+          <h3 className="text-[18px] font-bold text-[#1d5358]">
+            Distribuição de pedidos por status
+          </h3>
+          <div className="flex items-center gap-1 mt-1 text-[11px]">
+            <span className="text-[#343434] font-medium">Total de pedidos no mês:</span>
+            <span className="font-bold text-[#343434]">{total || '—'}</span>
+            {total > 0 && <TagVariacao valor="+12%/ABR" tipo="bom" />}
+          </div>
+        </div>
+        <div className="shrink-0">
+          <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
         </div>
       </div>
 
