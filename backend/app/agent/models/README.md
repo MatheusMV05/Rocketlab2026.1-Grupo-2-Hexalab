@@ -1,14 +1,14 @@
-# 📦 Modelos de Dados (Agentes)
+#  Modelos de Dados (Agentes)
 
 Este diretório contém os modelos de dados centrais que padronizam a comunicação e o retorno dos agentes de Inteligência Artificial no pipeline da aplicação.
 
 A utilização de modelos fortemente tipados (através de Pydantic e Dataclasses) é fundamental para garantir previsibilidade, segurança e integrar de forma natural com o framework `PydanticAI`.
 
-## 📂 Estrutura de Arquivos
+##  Estrutura de Arquivos
 
 - `resultado.py`: Concentra todas as classes e estruturas de dados que representam as **saídas** (outputs) produzidas pelos agentes.
 
-## 📝 Detalhamento dos Modelos (`resultado.py`)
+##  Detalhamento dos Modelos (`resultado.py`)
 
 O arquivo é conceitualmente dividido em dois tipos de estruturas: as saídas brutas extraídas e validadas diretamente do LLM, e os retornos consolidados e limpos usados pelo restante da aplicação.
 
@@ -33,7 +33,7 @@ Estas classes são os empacotadores finais. É o que as funções da sua aplica�
   - `raciocinio`: A explicação associada.
   - `tokens_usados`: Custo em tokens daquela geração.
 
-## 🛠️ Regras e Boas Práticas (Para Desenvolvedores)
+##  Regras e Boas Práticas (Para Desenvolvedores)
 
 - **Descrições no `Field()`**: As strings passadas no parâmetro `description` dos modelos Pydantic não são meros comentários. **A Inteligência Artificial lê essas descrições para entender como preencher cada campo**. Se for alterar algo, garanta que a descrição seja o mais clara possível sobre o que a IA deve colocar lá.
 - **Desacoplamento**: Mantenha a separação clara entre "o que o LLM cospe em JSON" (os Pydantic BaseModels) e "o que o Python repassa para os controllers" (os Dataclasses).
