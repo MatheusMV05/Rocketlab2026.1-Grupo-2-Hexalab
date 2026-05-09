@@ -4,13 +4,13 @@ Este diretório contém a lógica e os dados responsáveis por guiar as resposta
 
 Ao fornecer exemplos claros de como interpretar uma pergunta em linguagem natural, estruturar um raciocínio lógico e gerar uma query SQL válida, aumentamos drasticamente a precisão e a estabilidade do agente.
 
-## 📂 Estrutura de Arquivos
+##  Estrutura de Arquivos
 
 - `exemplos.yaml`: O "banco de dados" bruto de exemplos. É aqui que você adiciona, remove ou atualiza as demonstrações dadas à IA.
 - `modelos.py`: Define o modelo de dados (`ExemploFewShot` via Pydantic), garantindo que todos os exemplos extraídos do YAML estejam tipados, formatados corretamente e tenham compatibilidade com nomenclaturas antigas.
 - `fewshot_retriever.py`: O "motor de busca" dos exemplos. Como não devemos passar dezenas de exemplos para a IA de uma vez (o prompt ficaria gigante e muito caro), esta classe compara a pergunta atual do usuário com todos os exemplos do YAML usando uma técnica rápida de similaridade de texto (sobreposição de tokens e bigramas, sem depender de embeddings externos). O objetivo é selecionar dinamicamente apenas os `k` exemplos mais parecidos e relevantes para injetar no prompt.
 
-## 📝 Como funciona o `exemplos.yaml`
+##  Como funciona o `exemplos.yaml`
 
 Cada item no arquivo YAML representa um único exemplo (um "shot") e deve possuir os seguintes campos:
 

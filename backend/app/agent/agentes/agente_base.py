@@ -8,14 +8,8 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
  
 from app.agent.config import Config
  
-try:
-    from pydantic_ai import Agent, RunContext
-    from pydantic_ai.models.mistral import MistralModel
-    HAS_PYDANTIC_AI = True
-except ImportError:  # pragma: no cover
-    HAS_PYDANTIC_AI = False
-    Agent = None  # type: ignore[assignment]
-    MistralModel = None  # type: ignore[assignment]
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.models.mistral import MistralModel
 
 from app.agent.config import Config
 from app.agent.contexto import ContextoAgente
@@ -62,7 +56,13 @@ class AgenteBase(ABC):
                 com os valores padrão lidos das variáveis de ambiente.
         """
         self.config = config or Config()
- 
+
+        import asyncio
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+
         diretorio_prompts = Path(__file__).resolve().parents[1] / "prompts"
         self._jinja = Environment(
             loader=FileSystemLoader(str(diretorio_prompts)),
@@ -74,7 +74,7 @@ class AgenteBase(ABC):
  
         self._agent: Any | None = None
 
-        if HAS_PYDANTIC_AI and self.config.api_key:
+        if self.config.api_key:
             model = MistralModel(self.config.model, api_key=self.config.api_key)
             self._agent = Agent(
                 model,
@@ -84,14 +84,6 @@ class AgenteBase(ABC):
             @self._agent.system_prompt
             def get_system_prompt(ctx: RunContext[ContextoAgente]) -> str:
                 return ctx.deps.sistema
-
-        elif self.config.api_key and not HAS_PYDANTIC_AI:
-            # Se a chave da API estiver configurada, mas o cliente não
-            # puder ser instanciado, expomos o erro explicitamente.
-            raise RuntimeError(
-                "O cliente LLM não pôde ser inicializado. Verifique se `pydantic-ai` "
-                "está instalado e se o ambiente virtual correto está ativado."
-            )
  
     def _call_llm(self, sistema: str, usuario: str) -> tuple[str, int]:
         """Envia uma mensagem ao LLM e retorna a resposta com o consumo de tokens.

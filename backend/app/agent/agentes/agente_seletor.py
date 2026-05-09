@@ -4,6 +4,8 @@ import asyncio
 import logging
 import re
 
+from pydantic_ai.models.mistral import MistralModel
+import asyncio
 from pydantic_ai import Agent
 
 from app.agent.agentes.agente_base import AgenteBase
@@ -51,17 +53,6 @@ class AgenteSeletor(AgenteBase):
 
     def __init__(self, config: Config | None = None) -> None:
         super().__init__(config)
-        # Sobrescrevemos o _agent da base para tipar o result_type especificamente para este agente.
-        if self._agent is not None:
-            self._agent = Agent(
-                self._agent.model,
-                deps_type=ContextoAgente,
-                result_type=ResultadoSeletorLLM,
-            )
-
-            @self._agent.system_prompt
-            def get_system_prompt(ctx) -> str:
-                return ctx.deps.sistema
 
     def run(self, esquema_completo: str, pergunta: str) -> ResultadoSeletor:
         """Filtra o esquema e retorna apenas as tabelas relevantes para a pergunta.
@@ -88,31 +79,24 @@ class AgenteSeletor(AgenteBase):
         """
         logger.debug("AgenteSeletor.run: tamanho do esquema=%d", len(esquema_completo or ""))
         blocos_originais = self._extrair_blocos_tabelas(esquema_completo)
+        
         resumo_esquema: dict[str, dict[str, object]] = {}
-        for nome_tabela, bloco in blocos_originais.items():
-            resumo_esquema[nome_tabela] = {
-                "colunas": self._extrair_nomes_colunas(bloco),
-                "descricao": "",
-            }
-
         try:
             from pathlib import Path
             import json
 
             caminho_descricoes = Path(__file__).resolve().parents[1] / "db" / "descricao_tabelas.json"
-            logger.debug(
-                "AgenteSeletor.run: caminho_descricoes=%s existe=%s",
-                caminho_descricoes,
-                caminho_descricoes.exists(),
-            )
             if caminho_descricoes.exists():
                 with open(caminho_descricoes, "r", encoding="utf8") as arquivo:
                     mapa_descricoes = json.load(arquivo)
-                logger.debug("AgenteSeletor.run: carregou %d descricoes", len(mapa_descricoes))
+                
+                # Apenas adiciona tabelas que de fato existem no esquema completo
                 for nome_tabela, descricao in mapa_descricoes.items():
-                    if nome_tabela in resumo_esquema:
-                        resumo_esquema[nome_tabela]["descricao"] = descricao
-                        logger.debug("AgenteSeletor.run: definiu descricao para a tabela %s", nome_tabela)
+                    if nome_tabela in blocos_originais:
+                        resumo_esquema[nome_tabela] = {
+                            "colunas": self._extrair_nomes_colunas(blocos_originais[nome_tabela]),
+                            "descricao": str(descricao),
+                        }
         except Exception as erro:
             # Não é fatal: se as descrições não puderem ser lidas, continuamos com o resumo vazio.
             logger.debug("AgenteSeletor.run: falha ao carregar descricoes: %s", erro)
@@ -127,17 +111,27 @@ class AgenteSeletor(AgenteBase):
 
         deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
 
-        if self._agent is None:
+        if not self.config.api_key:
             logger.info("AgenteSeletor: cliente PydanticAI indisponível, usando fallback com esquema completo")
             return ResultadoSeletor(
                 esquema_filtrado=esquema_completo,
                 tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
                 tokens_usados=0,
             )
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+
+        model = MistralModel(self.config.model, api_key=self.config.api_key)
+        agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoSeletorLLM)
+        
+        @agent.system_prompt
+        def get_system_prompt(ctx) -> str:
+            return ctx.deps.sistema
 
         try:
-            # Usamos run_sync diretamente. O PydanticAI gerencia o loop interno.
-            resultado = self._agent.run_sync(pergunta, deps=deps)
+            resultado = agent.run_sync(pergunta, deps=deps)
             dados = resultado.data  # Será do tipo ResultadoSeletorLLM
             uso = resultado.usage()
             tokens_usados = uso.total_tokens if uso else 0

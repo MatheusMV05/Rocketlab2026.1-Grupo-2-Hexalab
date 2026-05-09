@@ -18,6 +18,12 @@ from app.agent.agentes.agente_decompositor import AgenteDecompositor
 from app.agent.db.leitor_esquema import ler_esquema
 
 def run():
+    import asyncio
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+
     api_key = os.getenv("MISTRAL_API_KEY")
     if not api_key:
         print("⚠️ ERRO: MISTRAL_API_KEY não foi encontrada no arquivo .env!")

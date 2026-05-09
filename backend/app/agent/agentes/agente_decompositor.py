@@ -4,7 +4,7 @@ import asyncio
 import logging
 import re
 from typing import Any
-
+from pydantic_ai.models.mistral import MistralModel
 from pydantic_ai import Agent
 
 from app.agent.Guardrail.guardrail import validar_sql_somente_leitura
@@ -29,16 +29,6 @@ class AgenteDecompositor(AgenteBase):
 
 	def __init__(self, config: Config | None = None) -> None:
 		super().__init__(config)
-		if self._agent is not None:
-			self._agent = Agent(
-				self._agent.model,
-				deps_type=ContextoAgente,
-				result_type=ResultadoDecompositorLLM,
-			)
-
-			@self._agent.system_prompt
-			def get_system_prompt(ctx):
-				return ctx.deps.sistema
 
 	def run(
 		self,
@@ -65,7 +55,7 @@ class AgenteDecompositor(AgenteBase):
 			examples=exemplos_normalizados,
 		)
 
-		if self._agent is None:
+		if not self.config.api_key:
 			return ResultadoDecompositor(
 				sql="",
 				raciocinio="Raciocínio não informado pelo modelo.",
@@ -73,8 +63,21 @@ class AgenteDecompositor(AgenteBase):
 			)
 
 		deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
+
 		try:
-			resultado = self._agent.run_sync(pergunta, deps=deps)
+			asyncio.get_event_loop()
+		except RuntimeError:
+			asyncio.set_event_loop(asyncio.new_event_loop())
+
+		model = MistralModel(self.config.model, api_key=self.config.api_key)
+		agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoDecompositorLLM)
+		
+		@agent.system_prompt
+		def get_system_prompt(ctx) -> str:
+			return ctx.deps.sistema
+
+		try:
+			resultado = agent.run_sync(pergunta, deps=deps)
 			dados = resultado.data
 			uso = resultado.usage()
 			tokens_usados = uso.total_tokens if uso else 0
