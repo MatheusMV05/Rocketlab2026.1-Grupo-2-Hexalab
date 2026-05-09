@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, Users, Box, ShoppingCart, Tag } from 'lucide-react'
+import logoVC from '../../assets/logos/Logo-vc.svg'
 
 const itensNav = [
   { para: '/', icone: LayoutDashboard, rotulo: 'Dashboard' },
@@ -17,7 +18,7 @@ export function BarraLateral() {
         className="flex items-center justify-center shrink-0"
         style={{ backgroundColor: '#3f7377', width: 104, height: 87 }}
       >
-        <span className="text-white font-bold text-xl leading-none tracking-wide">VC</span>
+        <img src={logoVC} alt="Logo VC" className="w-[52px] h-[52px] object-contain" />
       </div>
 
       {/* Fundo cinza claro da barra lateral abaixo do logo */}

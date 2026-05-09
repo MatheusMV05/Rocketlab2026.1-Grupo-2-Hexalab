@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Search, Bell, Settings } from 'lucide-react'
-import { Bot } from 'lucide-react'
+import logoAgente from '../../assets/logos/logo-agente.svg'
 
 interface Props {
   titulo: string
@@ -28,7 +28,7 @@ export function BarraTopo({ titulo }: Props) {
           to="/chat"
           className="flex items-center gap-2 text-[#343434] hover:text-[#3f7377] transition-colors"
         >
-          <Bot size={20} strokeWidth={1.5} className="text-[#3f7377]" />
+          <img src={logoAgente} alt="Logo Agente" className="w-[32px] h-[32px] object-contain" />
           <span className="text-[20px] font-semibold">Assistente</span>
         </Link>
 
