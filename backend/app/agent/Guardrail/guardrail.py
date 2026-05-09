@@ -18,7 +18,7 @@ TABELAS_PERMITIDAS = {
     "dim_data", 
     "fat_pedidos", 
     "fat_avaliacoes", 
-    "fat_tickets_suporte", 
+    "fat_tickets", 
     "fat_clickstream",
     "mart_desempenho_produtos", 
     "mart_cliente_360", 
