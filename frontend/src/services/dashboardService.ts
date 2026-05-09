@@ -5,6 +5,9 @@ import type {
   TopProdutosDados,
   RegiaoDados,
   StatusPedidosDados,
+  TaxaSatisfacaoDados,
+  MatrizProdutosDados,
+  EntregasDados,
 } from '../types/dashboard'
 
 const api = axios.create({
@@ -26,4 +29,15 @@ export const dashboardService = {
 
   buscarStatusPedidos: () =>
     api.get<StatusPedidosDados>('/dashboard/status-pedidos').then((r) => r.data),
+
+  buscarTaxaSatisfacao: () =>
+    api.get<TaxaSatisfacaoDados>('/dashboard/taxa-satisfacao').then((r) => r.data),
+
+  buscarMatrizProdutos: () =>
+    api.get<MatrizProdutosDados>('/dashboard/matriz-produtos').then((r) => r.data),
+
+  buscarEntregas: (pagina: number = 1, porPagina: number = 7) =>
+    api
+      .get<EntregasDados>('/dashboard/entregas', { params: { pagina, por_pagina: porPagina } })
+      .then((r) => r.data),
 }

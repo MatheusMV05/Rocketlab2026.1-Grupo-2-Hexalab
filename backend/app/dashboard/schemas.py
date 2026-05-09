@@ -46,3 +46,35 @@ class StatusPedidoItem(BaseModel):
 
 class StatusPedidosResponse(BaseModel):
     items: list[StatusPedidoItem]
+
+
+class TaxaSatisfacaoResponse(BaseModel):
+    valor: float
+    meta: float
+    total_avaliacoes: int
+
+
+class MatrizProdutoItem(BaseModel):
+    nome: str
+    volume: int
+    satisfacao: float
+    status: str
+
+
+class MatrizProdutosResponse(BaseModel):
+    items: list[MatrizProdutoItem]
+
+
+class EntregaItem(BaseModel):
+    id: str
+    cliente: str
+    status: str
+    prazo: str
+
+
+class EntregasResponse(BaseModel):
+    items: list[EntregaItem]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

@@ -12,15 +12,9 @@ import {
 } from 'lucide-react'
 import { BotaoFiltro } from '../atoms/BotaoFiltro'
 import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_NOME } from '../../constants/opcoesFiltro'
+import { useEntregas } from '../../hooks/useDashboard'
 
 type StatusEntrega = 'hoje' | 'no_prazo' | 'atrasado'
-
-interface Entrega {
-  id: string
-  cliente: string
-  status: StatusEntrega
-  prazo: string
-}
 
 interface FiltroEntregas {
   ano: string
@@ -28,16 +22,6 @@ interface FiltroEntregas {
   localidades: string[]
   status: StatusEntrega[]
 }
-
-const ENTREGAS_MOCK: Entrega[] = [
-  { id: '#f3221', cliente: 'Maria Day', status: 'hoje', prazo: '(limite às 18h)' },
-  { id: '#f3222', cliente: 'João Silva', status: 'no_prazo', prazo: '24/05/2026' },
-  { id: '#f3223', cliente: 'Ana Costa', status: 'hoje', prazo: '(limite às 9h)' },
-  { id: '#f3224', cliente: 'Carlos Mendes', status: 'atrasado', prazo: '21/05/2026' },
-  { id: '#f3225', cliente: 'Lúcia Ferreira', status: 'no_prazo', prazo: '26/05/2026' },
-  { id: '#f3226', cliente: 'Pedro Santos', status: 'no_prazo', prazo: '26/05/2026' },
-  { id: '#f3227', cliente: 'Mariana Oliveira', status: 'hoje', prazo: '(limite às 15h)' },
-]
 
 const STATUS_CONFIG: Record<StatusEntrega, { label: string; cor: string }> = {
   hoje: { label: 'Hoje', cor: '#e37405' },
@@ -52,8 +36,6 @@ const STATUS_OPCOES: { valor: StatusEntrega; label: string }[] = [
   { valor: 'hoje', label: 'Hoje' },
 ]
 
-const TOTAL_PAGINAS = 6
-
 const FILTRO_VAZIO: FiltroEntregas = { ano: '', mes: '', localidades: [], status: [] }
 
 
@@ -66,6 +48,10 @@ export function ListaEntregas() {
   const [filtroAberto, setFiltroAberto] = useState(false)
   const [filtro, setFiltro] = useState<FiltroEntregas>(FILTRO_VAZIO)
   const [filtroTemp, setFiltroTemp] = useState<FiltroEntregas>(FILTRO_VAZIO)
+
+  const { data, isLoading, isError } = useEntregas(paginaAtual)
+  const entregas = data?.items ?? []
+  const totalPaginas = data?.total_paginas ?? 1
 
   function abrirFiltro() {
     setFiltroTemp(filtro)
@@ -263,8 +249,18 @@ export function ListaEntregas() {
       <div className="border-t border-[#e0e0e0] mx-1" />
 
       {/* Linhas da tabela */}
-      {ENTREGAS_MOCK.map((entrega, idx) => {
-        const cfg = STATUS_CONFIG[entrega.status]
+      {isLoading && (
+        <div className="flex items-center justify-center py-8 text-[#4d4d4d] text-sm">
+          Carregando...
+        </div>
+      )}
+      {isError && (
+        <div className="flex items-center justify-center py-8 text-[#c20000] text-sm">
+          Erro ao carregar entregas
+        </div>
+      )}
+      {!isLoading && !isError && entregas.map((entrega, idx) => {
+        const cfg = STATUS_CONFIG[entrega.status as StatusEntrega] ?? { label: entrega.status, cor: '#4d4d4d' }
         return (
           <div key={entrega.id}>
             <div className="flex items-center gap-[6px] pl-[6px] py-[10px]">
@@ -288,7 +284,7 @@ export function ListaEntregas() {
                 {entrega.prazo}
               </span>
             </div>
-            {idx < ENTREGAS_MOCK.length - 1 && (
+            {idx < entregas.length - 1 && (
               <div className="border-t border-[#e0e0e0] mx-1" />
             )}
           </div>
@@ -305,7 +301,7 @@ export function ListaEntregas() {
           <ChevronLeft size={18} />
         </button>
 
-        {Array.from({ length: TOTAL_PAGINAS }, (_, i) => i + 1).map((p) => (
+        {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((p) => (
           <button
             key={p}
             className={`flex items-center justify-center w-7 h-7 rounded-[5px] text-[14px] font-medium transition-colors ${
@@ -321,8 +317,8 @@ export function ListaEntregas() {
 
         <button
           className="flex items-center justify-center w-6 h-6 text-[#4d4d4d] hover:text-[#3f7377] transition-colors disabled:opacity-30"
-          onClick={() => setPaginaAtual((p) => Math.min(TOTAL_PAGINAS, p + 1))}
-          disabled={paginaAtual === TOTAL_PAGINAS}
+          onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+          disabled={paginaAtual === totalPaginas}
         >
           <ChevronRight size={18} />
         </button>

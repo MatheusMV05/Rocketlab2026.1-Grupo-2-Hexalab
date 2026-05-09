@@ -11,6 +11,11 @@ from app.dashboard.schemas import (
     RegiaoItem,
     StatusPedidosResponse,
     StatusPedidoItem,
+    TaxaSatisfacaoResponse,
+    MatrizProdutosResponse,
+    MatrizProdutoItem,
+    EntregasResponse,
+    EntregaItem,
 )
 
 
@@ -73,3 +78,26 @@ async def get_status_pedidos(db: AsyncSession) -> StatusPedidosResponse:
         reverse=True,
     )
     return StatusPedidosResponse(items=items)
+
+
+async def get_taxa_satisfacao(db: AsyncSession) -> TaxaSatisfacaoResponse:
+    data = await repository.get_taxa_satisfacao(db)
+    return TaxaSatisfacaoResponse(**data)
+
+
+async def get_matriz_produtos(db: AsyncSession) -> MatrizProdutosResponse:
+    data = await repository.get_matriz_produtos(db)
+    items = [MatrizProdutoItem(**item) for item in data]
+    return MatrizProdutosResponse(items=items)
+
+
+async def get_entregas(db: AsyncSession, pagina: int = 1, por_pagina: int = 7) -> EntregasResponse:
+    data = await repository.get_entregas(db, pagina, por_pagina)
+    items = [EntregaItem(**item) for item in data["items"]]
+    return EntregasResponse(
+        items=items,
+        total=data["total"],
+        pagina=data["pagina"],
+        por_pagina=data["por_pagina"],
+        total_paginas=data["total_paginas"],
+    )

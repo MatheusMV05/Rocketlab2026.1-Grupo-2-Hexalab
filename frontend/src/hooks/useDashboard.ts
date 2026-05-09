@@ -35,3 +35,24 @@ export function useStatusPedidos() {
     queryFn: dashboardService.buscarStatusPedidos,
   })
 }
+
+export function useTaxaSatisfacao() {
+  return useQuery({
+    queryKey: ['dashboard', 'taxa-satisfacao'],
+    queryFn: dashboardService.buscarTaxaSatisfacao,
+  })
+}
+
+export function useMatrizProdutos() {
+  return useQuery({
+    queryKey: ['dashboard', 'matriz-produtos'],
+    queryFn: dashboardService.buscarMatrizProdutos,
+  })
+}
+
+export function useEntregas(pagina: number, porPagina: number = 7) {
+  return useQuery({
+    queryKey: ['dashboard', 'entregas', pagina, porPagina],
+    queryFn: () => dashboardService.buscarEntregas(pagina, porPagina),
+  })
+}

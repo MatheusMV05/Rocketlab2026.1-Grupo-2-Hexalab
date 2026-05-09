@@ -44,3 +44,35 @@ export interface StatusPedidoItem {
 export interface StatusPedidosDados {
   items: StatusPedidoItem[]
 }
+
+export interface TaxaSatisfacaoDados {
+  valor: number
+  meta: number
+  total_avaliacoes: number
+}
+
+export interface MatrizProdutoItem {
+  nome: string
+  volume: number
+  satisfacao: number
+  status: string
+}
+
+export interface MatrizProdutosDados {
+  items: MatrizProdutoItem[]
+}
+
+export interface EntregaItem {
+  id: string
+  cliente: string
+  status: string
+  prazo: string
+}
+
+export interface EntregasDados {
+  items: EntregaItem[]
+  total: number
+  pagina: number
+  por_pagina: number
+  total_paginas: number
+}

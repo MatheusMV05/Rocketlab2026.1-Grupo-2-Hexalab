@@ -12,19 +12,7 @@ import {
 } from 'recharts'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
 import { TooltipMatriz } from '../molecules/TooltipMatriz'
-
-/* ─── Dados mock ─────────────────────────────────────────────────────────── */
-const PRODUTOS_MOCK = [
-  { nome: 'Sofá Retrátil', volume: 850, satisfacao: 4.5, status: 'bom' },
-  { nome: 'Fone Bluetooth XYZ', volume: 1050, satisfacao: 4.4, status: 'bom' },
-  { nome: 'Bicicleta Aro 29', volume: 1250, satisfacao: 4.2, status: 'bom' },
-  { nome: 'Monitor 24" Básico', volume: 1100, satisfacao: 3.0, status: 'neutro' },
-  { nome: 'Máquina Lavar Ultra', volume: 1200, satisfacao: 2.6, status: 'ruim' },
-  { nome: 'Roteador Wi-Fi Antigo', volume: 400, satisfacao: 2.3, status: 'ruim' },
-  { nome: 'Capa Celular Genérica', volume: 420, satisfacao: 2.0, status: 'ruim' },
-  { nome: 'Teclado Mecânico', volume: 2700, satisfacao: 1.5, status: 'ruim' },
-  { nome: 'Perfume Premium', volume: 3400, satisfacao: 4.3, status: 'bom' },
-]
+import { useMatrizProdutos } from '../../hooks/useDashboard'
 
 const COR_PONTO: Record<string, string> = {
   bom: '#1a9a45',
@@ -113,6 +101,9 @@ interface Props {
 
 /* ─── Componente ─────────────────────────────────────────────────────────── */
 export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props) {
+  const { data, isLoading, isError } = useMatrizProdutos()
+  const produtos = data?.items ?? []
+
   return (
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 flex flex-col">
       {/* Filtro absoluto no topo direito */}
@@ -135,7 +126,17 @@ export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props)
 
       {/* Gráfico de dispersão */}
       <div style={{ height: 320 }}>
-        <ResponsiveContainer width="100%" height="100%">
+        {isLoading && (
+          <div className="flex items-center justify-center h-full text-[#4d4d4d] text-sm">
+            Carregando...
+          </div>
+        )}
+        {isError && (
+          <div className="flex items-center justify-center h-full text-[#c20000] text-sm">
+            Erro ao carregar dados
+          </div>
+        )}
+        {!isLoading && !isError && <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 16, right: 24, left: 0, bottom: 20 }}>
             <CartesianGrid strokeDasharray="4 4" stroke="#e8e8e8" />
 
@@ -269,7 +270,7 @@ export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props)
 
             {/* ── Pontos de dispersão ── */}
             <Scatter
-              data={PRODUTOS_MOCK}
+              data={produtos}
               shape={(props: {
                 cx?: number
                 cy?: number
@@ -294,7 +295,7 @@ export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props)
               }}
             />
           </ScatterChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </div>
 
       {/* Legenda */}

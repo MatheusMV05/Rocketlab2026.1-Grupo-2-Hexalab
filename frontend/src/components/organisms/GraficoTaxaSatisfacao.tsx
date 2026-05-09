@@ -1,5 +1,6 @@
 import { TagVariacao } from '../atoms/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
+import { useTaxaSatisfacao } from '../../hooks/useDashboard'
 
 // ─── Constantes do gauge (espelham o medidor-dashboard de referência) ─────────
 const GCX = 280
@@ -55,11 +56,13 @@ interface Props {
   onFiltrosChange: (f: FiltrosPeriodo) => void
 }
 
-const VALOR = 88
-const META = 90
-const TOTAL_AVALIACOES = 115
-
 export function GraficoTaxaSatisfacao({ filtros, onFiltrosChange }: Props) {
+  const { data, isLoading } = useTaxaSatisfacao()
+
+  const VALOR = data?.valor ?? 88
+  const META = data?.meta ?? 90
+  const TOTAL_AVALIACOES = data?.total_avaliacoes ?? 0
+
   const metaAngle = pctToRad(META)
   const mcos = Math.cos(metaAngle)
   const msin = Math.sin(metaAngle)
@@ -181,13 +184,13 @@ export function GraficoTaxaSatisfacao({ filtros, onFiltrosChange }: Props) {
         {/* Estatísticas */}
         <div className="flex flex-col items-center -mt-2">
           <span className="text-[48px] font-bold text-black leading-none">
-            {VALOR}%
+            {isLoading ? '...' : `${VALOR}%`}
           </span>
           <div className="mt-2">
             <TagVariacao valor="+3%/ABR" tipo="bom" />
           </div>
           <span className="text-[12px] font-medium text-[#4d4d4d] mt-2">
-            Baseado em {TOTAL_AVALIACOES} avaliações
+            {isLoading ? '' : `Baseado em ${TOTAL_AVALIACOES} avaliações`}
           </span>
         </div>
       </div>
