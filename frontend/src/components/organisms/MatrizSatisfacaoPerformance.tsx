@@ -278,17 +278,28 @@ export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props)
               }) => {
                 const { cx = 0, cy = 0, payload } = props
                 const cor = COR_PONTO[payload?.status ?? 'neutro']
+                const nome = payload?.nome ?? ''
+                const labelW = nome.length * 5.5 + 6
                 return (
                   <g>
                     <circle cx={cx} cy={cy} r={6} fill={cor} />
-                    <text
+                    <rect
                       x={cx + 8}
+                      y={cy - 6}
+                      width={labelW}
+                      height={13}
+                      fill="white"
+                      fillOpacity={0.85}
+                      rx={2}
+                    />
+                    <text
+                      x={cx + 11}
                       y={cy + 4}
                       fontSize={9}
                       fill="#343434"
                       className="pointer-events-none"
                     >
-                      {payload?.nome}
+                      {nome}
                     </text>
                   </g>
                 )

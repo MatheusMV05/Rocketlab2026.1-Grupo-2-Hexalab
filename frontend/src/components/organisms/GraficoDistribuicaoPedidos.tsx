@@ -49,26 +49,26 @@ export function GraficoDistribuicaoPedidos({ filtros, onFiltrosChange }: Props) 
   }))
 
   return (
-    <div className="bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 h-full flex flex-col">
-      {/* Cabeçalho: título à esquerda, filtros à direita */}
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="min-w-0">
-          <h3 className="text-[18px] font-bold text-[#1d5358]">
-            Distribuição de pedidos por status
-          </h3>
-          <div className="flex items-center gap-1 mt-1 text-[11px]">
-            <span className="text-[#343434] font-medium">Total de pedidos no mês:</span>
-            <span className="font-bold text-[#343434]">{total || '—'}</span>
-            {total > 0 && <TagVariacao valor="+12%/ABR" tipo="bom" />}
-          </div>
-        </div>
-        <div className="shrink-0">
-          <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+    <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
+      {/* Filtros: absoluto no topo direito */}
+      <div className="absolute top-[13px] right-[14px]">
+        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+      </div>
+
+      {/* Cabeçalho abaixo dos filtros */}
+      <div className="px-4 pt-[50px] pb-2">
+        <h3 className="text-[18px] font-bold text-[#1d5358]">
+          Distribuição de pedidos por status
+        </h3>
+        <div className="flex items-center gap-1 mt-1 text-[11px]">
+          <span className="text-[#343434] font-medium">Total de pedidos no mês:</span>
+          <span className="font-bold text-[#343434]">{total || '—'}</span>
+          {total > 0 && <TagVariacao valor="+12%/ABR" tipo="bom" />}
         </div>
       </div>
 
       {/* Gráfico */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 px-4 pb-4">
         {isLoading && (
           <div className="flex items-center justify-center h-full text-[#4d4d4d] text-sm">
             Carregando...

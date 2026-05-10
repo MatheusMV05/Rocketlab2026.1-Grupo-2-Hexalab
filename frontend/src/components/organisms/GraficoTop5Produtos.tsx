@@ -39,36 +39,36 @@ export function GraficoTop5Produtos({ filtros, onFiltrosChange }: Props) {
   const isReceita = tipoDado === 'Receita'
 
   return (
-    <div className="bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 h-full flex flex-col">
-      {/* Cabeçalho: título à esquerda, filtros à direita */}
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="text-[18px] font-bold text-[#1d5358] min-w-0">
+    <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
+      {/* Filtros: absoluto no topo direito */}
+      <div className="absolute top-[13px] right-[14px]">
+        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+      </div>
+
+      {/* Cabeçalho abaixo dos filtros */}
+      <div className="px-4 pt-[50px] pb-2">
+        <h3 className="text-[18px] font-bold text-[#1d5358]">
           Top 5 Produtos Mais Vendidos
         </h3>
-        <div className="shrink-0">
-          <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+      </div>
+
+      {/* Dropdown único "Dados: Volume/Receita" — conforme protótipo */}
+      <div className="px-4 mb-2">
+        <div className="relative inline-block">
+          <select
+            value={tipoDado}
+            onChange={(e) => setTipoDado(e.target.value)}
+            className="h-[30px] pl-2 pr-7 text-[13px] font-medium rounded-[4px] border border-[#e0e0e0] bg-white text-[#262626] appearance-none cursor-pointer focus:outline-none focus:border-[#3f7377]"
+          >
+            <option value="Volume">Dados: Volume</option>
+            <option value="Receita">Dados: Receita</option>
+          </select>
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#4d4d4d] text-xs">▼</span>
         </div>
       </div>
 
-      {/* Toggle Receita / Volume — botões do SVG (175px cada, gap 21px) */}
-      <div className="flex gap-[21px] mb-2">
-        {(['Receita', 'Volume'] as const).map((modo) => (
-          <button
-            key={modo}
-            onClick={() => setTipoDado(modo)}
-            className={`h-[28px] w-[175px] text-[13px] font-medium rounded-[4px] border-2 transition-colors ${
-              tipoDado === modo
-                ? 'bg-white border-[#e0e0e0] text-[#262626]'
-                : 'bg-[#f6f7f9] border-[#e0e0e0] text-[#262626]'
-            }`}
-          >
-            {modo}
-          </button>
-        ))}
-      </div>
-
       {/* Subtítulo com total */}
-      <div className="flex items-center gap-1 mb-2 text-[11px]">
+      <div className="flex items-center gap-1 px-4 mb-2 text-[11px]">
         <span className="text-[#343434] font-medium">
           {isReceita ? 'Receita Total dos Top 5:' : 'Volume Total dos Top 5:'}
         </span>

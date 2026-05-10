@@ -7,11 +7,23 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  type DotProps,
 } from 'recharts'
 import { useVendasMensal } from '../../hooks/useDashboard'
 import { TagVariacao } from '../atoms/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
 import { formatarMes, formatarReais } from '../../utils/formatadores'
+
+function TrianguloMeta(props: DotProps) {
+  const { cx = 0, cy = 0 } = props
+  const s = 5
+  return (
+    <polygon
+      points={`${cx},${cy - s} ${cx - s},${cy + s} ${cx + s},${cy + s}`}
+      fill="#b0b0b0"
+    />
+  )
+}
 
 interface Props {
   filtros: FiltrosPeriodo
@@ -82,13 +94,13 @@ export function GraficoReceitaMensal({ filtros, onFiltrosChange }: Props) {
               <Tooltip
                 formatter={(valor: number, nome: string) => [
                   `R$ ${valor.toLocaleString('pt-BR')}`,
-                  nome === 'receita' ? 'Receita realizada' : 'Meta sazonal',
+                  nome === 'receita' ? 'Receita realizada' : 'Meta ponderada',
                 ]}
                 contentStyle={{ fontSize: 11, borderColor: '#e0e0e0', borderRadius: 5 }}
               />
               <Legend
                 formatter={(value) =>
-                  value === 'receita' ? 'Receita realizada' : 'Meta sazonal'
+                  value === 'receita' ? 'Receita realizada' : 'Meta ponderada'
                 }
                 wrapperStyle={{ fontSize: 11 }}
               />
@@ -103,10 +115,11 @@ export function GraficoReceitaMensal({ filtros, onFiltrosChange }: Props) {
               <Line
                 type="monotone"
                 dataKey="meta"
-                stroke="#e0e0e0"
-                strokeWidth={2}
-                strokeDasharray="5 3"
-                dot={false}
+                stroke="#b0b0b0"
+                strokeWidth={1.5}
+                strokeDasharray="8 4"
+                dot={<TrianguloMeta />}
+                activeDot={{ r: 5 }}
               />
             </LineChart>
           </ResponsiveContainer>
