@@ -10,6 +10,8 @@ env/
 # Backend DB
 backend/data/*.db
 banco.db
+database.zip
+backend/data/*.zip
 
 
 # Node
