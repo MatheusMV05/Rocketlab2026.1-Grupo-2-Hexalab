@@ -12,6 +12,7 @@ from app.dashboard.schemas import (
     TaxaSatisfacaoResponse,
     MatrizProdutosResponse,
     EntregasResponse,
+    ReceitaGraficoResponse,
 )
 
 router = APIRouter()
@@ -78,6 +79,20 @@ async def get_matriz_produtos(db: AsyncSession = Depends(get_db)):
         return await service.get_matriz_produtos(db)
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao buscar matriz de produtos.")
+
+
+@router.get("/receita-grafico", response_model=ReceitaGraficoResponse)
+# Dados do gráfico de receita com granularidade dinâmica: semanal, comparativo entre anos, ou mensal
+async def get_receita_grafico(
+    ano: str = "",
+    mes: str = "",
+    localidade: str = "",
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await service.get_receita_grafico(db, ano, mes, localidade)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao buscar dados do gráfico de receita.")
 
 
 @router.get("/entregas", response_model=EntregasResponse)

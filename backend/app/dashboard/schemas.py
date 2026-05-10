@@ -65,6 +65,17 @@ class MatrizProdutosResponse(BaseModel):
     items: list[MatrizProdutoItem]
 
 
+class ReceitaGraficoItem(BaseModel):
+    label: str
+    receita: float
+    meta: float
+
+
+class ReceitaGraficoResponse(BaseModel):
+    items: list[ReceitaGraficoItem]
+    modo: str  # "semanal" | "comparativo" | "mensal"
+
+
 class EntregaItem(BaseModel):
     id: str
     cliente: str

@@ -69,6 +69,17 @@ export interface EntregaItem {
   prazo: string
 }
 
+export interface ReceitaGraficoItem {
+  label: string
+  receita: number
+  meta: number
+}
+
+export interface ReceitaGraficoDados {
+  items: ReceitaGraficoItem[]
+  modo: 'semanal' | 'comparativo' | 'mensal'
+}
+
 export interface EntregasDados {
   items: EntregaItem[]
   total: number

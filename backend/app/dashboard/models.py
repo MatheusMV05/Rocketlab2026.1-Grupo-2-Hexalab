@@ -1,5 +1,52 @@
 # Mocks internos do dashboard serão substituídos pelas queries reais quando os outros módulos estiverem prontos e os dados reais disponiblizados.
 
+# ── Dados auxiliares para mock_receita_grafico ────────────────────────────────
+
+_MESES_NOME_ABREV = {
+    "Janeiro": "Jan", "Fevereiro": "Fev", "Março": "Mar", "Abril": "Abr",
+    "Maio": "Mai", "Junho": "Jun", "Julho": "Jul", "Agosto": "Ago",
+    "Setembro": "Set", "Outubro": "Out", "Novembro": "Nov", "Dezembro": "Dez",
+}
+
+_ABREV_ORDEM = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+_RECEITA_BASE: dict[tuple[str, str], float] = {
+    ("Jun", "2024"): 28750.00, ("Jul", "2024"): 32140.00, ("Ago", "2024"): 38920.75,
+    ("Set", "2024"): 41380.20, ("Out", "2024"): 45210.90, ("Nov", "2024"): 62890.40,
+    ("Dez", "2024"): 78430.60,
+    ("Jan", "2025"): 35670.30, ("Fev", "2025"): 33210.15, ("Mar", "2025"): 44580.00,
+    ("Abr", "2025"): 51340.70, ("Mai", "2025"): 23545.50,
+    # Anos sintéticos para modo comparativo
+    ("Jan", "2022"): 18000.00, ("Fev", "2022"): 17200.00, ("Mar", "2022"): 21500.00,
+    ("Abr", "2022"): 22800.00, ("Mai", "2022"): 19400.00, ("Jun", "2022"): 20100.00,
+    ("Jul", "2022"): 22300.00, ("Ago", "2022"): 26400.00, ("Set", "2022"): 28100.00,
+    ("Out", "2022"): 30200.00, ("Nov", "2022"): 42100.00, ("Dez", "2022"): 52800.00,
+    ("Jan", "2023"): 24500.00, ("Fev", "2023"): 23100.00, ("Mar", "2023"): 29800.00,
+    ("Abr", "2023"): 31200.00, ("Mai", "2023"): 26400.00, ("Jun", "2023"): 23900.00,
+    ("Jul", "2023"): 27100.00, ("Ago", "2023"): 32800.00, ("Set", "2023"): 35200.00,
+    ("Out", "2023"): 38900.00, ("Nov", "2023"): 55300.00, ("Dez", "2023"): 67400.00,
+}
+
+_SEMANAS_FRAC: dict[str, list[float]] = {
+    "Jan": [0.22, 0.28, 0.30, 0.20], "Fev": [0.24, 0.26, 0.28, 0.22],
+    "Mar": [0.20, 0.27, 0.32, 0.21], "Abr": [0.25, 0.25, 0.28, 0.22],
+    "Mai": [0.23, 0.29, 0.27, 0.21], "Jun": [0.22, 0.26, 0.30, 0.22],
+    "Jul": [0.24, 0.25, 0.29, 0.22], "Ago": [0.21, 0.27, 0.31, 0.21],
+    "Set": [0.23, 0.26, 0.29, 0.22], "Out": [0.22, 0.27, 0.30, 0.21],
+    "Nov": [0.20, 0.25, 0.35, 0.20], "Dez": [0.23, 0.28, 0.31, 0.18],
+}
+
+_LOCALIDADE_FATOR: dict[str, float] = {
+    "SP": 0.29, "RJ": 0.16, "MG": 0.11, "PR": 0.08, "RS": 0.07,
+    "BA": 0.06, "SC": 0.06, "CE": 0.05, "PE": 0.04, "GO": 0.04,
+    "MA": 0.03, "PA": 0.02, "ES": 0.03, "PB": 0.02, "RN": 0.02,
+    "AL": 0.01, "PI": 0.01, "MS": 0.02, "MT": 0.02, "DF": 0.03,
+    "RO": 0.01, "TO": 0.01, "AC": 0.005, "AP": 0.005, "RR": 0.005,
+    "AM": 0.01, "SE": 0.01,
+}
+
+_META_FRAC = 0.9
+
 
 # TODO: substituir pela query real —> depende do módulo pedidos e clientes
 def mock_kpis() -> dict:
@@ -94,6 +141,57 @@ def mock_matriz_produtos() -> list[dict]:
         {"nome": "Teclado Mecânico", "volume": 2700, "satisfacao": 1.5, "status": "ruim"},
         {"nome": "Perfume Premium", "volume": 3400, "satisfacao": 4.3, "status": "bom"},
     ]
+
+
+# TODO: substituir pela query real —> depende do módulo pedidos
+def mock_receita_grafico(ano: str = "", mes: str = "", localidade: str = "") -> dict:
+    abrev = _MESES_NOME_ABREV.get(mes, "")
+    loc_fator = _LOCALIDADE_FATOR.get(localidade, 1.0) if localidade else 1.0
+
+    if ano and abrev:
+        # Modo semanal: semanas do mês/ano selecionado
+        base = _RECEITA_BASE.get((abrev, ano), 40000.0)
+        fracs = _SEMANAS_FRAC.get(abrev, [0.25, 0.25, 0.25, 0.25])
+        items = [
+            {
+                "label": f"Semana {i + 1}",
+                "receita": round(base * f * loc_fator, 2),
+                "meta": round(base * f * loc_fator * _META_FRAC, 2),
+            }
+            for i, f in enumerate(fracs)
+        ]
+        return {"items": items, "modo": "semanal"}
+
+    elif not ano and abrev:
+        # Modo comparativo: mesmo mês em vários anos
+        anos = ["2022", "2023", "2024", "2025"]
+        items = []
+        for a in anos:
+            receita = _RECEITA_BASE.get((abrev, a))
+            if receita is not None:
+                items.append({
+                    "label": f"{abrev}/{a}",
+                    "receita": round(receita * loc_fator, 2),
+                    "meta": round(receita * loc_fator * _META_FRAC, 2),
+                })
+        return {"items": items, "modo": "comparativo"}
+
+    else:
+        # Modo mensal: linha do tempo (filtrado por ano se informado)
+        dados = sorted(
+            _RECEITA_BASE.items(),
+            key=lambda x: (x[0][1], _ABREV_ORDEM.index(x[0][0])),
+        )
+        items = []
+        for (mes_abr, a), receita in dados:
+            if ano and a != ano:
+                continue
+            items.append({
+                "label": f"{mes_abr}/{a}",
+                "receita": round(receita * loc_fator, 2),
+                "meta": round(receita * loc_fator * _META_FRAC, 2),
+            })
+        return {"items": items, "modo": "mensal"}
 
 
 # TODO: substituir pela query real —> depende do módulo pedidos/logística

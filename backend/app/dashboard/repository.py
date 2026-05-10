@@ -9,6 +9,7 @@ from app.dashboard.models import (
     mock_taxa_satisfacao,
     mock_matriz_produtos,
     mock_entregas,
+    mock_receita_grafico,
 )
 
 
@@ -45,6 +46,11 @@ async def get_taxa_satisfacao(db: AsyncSession) -> dict:
 # TODO: substituir pela query real —> depende dos módulos produtos e avaliações
 async def get_matriz_produtos(db: AsyncSession) -> list[dict]:
     return mock_matriz_produtos()
+
+
+# TODO: substituir pela query real —> depende do módulo pedidos
+async def get_receita_grafico(db: AsyncSession, ano: str = "", mes: str = "", localidade: str = "") -> dict:
+    return mock_receita_grafico(ano, mes, localidade)
 
 
 # TODO: substituir pela query real —> depende do módulo pedidos/logística

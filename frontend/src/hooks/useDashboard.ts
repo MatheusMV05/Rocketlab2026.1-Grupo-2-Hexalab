@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { dashboardService } from '../services/dashboardService'
+import type { FiltrosPeriodo } from '../components/molecules/FiltroPeriodo'
 
 export function useKpis() {
   return useQuery({
@@ -47,6 +48,18 @@ export function useMatrizProdutos() {
   return useQuery({
     queryKey: ['dashboard', 'matriz-produtos'],
     queryFn: dashboardService.buscarMatrizProdutos,
+  })
+}
+
+export function useReceitaGrafico(filtros: FiltrosPeriodo) {
+  return useQuery({
+    queryKey: ['dashboard', 'receita-grafico', filtros.ano, filtros.mes, filtros.localidade],
+    queryFn: () =>
+      dashboardService.buscarReceitaGrafico({
+        ano: filtros.ano || undefined,
+        mes: filtros.mes || undefined,
+        localidade: filtros.localidade || undefined,
+      }),
   })
 }
 

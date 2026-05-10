@@ -16,6 +16,8 @@ from app.dashboard.schemas import (
     MatrizProdutoItem,
     EntregasResponse,
     EntregaItem,
+    ReceitaGraficoItem,
+    ReceitaGraficoResponse,
 )
 
 
@@ -89,6 +91,14 @@ async def get_matriz_produtos(db: AsyncSession) -> MatrizProdutosResponse:
     data = await repository.get_matriz_produtos(db)
     items = [MatrizProdutoItem(**item) for item in data]
     return MatrizProdutosResponse(items=items)
+
+
+async def get_receita_grafico(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> ReceitaGraficoResponse:
+    data = await repository.get_receita_grafico(db, ano, mes, localidade)
+    items = [ReceitaGraficoItem(**item) for item in data["items"]]
+    return ReceitaGraficoResponse(items=items, modo=data["modo"])
 
 
 async def get_entregas(db: AsyncSession, pagina: int = 1, por_pagina: int = 7) -> EntregasResponse:

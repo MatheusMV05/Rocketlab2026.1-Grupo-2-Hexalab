@@ -1,5 +1,5 @@
 import { DropdownFiltro } from '../atoms/DropdownFiltro'
-import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_SIGLA } from '../../constants/opcoesFiltro'
+import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_NOME } from '../../constants/opcoesFiltro'
 
 export interface FiltrosPeriodo {
   ano: string
@@ -31,7 +31,7 @@ export function FiltroPeriodo({ filtros, onChange }: Props) {
       />
       <DropdownFiltro
         label="Localidade"
-        opcoes={ESTADOS_SIGLA}
+        opcoes={ESTADOS_NOME}
         valor={filtros.localidade}
         onChange={(v) => onChange({ ...filtros, localidade: v })}
         rotulo="Localidade"
