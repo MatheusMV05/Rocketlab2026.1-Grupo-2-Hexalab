@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
+from app.dashboard.router import router as dashboard_router
 
 
 @asynccontextmanager
@@ -11,7 +12,6 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-
 
 app = FastAPI(
     title="V-Commerce CRM 360",
@@ -31,7 +31,7 @@ app.add_middleware(
 # Exemplo: app.include_router(dashboard_router)
 from app.clientes.router import router as clientes_router
 from app.pedidos.router import router as pedidos_router
-
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(clientes_router)
 app.include_router(produtos_router)
 app.include_router(pedidos_router)

@@ -1,0 +1,128 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.dashboard import repository
+from app.dashboard.schemas import (
+    KpiResponse,
+    VendasMensalResponse,
+    VendasMensalItem,
+    TopProdutosResponse,
+    TopProdutoItem,
+    RegiaoResponse,
+    RegiaoItem,
+    StatusPedidosResponse,
+    StatusPedidoItem,
+    TaxaSatisfacaoResponse,
+    MatrizProdutosResponse,
+    MatrizProdutoItem,
+    EntregasResponse,
+    EntregaItem,
+    ReceitaGraficoItem,
+    ReceitaGraficoResponse,
+)
+
+
+async def get_kpis(db: AsyncSession) -> KpiResponse:
+    data = await repository.get_kpis(db)
+    return KpiResponse(**data)
+
+
+_MESES = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6,
+          "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
+
+
+def _mes_ano_para_ordem(mes_ano: str) -> tuple[int, int]:
+    mes, ano = mes_ano.split("/")
+    return int(ano), _MESES[mes]
+
+
+async def get_vendas_mensal(db: AsyncSession) -> VendasMensalResponse:
+    data = await repository.get_vendas_mensal(db)
+    items = sorted(
+        [VendasMensalItem(**item) for item in data],
+        key=lambda x: _mes_ano_para_ordem(x.mes_ano),
+    )
+    return VendasMensalResponse(items=items)
+
+
+async def get_top_produtos(db: AsyncSession) -> TopProdutosResponse:
+    data = await repository.get_top_produtos(db)
+    items = sorted(
+        [TopProdutoItem(**item) for item in data],
+        key=lambda x: x.receita_total,
+        reverse=True,
+    )
+    return TopProdutosResponse(items=items)
+
+
+async def get_por_regiao(db: AsyncSession) -> RegiaoResponse:
+    data = await repository.get_por_regiao(db)
+    items = sorted(
+        [RegiaoItem(**item) for item in data],
+        key=lambda x: x.receita_total,
+        reverse=True,
+    )
+    return RegiaoResponse(items=items)
+
+
+async def get_status_pedidos(db: AsyncSession) -> StatusPedidosResponse:
+    data = await repository.get_status_pedidos(db)
+    total = sum(item["total"] for item in data)
+    items = sorted(
+        [
+            StatusPedidoItem(
+                status=item["status"],
+                total=item["total"],
+                percentual=round(item["total"] / total * 100, 2) if total > 0 else 0.0,
+            )
+            for item in data
+        ],
+        key=lambda x: x.total,
+        reverse=True,
+    )
+    return StatusPedidosResponse(items=items)
+
+
+async def get_taxa_satisfacao(db: AsyncSession) -> TaxaSatisfacaoResponse:
+    data = await repository.get_taxa_satisfacao(db)
+    return TaxaSatisfacaoResponse(**data)
+
+
+async def get_matriz_produtos(db: AsyncSession) -> MatrizProdutosResponse:
+    data = await repository.get_matriz_produtos(db)
+    items = [MatrizProdutoItem(**item) for item in data]
+    return MatrizProdutosResponse(items=items)
+
+
+async def get_receita_grafico(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> ReceitaGraficoResponse:
+    data = await repository.get_receita_grafico(db, ano, mes, localidade)
+    items = [ReceitaGraficoItem(**item) for item in data["items"]]
+    return ReceitaGraficoResponse(items=items, modo=data["modo"])
+
+
+async def get_entregas(
+    db: AsyncSession,
+    pagina: int = 1,
+    por_pagina: int = 7,
+    status: list[str] | None = None,
+    ano: str = "",
+    mes: str = "",
+) -> EntregasResponse:
+    data = await repository.get_entregas(db, pagina, por_pagina, status, ano, mes)
+    items = [EntregaItem(**item) for item in data["items"]]
+    return EntregasResponse(
+        items=items,
+        total=data["total"],
+        pagina=data["pagina"],
+        por_pagina=data["por_pagina"],
+        total_paginas=data["total_paginas"],
+    )
+
+
+async def atualizar_entrega(db: AsyncSession, id_entrega: str, dados: dict) -> EntregaItem:
+    campos = {k: v for k, v in dados.items() if v is not None}
+    result = await repository.atualizar_entrega(db, id_entrega, campos)
+    if result is None:
+        raise ValueError(f"Entrega {id_entrega} não encontrada")
+    return EntregaItem(**result)
