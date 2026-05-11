@@ -3,7 +3,7 @@ import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
 import { useTaxaSatisfacao } from '../../../hooks/useDashboard'
 
-// ─── Constantes do gauge (espelham o medidor-dashboard de referência) ─────────
+// Constantes do gauge (espelham o medidor-dashboard de referência)
 const GCX = 280
 const GCY = 200
 const OUTER_R = 155
@@ -51,7 +51,7 @@ function arcSegment(startPct: number, endPct: number): string {
   ].join(' ')
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+// Props
 interface Props {
   filtrosGlobais: FiltrosPeriodo
 }

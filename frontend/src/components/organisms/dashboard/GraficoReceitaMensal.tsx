@@ -15,7 +15,7 @@ import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
 import { formatarReais } from '../../../utils/formatadores'
 
-/* ── Tooltip ─────────────────────────────────────────────────────────────── */
+// Tooltip
 function TooltipReceita(props: TooltipProps<number, string>) {
   const { active, payload, label } = props
   if (!active || !payload || payload.length === 0) return null
@@ -75,19 +75,19 @@ function TooltipReceita(props: TooltipProps<number, string>) {
   )
 }
 
-/* ── Triângulo nos dots da linha de meta ─────────────────────────────────── */
+// Triângulo nos dots da linha de meta
 function TrianguloMeta(props: DotProps) {
   const { cx = 0, cy = 0 } = props
   const s = 5
   return <polygon points={`${cx},${cy - s} ${cx - s},${cy + s} ${cx + s},${cy + s}`} fill="#343434" />
 }
 
-/* ── Props ───────────────────────────────────────────────────────────────── */
+// Props
 interface Props {
   filtrosGlobais: FiltrosPeriodo
 }
 
-/* ── Componente ──────────────────────────────────────────────────────────── */
+// Componente
 export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
   const [filtros, setFiltros] = useState(filtrosGlobais)
 

@@ -1,8 +1,4 @@
-/**
- * Atom: BotaoFiltro
- * Botão de toggle para seleção de filtros em painéis expansíveis.
- * Estado ativo/inativo controlado externamente via prop `ativo`.
- */
+// BotaoFiltro — botão de toggle para filtros; estado ativo/inativo controlado via prop `ativo`
 interface Props {
   label: string
   ativo: boolean

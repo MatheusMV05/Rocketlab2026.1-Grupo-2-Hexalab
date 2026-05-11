@@ -1,3 +1,5 @@
+// TODO: remover os mocks e conectar a matriz ao backend
+
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   ScatterChart,
@@ -21,20 +23,17 @@ const COR_PONTO: Record<string, string> = {
   ruim: '#c20000',
 }
 
-/* ─── Configuração do gráfico ────────────────────────────────────────────── */
-/** Valor do eixo X onde a linha de divisão vertical é desenhada */
+// Configuração do gráfico
+// Valor do eixo X onde a linha de divisão vertical é desenhada
 const CORTE_X = 1750
-/** Valor do eixo Y onde a linha de divisão horizontal é desenhada */
+// Valor do eixo Y onde a linha de divisão horizontal é desenhada
 const CORTE_Y = 3.0
 
 const DOM_X: [number, number] = [0, 3800]
 const DOM_Y: [number, number] = [1, 5]
 
-/* ─── Badge de quadrante renderizada dentro do SVG via <Label> ─────────── */
-/**
- * Render prop passado para `<ReferenceArea label={...}>`.
- * Cria um badge com fundo colorido e texto nos cantos do quadrante.
- */
+// Badge de quadrante renderizada dentro do SVG via <Label>
+// Render prop passado para <ReferenceArea label>: cria um badge com fundo colorido e texto nos cantos do quadrante
 function BadgeQuadrante({
   viewBox,
   texto,
@@ -46,7 +45,7 @@ function BadgeQuadrante({
   texto: string
   corTexto: string
   corFundo: string
-  /** onde fixar o badge dentro do quadrante */
+  // onde fixar o badge dentro do quadrante
   ancoragem: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 }) {
   if (!viewBox) return null
@@ -94,7 +93,7 @@ function BadgeQuadrante({
   )
 }
 
-/* ─── Constantes do label ────────────────────────────────────────────────── */
+// Constantes do label
 const DOT_R = 6
 const LABEL_FONT = 11
 const LABEL_PAD_X = 10
@@ -112,8 +111,8 @@ interface ProdutoComLabel {
   labelDy: number
 }
 
-/* Pré-computa offsets de label evitando sobreposição.
-   Testa candidatos de posição em ordem de preferência e escolhe o primeiro livre. */
+// Pré-computa offsets de label evitando sobreposição
+// Testa candidatos de posição em ordem de preferência e escolhe o primeiro livre
 function calcLabelPositions(
   items: { nome: string; volume: number; satisfacao: number; status: string }[],
   containerWidth: number
@@ -168,12 +167,12 @@ function calcLabelPositions(
   })
 }
 
-/* ─── Props ──────────────────────────────────────────────────────────────── */
+// Props
 interface Props {
   filtrosGlobais: FiltrosPeriodo
 }
 
-/* ─── Componente ─────────────────────────────────────────────────────────── */
+// Componente
 export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
   const [filtros, setFiltros] = useState(filtrosGlobais)
   const [chartWidth, setChartWidth] = useState(1000)

@@ -13,7 +13,7 @@ import { useStatusPedidos } from '../../../hooks/useDashboard'
 import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
 
-/** Traduz valores de status do backend para os rótulos exibidos no Figma */
+// Traduz valores de status do backend para os rótulos exibidos no Figma
 const ROTULOS: Record<string, string> = {
   // snake_case do backend
   aguardando_pagamento: 'Aguardando pagamento',

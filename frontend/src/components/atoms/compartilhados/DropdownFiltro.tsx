@@ -113,7 +113,7 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props
   )
 }
 
-/* ── Item do dropdown ── */
+// Item do dropdown
 interface ItemProps {
   rotulo: string
   selecionado: boolean

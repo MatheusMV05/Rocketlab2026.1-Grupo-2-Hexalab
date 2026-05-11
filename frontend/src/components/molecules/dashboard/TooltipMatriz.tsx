@@ -1,8 +1,4 @@
-/**
- * Molecule: TooltipMatriz
- * Tooltip personalizado usado no ScatterChart da Matriz de Satisfação vs. Performance.
- * Combina múltiplos átomos de texto para exibir informações do produto.
- */
+// TooltipMatriz — tooltip personalizado do ScatterChart da Matriz de Satisfação vs. Performance
 interface TooltipPayloadItem {
   payload: {
     nome: string
