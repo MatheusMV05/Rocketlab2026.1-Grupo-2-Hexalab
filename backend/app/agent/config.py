@@ -10,6 +10,17 @@ para exemplos few-shot.
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    load_dotenv = None  # type: ignore[assignment]
+
+
+_CAMINHO_ENV = Path(__file__).resolve().parents[2] / ".env"
+if load_dotenv is not None and _CAMINHO_ENV.exists():
+    load_dotenv(_CAMINHO_ENV)
 
 
 def _ler_chave_api_mistral() -> str:
@@ -56,4 +67,4 @@ class Config:
     model: str = field(default_factory=_ler_modelo_mistral)
     max_tokens: int = 1024
     max_retries: int = 3
-    few_shot_path: str = "few_shots/examples.yaml"
+    few_shot_path: str = "few_shots/exemplos.yaml"

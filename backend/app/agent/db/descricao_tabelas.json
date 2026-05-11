@@ -6,6 +6,5 @@
   "fat_itens_pedidos": "Fato de itens por pedido: uma linha por item pedido com `id_pedido`, `id_produto`, quantidade e `valor_unitario`; útil para análise de mix e unidades vendidas.",
   "fat_pedido_total": "Fato agregada por pedido com valores totais por pedido; inclui `id_pedido`, `id_consumidor` e `valor_total`. Use para análises de receita por pedido.",
   "fat_pedidos": "Fato (registro mestre) de pedidos com informações de cabeçalho por pedido (datas, status, cliente); complemente com `fat_itens_pedidos` para detalhe por item.",
-  "fat_totalpedidos": "(sinônimo/variante) Fato com totais por pedido — ver `fat_pedido_total`.",
-  "observacao": "Edite este arquivo para ajustar descrições; o agente usa estas descrições para explicar o propósito de cada tabela ao LLM."
+  "fat_totalpedidos": "(sinônimo/variante) Fato com totais por pedido — ver `fat_pedido_total`."
 }
