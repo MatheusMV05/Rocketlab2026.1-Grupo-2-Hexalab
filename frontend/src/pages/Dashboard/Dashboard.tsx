@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { TrendingUp, ShoppingCart, DollarSign, Smile } from 'lucide-react'
 import { LayoutPrincipal } from '../../components/templates/LayoutPrincipal'
-import { CardKpi } from '../../components/molecules/CardKpi'
-import { FiltroPeriodo, type FiltrosPeriodo } from '../../components/molecules/FiltroPeriodo'
-import { GraficoReceitaMensal } from '../../components/organisms/GraficoReceitaMensal'
-import { GraficoTaxaSatisfacao } from '../../components/organisms/GraficoTaxaSatisfacao'
-import { GraficoDistribuicaoPedidos } from '../../components/organisms/GraficoDistribuicaoPedidos'
-import { GraficoTop5Produtos } from '../../components/organisms/GraficoTop5Produtos'
-import { MatrizSatisfacaoPerformance } from '../../components/organisms/MatrizSatisfacaoPerformance'
-import { ListaEntregas } from '../../components/organisms/ListaEntregas'
+import { CardKpi } from '../../components/molecules/dashboard/CardKpi'
+import { FiltroPeriodo, type FiltrosPeriodo } from '../../components/molecules/compartilhados/FiltroPeriodo'
+import { GraficoReceitaMensal } from '../../components/organisms/dashboard/GraficoReceitaMensal'
+import { GraficoTaxaSatisfacao } from '../../components/organisms/dashboard/GraficoTaxaSatisfacao'
+import { GraficoDistribuicaoPedidos } from '../../components/organisms/dashboard/GraficoDistribuicaoPedidos'
+import { GraficoTop5Produtos } from '../../components/organisms/dashboard/GraficoTop5Produtos'
+import { MatrizSatisfacaoPerformance } from '../../components/organisms/dashboard/MatrizSatisfacaoPerformance'
+import { ListaEntregas } from '../../components/organisms/dashboard/ListaEntregas'
 import { useKpis } from '../../hooks/useDashboard'
 import { formatarReaisCompleto } from '../../utils/formatadores'
 
@@ -59,15 +59,6 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <span className="text-[14px] font-semibold text-[#1d5358]">Filtros globais:</span>
           <FiltroPeriodo filtros={filtrosGlobais} onChange={setFiltrosGlobais} />
-          <button
-            onClick={() => setFiltrosGlobais({ ano: '', mes: '', localidade: '' })}
-            className="flex items-center gap-[5px] text-[13px] text-[#343434] hover:text-[#c20000] transition-colors whitespace-nowrap"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            Limpar
-          </button>
         </div>
       </div>
 

@@ -7,13 +7,12 @@ import {
   Filter,
   Edit2,
   Upload,
-  ChevronLeft,
   ArrowRight,
   X,
 } from 'lucide-react'
-import { BotaoFiltro } from '../atoms/BotaoFiltro'
-import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_NOME } from '../../constants/opcoesFiltro'
-import { useEntregas, useAtualizarEntrega } from '../../hooks/useDashboard'
+import { BotaoFiltro } from '../../atoms/compartilhados/BotaoFiltro'
+import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_NOME } from '../../../constants/opcoesFiltro'
+import { useEntregas, useAtualizarEntrega } from '../../../hooks/useDashboard'
 
 type StatusEntrega = 'hoje' | 'no_prazo' | 'atrasado'
 
@@ -561,11 +560,11 @@ export function ListaEntregas() {
       {/* Paginação */}
       <div className="flex items-center justify-center gap-[10px] p-[10px]">
         <button
-          className="flex items-center justify-center w-6 h-6 text-[#4d4d4d] hover:text-[#3f7377] transition-colors disabled:opacity-30"
+          className="flex items-center justify-center w-7 h-7 rounded-full border border-[#e0e0e0] text-[#4d4d4d] hover:bg-[#dde5e6] hover:border-[#3f7377] hover:text-[#3f7377] transition-colors disabled:opacity-30"
           onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
           disabled={paginaAtual === 1}
         >
-          <ChevronLeft size={18} />
+          <ArrowRight size={14} strokeWidth={2} className="rotate-180" />
         </button>
 
         {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((p) => (

@@ -9,9 +9,9 @@ import {
   LabelList,
 } from 'recharts'
 import { useState, useEffect } from 'react'
-import { useStatusPedidos } from '../../hooks/useDashboard'
-import { TagVariacao } from '../atoms/TagVariacao'
-import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
+import { useStatusPedidos } from '../../../hooks/useDashboard'
+import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
+import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
 
 /** Traduz valores de status do backend para os rótulos exibidos no Figma */
 const ROTULOS: Record<string, string> = {

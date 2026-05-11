@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { TagVariacao } from '../atoms/TagVariacao'
-import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
-import { useTaxaSatisfacao } from '../../hooks/useDashboard'
+import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
+import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
+import { useTaxaSatisfacao } from '../../../hooks/useDashboard'
 
 // ─── Constantes do gauge (espelham o medidor-dashboard de referência) ─────────
 const GCX = 280

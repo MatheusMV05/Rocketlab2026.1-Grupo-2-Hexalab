@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { BarraLateral } from '../organisms/BarraLateral'
-import { BarraTopo } from '../organisms/BarraTopo'
+import { BarraLateral } from '../organisms/compartilhados/BarraLateral'
+import { BarraTopo } from '../organisms/compartilhados/BarraTopo'
 
 interface Props {
   titulo: string

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Search, Bell, Settings } from 'lucide-react'
-import logoAgente from '../../assets/logos/logo-agente.svg'
+import logoAgente from '../../../assets/logos/logo-agente.svg'
 
 interface Props {
   titulo: string

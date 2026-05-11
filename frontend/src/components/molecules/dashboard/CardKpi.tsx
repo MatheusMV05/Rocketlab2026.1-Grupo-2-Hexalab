@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TagVariacao } from '../atoms/TagVariacao'
+import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 
 interface Props {
   titulo: string

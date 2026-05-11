@@ -10,10 +10,10 @@ import {
   type DotProps,
   type TooltipProps,
 } from 'recharts'
-import { useReceitaGrafico } from '../../hooks/useDashboard'
-import { TagVariacao } from '../atoms/TagVariacao'
-import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
-import { formatarReais } from '../../utils/formatadores'
+import { useReceitaGrafico } from '../../../hooks/useDashboard'
+import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
+import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
+import { formatarReais } from '../../../utils/formatadores'
 
 /* ── Tooltip ─────────────────────────────────────────────────────────────── */
 function TooltipReceita(props: TooltipProps<number, string>) {
@@ -82,14 +82,6 @@ function TrianguloMeta(props: DotProps) {
   return <polygon points={`${cx},${cy - s} ${cx - s},${cy + s} ${cx + s},${cy + s}`} fill="#343434" />
 }
 
-/* ── Título do subtítulo de período ─────────────────────────────────────── */
-function tituloPeriodo(modo: string, filtros: FiltrosPeriodo): string {
-  if (modo === 'semanal') return `${filtros.mes} de ${filtros.ano}`
-  if (modo === 'comparativo') return `${filtros.mes} — todos os anos`
-  if (filtros.ano) return `Ano ${filtros.ano}`
-  return 'Todos os períodos'
-}
-
 /* ── Props ───────────────────────────────────────────────────────────────── */
 interface Props {
   filtrosGlobais: FiltrosPeriodo
@@ -131,12 +123,6 @@ export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
             ? `Meta de receita total: R$ ${metaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
             : 'Meta de receita total: —'}
         </div>
-        {data && (
-          <div className="text-[10px] text-[#b8b8b8] mt-0.5">
-            {tituloPeriodo(modo, filtros)}
-            {filtros.localidade ? ` · ${filtros.localidade}` : ''}
-          </div>
-        )}
       </div>
 
       {/* Gráfico */}
@@ -195,7 +181,7 @@ export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
       </div>
 
       {/* Legenda customizada */}
-      <div className="flex items-center justify-center gap-6 pb-3 text-[11px] text-[#343434]">
+      <div className="flex items-center justify-center gap-12 pb-3 text-[11px] text-[#343434]">
         <div className="flex items-center gap-1.5">
           <svg width="26" height="12" viewBox="0 0 26 12">
             <line x1="0" y1="6" x2="26" y2="6" stroke="#3f7377" strokeWidth="2" />

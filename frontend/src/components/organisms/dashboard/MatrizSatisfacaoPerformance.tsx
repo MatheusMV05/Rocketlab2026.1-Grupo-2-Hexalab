@@ -11,9 +11,9 @@ import {
   ReferenceArea,
   Label,
 } from 'recharts'
-import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
-import { TooltipMatriz } from '../molecules/TooltipMatriz'
-import { useMatrizProdutos } from '../../hooks/useDashboard'
+import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
+import { TooltipMatriz } from '../../molecules/dashboard/TooltipMatriz'
+import { useMatrizProdutos } from '../../../hooks/useDashboard'
 
 const COR_PONTO: Record<string, string> = {
   bom: '#1a9a45',

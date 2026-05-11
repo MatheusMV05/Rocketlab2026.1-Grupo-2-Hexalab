@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { PieChart, Users, Box, ShoppingCart, Tag } from 'lucide-react'
-import logoVC from '../../assets/logos/Logo-vc.svg'
+import logoVC from '../../../assets/logos/Logo-vc.svg'
 
 const itensNav = [
   { para: '/', icone: PieChart, rotulo: 'Dashboard' },

@@ -8,11 +8,11 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts'
-import { useTopProdutos } from '../../hooks/useDashboard'
+import { useTopProdutos } from '../../../hooks/useDashboard'
 import { useState, useEffect } from 'react'
-import { TagVariacao } from '../atoms/TagVariacao'
-import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
-import { formatarReais } from '../../utils/formatadores'
+import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
+import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
+import { formatarReais } from '../../../utils/formatadores'
 
 interface Props {
   filtrosGlobais: FiltrosPeriodo
