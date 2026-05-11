@@ -194,34 +194,72 @@ def mock_receita_grafico(ano: str = "", mes: str = "", localidade: str = "") -> 
         return {"items": items, "modo": "mensal"}
 
 
+_MESES_NUM = {
+    "Janeiro": "01", "Fevereiro": "02", "Março": "03", "Abril": "04",
+    "Maio": "05", "Junho": "06", "Julho": "07", "Agosto": "08",
+    "Setembro": "09", "Outubro": "10", "Novembro": "11", "Dezembro": "12",
+}
+
+# Overrides aplicados pelo endpoint PUT /entregas/{id}
+_entregas_overrides: dict[str, dict] = {}
+
+_ENTREGAS_BASE = [
+    {"id": "#f3221", "cliente": "Maria Day", "status": "hoje", "prazo": "(limite às 18h)"},
+    {"id": "#f3222", "cliente": "João Silva", "status": "no_prazo", "prazo": "24/05/2026"},
+    {"id": "#f3223", "cliente": "Ana Costa", "status": "hoje", "prazo": "(limite às 9h)"},
+    {"id": "#f3224", "cliente": "Carlos Mendes", "status": "atrasado", "prazo": "21/05/2026"},
+    {"id": "#f3225", "cliente": "Lúcia Ferreira", "status": "no_prazo", "prazo": "26/05/2026"},
+    {"id": "#f3226", "cliente": "Pedro Santos", "status": "no_prazo", "prazo": "26/05/2026"},
+    {"id": "#f3227", "cliente": "Mariana Oliveira", "status": "hoje", "prazo": "(limite às 15h)"},
+    {"id": "#f3228", "cliente": "Roberto Alves", "status": "no_prazo", "prazo": "27/05/2026"},
+    {"id": "#f3229", "cliente": "Fernanda Lima", "status": "atrasado", "prazo": "20/05/2026"},
+    {"id": "#f3230", "cliente": "Gabriel Costa", "status": "no_prazo", "prazo": "28/05/2026"},
+    {"id": "#f3231", "cliente": "Patrícia Souza", "status": "hoje", "prazo": "(limite às 12h)"},
+    {"id": "#f3232", "cliente": "Ricardo Nunes", "status": "no_prazo", "prazo": "29/05/2026"},
+    {"id": "#f3233", "cliente": "Juliana Castro", "status": "atrasado", "prazo": "19/05/2026"},
+    {"id": "#f3234", "cliente": "Marcos Pereira", "status": "no_prazo", "prazo": "30/05/2026"},
+    {"id": "#f3235", "cliente": "Camila Rocha", "status": "hoje", "prazo": "(limite às 20h)"},
+    {"id": "#f3236", "cliente": "André Barbosa", "status": "no_prazo", "prazo": "31/05/2026"},
+    {"id": "#f3237", "cliente": "Beatriz Melo", "status": "no_prazo", "prazo": "01/06/2026"},
+    {"id": "#f3238", "cliente": "Thiago Ferreira", "status": "atrasado", "prazo": "18/05/2026"},
+    {"id": "#f3239", "cliente": "Natália Gomes", "status": "no_prazo", "prazo": "02/06/2026"},
+    {"id": "#f3240", "cliente": "Leonardo Santos", "status": "hoje", "prazo": "(limite às 16h)"},
+    {"id": "#f3241", "cliente": "Vanessa Cardoso", "status": "no_prazo", "prazo": "03/06/2026"},
+    {"id": "#f3242", "cliente": "Diego Martins", "status": "atrasado", "prazo": "17/05/2026"},
+]
+
+
+def aplicar_override_entrega(id_entrega: str, campos: dict) -> dict | None:
+    base = next((e for e in _ENTREGAS_BASE if e["id"] == id_entrega), None)
+    if base is None:
+        return None
+    _entregas_overrides[id_entrega] = {**_entregas_overrides.get(id_entrega, {}), **campos}
+    return {**base, **_entregas_overrides[id_entrega]}
+
+
 # TODO: substituir pela query real —> depende do módulo pedidos/logística
-def mock_entregas(pagina: int = 1, por_pagina: int = 7) -> dict:
-    todos = [
-        {"id": "#f3221", "cliente": "Maria Day", "status": "hoje", "prazo": "(limite às 18h)"},
-        {"id": "#f3222", "cliente": "João Silva", "status": "no_prazo", "prazo": "24/05/2026"},
-        {"id": "#f3223", "cliente": "Ana Costa", "status": "hoje", "prazo": "(limite às 9h)"},
-        {"id": "#f3224", "cliente": "Carlos Mendes", "status": "atrasado", "prazo": "21/05/2026"},
-        {"id": "#f3225", "cliente": "Lúcia Ferreira", "status": "no_prazo", "prazo": "26/05/2026"},
-        {"id": "#f3226", "cliente": "Pedro Santos", "status": "no_prazo", "prazo": "26/05/2026"},
-        {"id": "#f3227", "cliente": "Mariana Oliveira", "status": "hoje", "prazo": "(limite às 15h)"},
-        {"id": "#f3228", "cliente": "Roberto Alves", "status": "no_prazo", "prazo": "27/05/2026"},
-        {"id": "#f3229", "cliente": "Fernanda Lima", "status": "atrasado", "prazo": "20/05/2026"},
-        {"id": "#f3230", "cliente": "Gabriel Costa", "status": "no_prazo", "prazo": "28/05/2026"},
-        {"id": "#f3231", "cliente": "Patrícia Souza", "status": "hoje", "prazo": "(limite às 12h)"},
-        {"id": "#f3232", "cliente": "Ricardo Nunes", "status": "no_prazo", "prazo": "29/05/2026"},
-        {"id": "#f3233", "cliente": "Juliana Castro", "status": "atrasado", "prazo": "19/05/2026"},
-        {"id": "#f3234", "cliente": "Marcos Pereira", "status": "no_prazo", "prazo": "30/05/2026"},
-        {"id": "#f3235", "cliente": "Camila Rocha", "status": "hoje", "prazo": "(limite às 20h)"},
-        {"id": "#f3236", "cliente": "André Barbosa", "status": "no_prazo", "prazo": "31/05/2026"},
-        {"id": "#f3237", "cliente": "Beatriz Melo", "status": "no_prazo", "prazo": "01/06/2026"},
-        {"id": "#f3238", "cliente": "Thiago Ferreira", "status": "atrasado", "prazo": "18/05/2026"},
-        {"id": "#f3239", "cliente": "Natália Gomes", "status": "no_prazo", "prazo": "02/06/2026"},
-        {"id": "#f3240", "cliente": "Leonardo Santos", "status": "hoje", "prazo": "(limite às 16h)"},
-        {"id": "#f3241", "cliente": "Vanessa Cardoso", "status": "no_prazo", "prazo": "03/06/2026"},
-        {"id": "#f3242", "cliente": "Diego Martins", "status": "atrasado", "prazo": "17/05/2026"},
-    ]
+def mock_entregas(
+    pagina: int = 1,
+    por_pagina: int = 7,
+    status: list[str] | None = None,
+    ano: str = "",
+    mes: str = "",
+) -> dict:
+    todos = [{**e, **_entregas_overrides.get(e["id"], {})} for e in _ENTREGAS_BASE]
+
+    if status:
+        todos = [e for e in todos if e["status"] in status]
+
+    if ano:
+        todos = [e for e in todos if ano in e["prazo"]]
+
+    if mes:
+        mes_num = _MESES_NUM.get(mes, "")
+        if mes_num:
+            todos = [e for e in todos if f"/{mes_num}/" in e["prazo"]]
+
     total = len(todos)
-    total_paginas = (total + por_pagina - 1) // por_pagina
+    total_paginas = max(1, (total + por_pagina - 1) // por_pagina)
     inicio = (pagina - 1) * por_pagina
     fim = inicio + por_pagina
     return {

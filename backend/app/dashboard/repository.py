@@ -10,6 +10,7 @@ from app.dashboard.models import (
     mock_matriz_produtos,
     mock_entregas,
     mock_receita_grafico,
+    aplicar_override_entrega,
 )
 
 
@@ -54,5 +55,16 @@ async def get_receita_grafico(db: AsyncSession, ano: str = "", mes: str = "", lo
 
 
 # TODO: substituir pela query real —> depende do módulo pedidos/logística
-async def get_entregas(db: AsyncSession, pagina: int = 1, por_pagina: int = 7) -> dict:
-    return mock_entregas(pagina, por_pagina)
+async def get_entregas(
+    db: AsyncSession,
+    pagina: int = 1,
+    por_pagina: int = 7,
+    status: list[str] | None = None,
+    ano: str = "",
+    mes: str = "",
+) -> dict:
+    return mock_entregas(pagina, por_pagina, status, ano, mes)
+
+
+async def atualizar_entrega(db: AsyncSession, id_entrega: str, campos: dict) -> dict | None:
+    return aplicar_override_entrega(id_entrega, campos)

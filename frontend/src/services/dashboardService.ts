@@ -42,8 +42,20 @@ export const dashboardService = {
       .get<ReceitaGraficoDados>('/dashboard/receita-grafico', { params })
       .then((r) => r.data),
 
-  buscarEntregas: (pagina: number = 1, porPagina: number = 7) =>
-    api
-      .get<EntregasDados>('/dashboard/entregas', { params: { pagina, por_pagina: porPagina } })
-      .then((r) => r.data),
+  buscarEntregas: (
+    pagina: number = 1,
+    porPagina: number = 7,
+    filtros?: { status?: string[]; ano?: string; mes?: string },
+  ) => {
+    const params = new URLSearchParams()
+    params.set('pagina', String(pagina))
+    params.set('por_pagina', String(porPagina))
+    filtros?.status?.forEach((s) => params.append('status', s))
+    if (filtros?.ano) params.set('ano', filtros.ano)
+    if (filtros?.mes) params.set('mes', filtros.mes)
+    return api.get<EntregasDados>(`/dashboard/entregas?${params}`).then((r) => r.data)
+  },
+
+  atualizarEntrega: (id: string, dados: { cliente?: string; status?: string; prazo?: string }) =>
+    api.put(`/dashboard/entregas/${encodeURIComponent(id)}`, dados).then((r) => r.data),
 }

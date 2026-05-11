@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   ScatterChart,
   Scatter,
@@ -93,22 +94,118 @@ function BadgeQuadrante({
   )
 }
 
+/* ─── Constantes do label ────────────────────────────────────────────────── */
+const DOT_R = 6
+const LABEL_FONT = 11
+const LABEL_PAD_X = 10
+const LABEL_PAD_Y = 5
+const LABEL_H = LABEL_FONT + LABEL_PAD_Y * 2
+const CHART_MARGIN = { top: 16, right: 24, left: 36, bottom: 20 }
+const CHART_H = 400
+
+interface ProdutoComLabel {
+  nome: string
+  volume: number
+  satisfacao: number
+  status: string
+  labelDx: number
+  labelDy: number
+}
+
+/* Pré-computa offsets de label evitando sobreposição.
+   Testa candidatos de posição em ordem de preferência e escolhe o primeiro livre. */
+function calcLabelPositions(
+  items: { nome: string; volume: number; satisfacao: number; status: string }[],
+  containerWidth: number
+): ProdutoComLabel[] {
+  const plotW = containerWidth - CHART_MARGIN.left - CHART_MARGIN.right
+  const plotH = CHART_H - CHART_MARGIN.top - CHART_MARGIN.bottom
+  const toPixX = (v: number) => CHART_MARGIN.left + ((v - DOM_X[0]) / (DOM_X[1] - DOM_X[0])) * plotW
+  const toPixY = (v: number) => CHART_MARGIN.top + ((DOM_Y[1] - v) / (DOM_Y[1] - DOM_Y[0])) * plotH
+
+  type Box = { x: number; y: number; w: number; h: number }
+  const placed: Box[] = []
+  const gap = DOT_R + 5
+
+  const overlaps = (b: Box) =>
+    placed.some(
+      (p) => b.x < p.x + p.w + 2 && b.x + b.w + 2 > p.x && b.y < p.y + p.h + 2 && b.y + b.h + 2 > p.y
+    )
+
+  return items.map((item) => {
+    const px = toPixX(item.volume)
+    const py = toPixY(item.satisfacao)
+    const lw = item.nome.length * 6.5 + LABEL_PAD_X * 2
+
+    const candidates: [number, number][] = [
+      [gap, -LABEL_H / 2],
+      [gap, -LABEL_H - 4],
+      [gap, 4],
+      [-lw - gap, -LABEL_H / 2],
+      [-lw - gap, -LABEL_H - 4],
+      [-lw - gap, 4],
+      [-lw / 2, -LABEL_H - gap],
+      [-lw / 2, gap],
+    ]
+
+    let dx = candidates[0][0]
+    let dy = candidates[0][1]
+
+    for (const [cdx, cdy] of candidates) {
+      const box: Box = { x: px + cdx, y: py + cdy, w: lw, h: LABEL_H }
+      if (!overlaps(box)) {
+        dx = cdx; dy = cdy
+        placed.push(box)
+        break
+      }
+    }
+
+    if (!placed.some((p) => p.x === px + dx && p.y === py + dy)) {
+      placed.push({ x: px + dx, y: py + dy, w: lw, h: LABEL_H })
+    }
+
+    return { ...item, labelDx: dx, labelDy: dy }
+  })
+}
+
 /* ─── Props ──────────────────────────────────────────────────────────────── */
 interface Props {
-  filtros: FiltrosPeriodo
-  onFiltrosChange: (f: FiltrosPeriodo) => void
+  filtrosGlobais: FiltrosPeriodo
 }
 
 /* ─── Componente ─────────────────────────────────────────────────────────── */
-export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props) {
+export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
+  const [filtros, setFiltros] = useState(filtrosGlobais)
+  const [chartWidth, setChartWidth] = useState(1000)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const obs = new ResizeObserver(([entry]) => setChartWidth(entry.contentRect.width))
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
   const { data, isLoading, isError } = useMatrizProdutos()
-  const produtos = data?.items ?? []
+
+  const top10 = useMemo(() => {
+    const items = data?.items ?? []
+    return [...items].sort((a, b) => b.volume - a.volume).slice(0, 10)
+  }, [data])
+
+  const produtos = useMemo(
+    () => calcLabelPositions(top10, chartWidth),
+    [top10, chartWidth]
+  )
 
   return (
-    <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 flex flex-col">
+    <div ref={containerRef} className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 flex flex-col">
       {/* Filtro absoluto no topo direito */}
       <div className="absolute top-3 right-3">
-        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
       {/* Cabeçalho */}
@@ -116,16 +213,17 @@ export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props)
         <h3 className="text-[18px] font-bold text-[#1d5358]">
           Matriz de Satisfação vs. Performance
         </h3>
-        <div className="flex items-center gap-2 mt-1 bg-[#e0e0e0] rounded-[5px] px-2 py-1 text-[10px] text-[#343434] font-medium max-w-xl">
+        {/* TODO: integrar agente de insights — exibir aqui a mensagem gerada automaticamente
+             com os produtos em situação crítica identificados pela IA (quadrante ALERTA VERMELHO).
+             O card abaixo é o template visual a ser preenchido com o conteúdo do agente. */}
+        <div className="hidden flex items-center gap-2 mt-1 bg-[#e0e0e0] rounded-[5px] px-2 py-1 text-[10px] text-[#343434] font-medium max-w-xl">
           <span className="text-[10px]">✦</span>
-          <span>
-            ATENÇÃO: Teclado mecânico e máquina de lavar ultra com alta performance e baixa satisfação.
-          </span>
+          <span />
         </div>
       </div>
 
       {/* Gráfico de dispersão */}
-      <div style={{ height: 320 }}>
+      <div style={{ height: 400 }}>
         {isLoading && (
           <div className="flex items-center justify-center h-full text-[#4d4d4d] text-sm">
             Carregando...
@@ -268,36 +366,42 @@ export function MatrizSatisfacaoPerformance({ filtros, onFiltrosChange }: Props)
               strokeDasharray="5 4"
             />
 
-            {/* ── Pontos de dispersão ── */}
+            {/* ── Pontos de dispersão (top 10 por volume) ── */}
             <Scatter
               data={produtos}
               shape={(props: {
                 cx?: number
                 cy?: number
-                payload?: { nome: string; status: string }
+                payload?: ProdutoComLabel
               }) => {
                 const { cx = 0, cy = 0, payload } = props
                 const cor = COR_PONTO[payload?.status ?? 'neutro']
                 const nome = payload?.nome ?? ''
-                const labelW = nome.length * 5.5 + 6
+                const ldx = payload?.labelDx ?? DOT_R + 5
+                const ldy = payload?.labelDy ?? -LABEL_H / 2
+                const lw = nome.length * 6.5 + LABEL_PAD_X * 2
+
                 return (
                   <g>
-                    <circle cx={cx} cy={cy} r={6} fill={cor} />
+                    <circle cx={cx} cy={cy} r={DOT_R} fill={cor} />
                     <rect
-                      x={cx + 8}
-                      y={cy - 6}
-                      width={labelW}
-                      height={13}
+                      x={cx + ldx}
+                      y={cy + ldy}
+                      width={lw}
+                      height={LABEL_H}
                       fill="white"
-                      fillOpacity={0.85}
-                      rx={2}
+                      stroke="#d0d0d0"
+                      strokeWidth={1}
+                      rx={4}
                     />
                     <text
-                      x={cx + 11}
-                      y={cy + 4}
-                      fontSize={9}
+                      x={cx + ldx + LABEL_PAD_X}
+                      y={cy + ldy + LABEL_FONT + LABEL_PAD_Y - 2}
+                      fontSize={LABEL_FONT}
+                      fontWeight={500}
+                      fontFamily="inherit"
                       fill="#343434"
-                      className="pointer-events-none"
+                      style={{ pointerEvents: 'none' }}
                     >
                       {nome}
                     </text>

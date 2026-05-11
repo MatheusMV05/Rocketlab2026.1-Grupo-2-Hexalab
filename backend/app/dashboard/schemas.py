@@ -89,3 +89,9 @@ class EntregasResponse(BaseModel):
     pagina: int
     por_pagina: int
     total_paginas: int
+
+
+class AtualizarEntregaRequest(BaseModel):
+    cliente: str | None = None
+    status: str | None = None
+    prazo: str | None = None

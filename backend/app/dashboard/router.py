@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -12,7 +14,9 @@ from app.dashboard.schemas import (
     TaxaSatisfacaoResponse,
     MatrizProdutosResponse,
     EntregasResponse,
+    EntregaItem,
     ReceitaGraficoResponse,
+    AtualizarEntregaRequest,
 )
 
 router = APIRouter()
@@ -96,13 +100,29 @@ async def get_receita_grafico(
 
 
 @router.get("/entregas", response_model=EntregasResponse)
-# Lista paginada de entregas com status e prazo
 async def get_entregas(
     pagina: int = 1,
     por_pagina: int = 7,
+    status: List[str] = Query(default=[]),
+    ano: str = "",
+    mes: str = "",
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        return await service.get_entregas(db, pagina, por_pagina)
+        return await service.get_entregas(db, pagina, por_pagina, status or None, ano, mes)
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao buscar entregas.")
+
+
+@router.put("/entregas/{id_entrega}", response_model=EntregaItem)
+async def atualizar_entrega(
+    id_entrega: str,
+    dados: AtualizarEntregaRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await service.atualizar_entrega(db, id_entrega, dados.model_dump())
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao atualizar entrega.")

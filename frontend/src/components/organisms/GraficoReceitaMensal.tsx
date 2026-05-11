@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import {
   LineChart,
   Line,
@@ -91,12 +92,15 @@ function tituloPeriodo(modo: string, filtros: FiltrosPeriodo): string {
 
 /* ── Props ───────────────────────────────────────────────────────────────── */
 interface Props {
-  filtros: FiltrosPeriodo
-  onFiltrosChange: (f: FiltrosPeriodo) => void
+  filtrosGlobais: FiltrosPeriodo
 }
 
 /* ── Componente ──────────────────────────────────────────────────────────── */
-export function GraficoReceitaMensal({ filtros, onFiltrosChange }: Props) {
+export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
+  const [filtros, setFiltros] = useState(filtrosGlobais)
+
+  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
+
   const { data, isLoading, isError } = useReceitaGrafico(filtros)
 
   const modo = data?.modo ?? 'mensal'
@@ -107,7 +111,7 @@ export function GraficoReceitaMensal({ filtros, onFiltrosChange }: Props) {
   return (
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       <div className="absolute top-[13px] right-[14px]">
-        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
       {/* Cabeçalho */}

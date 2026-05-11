@@ -101,8 +101,15 @@ async def get_receita_grafico(
     return ReceitaGraficoResponse(items=items, modo=data["modo"])
 
 
-async def get_entregas(db: AsyncSession, pagina: int = 1, por_pagina: int = 7) -> EntregasResponse:
-    data = await repository.get_entregas(db, pagina, por_pagina)
+async def get_entregas(
+    db: AsyncSession,
+    pagina: int = 1,
+    por_pagina: int = 7,
+    status: list[str] | None = None,
+    ano: str = "",
+    mes: str = "",
+) -> EntregasResponse:
+    data = await repository.get_entregas(db, pagina, por_pagina, status, ano, mes)
     items = [EntregaItem(**item) for item in data["items"]]
     return EntregasResponse(
         items=items,
@@ -111,3 +118,11 @@ async def get_entregas(db: AsyncSession, pagina: int = 1, por_pagina: int = 7) -
         por_pagina=data["por_pagina"],
         total_paginas=data["total_paginas"],
     )
+
+
+async def atualizar_entrega(db: AsyncSession, id_entrega: str, dados: dict) -> EntregaItem:
+    campos = {k: v for k, v in dados.items() if v is not None}
+    result = await repository.atualizar_entrega(db, id_entrega, campos)
+    if result is None:
+        raise ValueError(f"Entrega {id_entrega} não encontrada")
+    return EntregaItem(**result)

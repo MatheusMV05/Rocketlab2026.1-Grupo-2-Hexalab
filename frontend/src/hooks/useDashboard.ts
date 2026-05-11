@@ -1,6 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { dashboardService } from '../services/dashboardService'
 import type { FiltrosPeriodo } from '../components/molecules/FiltroPeriodo'
+
+interface FiltrosEntregas {
+  status?: string[]
+  ano?: string
+  mes?: string
+}
 
 export function useKpis() {
   return useQuery({
@@ -63,9 +69,20 @@ export function useReceitaGrafico(filtros: FiltrosPeriodo) {
   })
 }
 
-export function useEntregas(pagina: number, porPagina: number = 7) {
+export function useEntregas(pagina: number, filtros?: FiltrosEntregas, porPagina: number = 7) {
   return useQuery({
-    queryKey: ['dashboard', 'entregas', pagina, porPagina],
-    queryFn: () => dashboardService.buscarEntregas(pagina, porPagina),
+    queryKey: ['dashboard', 'entregas', pagina, porPagina, filtros],
+    queryFn: () => dashboardService.buscarEntregas(pagina, porPagina, filtros),
+  })
+}
+
+export function useAtualizarEntrega() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dados }: { id: string; dados: { cliente?: string; status?: string; prazo?: string } }) =>
+      dashboardService.atualizarEntrega(id, dados),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'entregas'] })
+    },
   })
 }

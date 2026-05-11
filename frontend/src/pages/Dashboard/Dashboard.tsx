@@ -59,6 +59,15 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <span className="text-[14px] font-semibold text-[#1d5358]">Filtros globais:</span>
           <FiltroPeriodo filtros={filtrosGlobais} onChange={setFiltrosGlobais} />
+          <button
+            onClick={() => setFiltrosGlobais({ ano: '', mes: '', localidade: '' })}
+            className="flex items-center gap-[5px] text-[13px] text-[#343434] hover:text-[#c20000] transition-colors whitespace-nowrap"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Limpar
+          </button>
         </div>
       </div>
 
@@ -78,19 +87,19 @@ export default function Dashboard() {
 
       {/* Linha 1: Receita Mensal (578×433) + Taxa de Satisfação (578×433) */}
       <div className="grid grid-cols-2 gap-[62px] mb-[46px]" style={{ height: 435 }}>
-        <GraficoReceitaMensal filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
-        <GraficoTaxaSatisfacao filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
+        <GraficoReceitaMensal filtrosGlobais={filtrosGlobais} />
+        <GraficoTaxaSatisfacao filtrosGlobais={filtrosGlobais} />
       </div>
 
-      {/* Linha 2: Matriz de Satisfação vs Performance — largura total (1214×487) */}
-      <div className="mb-[44px]" style={{ height: 487 }}>
-        <MatrizSatisfacaoPerformance filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
+      {/* Linha 2: Matriz de Satisfação vs Performance — largura total */}
+      <div className="mb-[44px]" style={{ height: 580 }}>
+        <MatrizSatisfacaoPerformance filtrosGlobais={filtrosGlobais} />
       </div>
 
       {/* Linha 3: Distribuição de Pedidos (578×417) + Top 5 Produtos (578×417) */}
       <div className="grid grid-cols-2 gap-[62px] mb-[46px]" style={{ height: 417 }}>
-        <GraficoDistribuicaoPedidos filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
-        <GraficoTop5Produtos filtros={filtrosGlobais} onFiltrosChange={setFiltrosGlobais} />
+        <GraficoDistribuicaoPedidos filtrosGlobais={filtrosGlobais} />
+        <GraficoTop5Produtos filtrosGlobais={filtrosGlobais} />
       </div>
 
       {/* Linha 4: Lista de Entregas — largura total */}

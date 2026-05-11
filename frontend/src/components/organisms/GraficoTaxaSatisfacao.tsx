@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { TagVariacao } from '../atoms/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
 import { useTaxaSatisfacao } from '../../hooks/useDashboard'
@@ -52,11 +53,14 @@ function arcSegment(startPct: number, endPct: number): string {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
-  filtros: FiltrosPeriodo
-  onFiltrosChange: (f: FiltrosPeriodo) => void
+  filtrosGlobais: FiltrosPeriodo
 }
 
-export function GraficoTaxaSatisfacao({ filtros, onFiltrosChange }: Props) {
+export function GraficoTaxaSatisfacao({ filtrosGlobais }: Props) {
+  const [filtros, setFiltros] = useState(filtrosGlobais)
+
+  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
+
   const { data, isLoading } = useTaxaSatisfacao()
 
   const VALOR = data?.valor ?? 88
@@ -82,7 +86,7 @@ export function GraficoTaxaSatisfacao({ filtros, onFiltrosChange }: Props) {
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto y=13 do card, alinhado à direita — conforme SVG */}
       <div className="absolute top-[13px] right-[14px]">
-        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
       {/* Título: abaixo dos filtros — pt-[50px] posiciona abaixo do filtro (y=41) */}

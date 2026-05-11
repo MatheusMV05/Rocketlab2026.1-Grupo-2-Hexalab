@@ -9,20 +9,22 @@ import {
   LabelList,
 } from 'recharts'
 import { useTopProdutos } from '../../hooks/useDashboard'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TagVariacao } from '../atoms/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
 import { formatarReais } from '../../utils/formatadores'
 
 interface Props {
-  filtros: FiltrosPeriodo
-  onFiltrosChange: (f: FiltrosPeriodo) => void
+  filtrosGlobais: FiltrosPeriodo
 }
 
-export function GraficoTop5Produtos({ filtros, onFiltrosChange }: Props) {
-  const { data, isLoading, isError } = useTopProdutos()
-  // Figma mostra "Dados: Volume" como padrão no DASHBOARD 2
+export function GraficoTop5Produtos({ filtrosGlobais }: Props) {
+  const [filtros, setFiltros] = useState(filtrosGlobais)
   const [tipoDado, setTipoDado] = useState('Volume')
+
+  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
+
+  const { data, isLoading, isError } = useTopProdutos()
 
   const top5 = (data?.items ?? []).slice(0, 5)
 
@@ -42,7 +44,7 @@ export function GraficoTop5Produtos({ filtros, onFiltrosChange }: Props) {
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto no topo direito */}
       <div className="absolute top-[13px] right-[14px]">
-        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
       {/* Cabeçalho abaixo dos filtros */}

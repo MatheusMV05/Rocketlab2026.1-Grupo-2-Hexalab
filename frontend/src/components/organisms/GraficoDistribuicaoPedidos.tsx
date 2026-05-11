@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts'
+import { useState, useEffect } from 'react'
 import { useStatusPedidos } from '../../hooks/useDashboard'
 import { TagVariacao } from '../atoms/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../molecules/FiltroPeriodo'
@@ -34,11 +35,14 @@ const ROTULOS: Record<string, string> = {
 }
 
 interface Props {
-  filtros: FiltrosPeriodo
-  onFiltrosChange: (f: FiltrosPeriodo) => void
+  filtrosGlobais: FiltrosPeriodo
 }
 
-export function GraficoDistribuicaoPedidos({ filtros, onFiltrosChange }: Props) {
+export function GraficoDistribuicaoPedidos({ filtrosGlobais }: Props) {
+  const [filtros, setFiltros] = useState(filtrosGlobais)
+
+  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
+
   const { data, isLoading, isError } = useStatusPedidos()
 
   const total = data?.items.reduce((s, i) => s + i.total, 0) ?? 0
@@ -52,7 +56,7 @@ export function GraficoDistribuicaoPedidos({ filtros, onFiltrosChange }: Props) 
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto no topo direito */}
       <div className="absolute top-[13px] right-[14px]">
-        <FiltroPeriodo filtros={filtros} onChange={onFiltrosChange} />
+        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
       {/* Cabeçalho abaixo dos filtros */}
