@@ -1,79 +1,53 @@
-from __future__ import annotations
-
-import re
-from pathlib import Path
-
 import yaml
+import logging
+from pathlib import Path
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 from app.agent.few_shots.modelos import ExemploFewShot
 
+logger = logging.getLogger(__name__)
+
 
 class FewShotRetriever:
-	"""Carrega e ranqueia exemplos few-shot a partir de um arquivo YAML."""
+    """Recupera exemplos few-shot mais parecidos com a pergunta do usuário.
 
-	def __init__(self, caminho_exemplos: str | Path) -> None:
-		self.caminho_exemplos = Path(caminho_exemplos)
+    O retriever carrega os exemplos do YAML configurado, normaliza cada item
+    para `ExemploFewShot` e cria um índice de embeddings para ranquear os
+    exemplos por similaridade semântica.
+    """
 
-	def retrieve(self, pergunta: str, k: int = 3) -> list[ExemploFewShot]:
-		"""Retorna os `k` exemplos mais relevantes para a pergunta.
+    def __init__(self, path: str | Path, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"):
+        caminho_yaml = Path(path)
 
-		A seleção usa sobreposição de tokens e bigramas para manter a lógica
-		leve e determinística, sem depender de embeddings externos.
-		"""
-		exemplos = self._carregar_exemplos()
-		if not exemplos or k <= 0:
-			return []
+        with open(caminho_yaml, 'r', encoding='utf-8') as file:
+            exemplos_raw = yaml.safe_load(file) or []
 
-		pergunta_tokens = self._tokenizar(pergunta)
-		pergunta_token_set = set(pergunta_tokens)
-		pergunta_bigrama = self._bigramas(pergunta_tokens)
+        self.exemplos = [
+            exemplo
+            for item in exemplos_raw
+            if (exemplo := ExemploFewShot.from_raw(item)) is not None
+        ]
 
-		ranqueados = []
-		for indice, exemplo in enumerate(exemplos):
-			score = self._pontuar(
-				pergunta_tokens=pergunta_token_set,
-				pergunta_bigrama=pergunta_bigrama,
-				texto=exemplo.question,
-			)
-			ranqueados.append((score, indice, exemplo))
+        if not self.exemplos:
+            logger.warning(f"Nenhum exemplo encontrado no arquivo {path}.")
+            self.model = None
+            self.index = None
+            return
 
-		ranqueados.sort(key=lambda item: (-item[0], item[1]))
-		return [item[2] for item in ranqueados[:k]]
+        logger.info(f"Carregando modelo de embeddings: {model_name}")
+        self.model = SentenceTransformer(model_name)
 
-	def _carregar_exemplos(self) -> list[ExemploFewShot]:
-		if not self.caminho_exemplos.exists():
-			return []
+        perguntas_yaml = [e.question for e in self.exemplos]
+        self.index = self.model.encode(perguntas_yaml, convert_to_numpy=True)
+        logger.info(f"Modelo carregado e {len(self.exemplos)} exemplos indexados.")
 
-		try:
-			with self.caminho_exemplos.open("r", encoding="utf-8") as arquivo:
-				dados = yaml.safe_load(arquivo)
-		except Exception:
-			return []
+    def retrieve(self, pergunta: str, k: int = 3) -> list[ExemploFewShot]:
+        """Retorna os `k` exemplos mais similares à pergunta informada."""
+        if not self.model or self.index is None or not self.exemplos or k <= 0:
+            return []
 
-		if not isinstance(dados, list):
-			return []
-
-		exemplos: list[ExemploFewShot] = []
-		for item in dados:
-			exemplo = ExemploFewShot.from_raw(item)
-			if exemplo is not None:
-				exemplos.append(exemplo)
-
-		return exemplos
-
-	@staticmethod
-	def _tokenizar(texto: str) -> list[str]:
-		return re.findall(r"[\wà-ÿ]+", (texto or "").lower())
-
-	@staticmethod
-	def _bigramas(tokens: list[str]) -> set[str]:
-		return {
-			f"{tokens[indice]} {tokens[indice + 1]}"
-			for indice in range(len(tokens) - 1)
-		}
-
-	def _pontuar(self, pergunta_tokens: set[str], pergunta_bigrama: set[str], texto: str) -> float:
-		tokens_texto_lista = self._tokenizar(texto)
-		tokens_texto = set(tokens_texto_lista)
-		bigramas_texto = self._bigramas(tokens_texto_lista)
-		return float(len(pergunta_tokens & tokens_texto)) + (0.5 * len(pergunta_bigrama & bigramas_texto))
+        vetor_pergunta = self.model.encode([pergunta], convert_to_numpy=True)
+        scores = cosine_similarity(vetor_pergunta, self.index)[0]
+        top_k_indices = scores.argsort()[::-1][:k]
+        return [self.exemplos[i] for i in top_k_indices]
