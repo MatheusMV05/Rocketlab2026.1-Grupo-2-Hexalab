@@ -1,16 +1,61 @@
 from __future__ import annotations
-
 import re
 import logging
 
-logger = logging.getLogger(__name__)
+# Configuração básica de log para monitorar tentativas de acesso indevido
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("CRM_Guardrail")
 
+# ==============================================================
+# CONFIGURAÇÕES DE ESCOPO E DOMÍNIO
+# ==============================================================
+
+# Whitelist: A IA só pode tocar nessas tabelas da Camada Gold.
+# Qualquer tabela fora desta lista resultará em bloqueio imediato.
+TABELAS_PERMITIDAS = {
+    "dim_clientes", 
+    "dim_produtos", 
+    "dim_data", 
+    "fat_pedidos", 
+    "fat_avaliacoes", 
+    "fat_tickets", 
+    "fat_clickstream",
+    "mart_desempenho_produtos", 
+    "mart_cliente_360", 
+    "mart_comportamento_digital"
+}
+
+# Termos que validam se a pergunta do usuário é sobre o negócio
+_TERMOS_DOMINIO = {
+    "cliente", "pedido", "produto", "receita", "faturamento", "venda", "estoque",
+    "ticket", "suporte", "atendimento", "nps", "avaliacao", "conversao", "sessao",
+    "carrinho", "abandono", "ltv", "churn", "engajamento", "vip", "agente", "sac"
+}
+
+# ==============================================================
+# PADRÕES REGEX (SEGURANÇA)
+# ==============================================================
+
+# Garante que a query seja apenas de leitura
 _PADRAO_SQL_INICIO_VALIDO = re.compile(r"^\s*(?:WITH|SELECT)\b", re.IGNORECASE)
+
+# Bloqueia comandos de escrita, alteração ou acesso ao sistema (DML/DDL)
 _PADRAO_PALAVRAS_PROIBIDAS = re.compile(
-    r"\b(?:DELETE|DROP|UPDATE|INSERT|ALTER|CREATE|TRUNCATE|REPLACE|MERGE|ATTACH|DETACH|PRAGMA)\b",
+    r"\b(?:DELETE|DROP|UPDATE|INSERT|ALTER|CREATE|TRUNCATE|REPLACE|MERGE|ATTACH|DETACH|PRAGMA|GRANT|REVOKE|EXEC|EXECUTE)\b",
     re.IGNORECASE,
 )
 
+# Padrões de Injection SQL e Comentários (Removido CASE WHEN para permitir análise)
+_PADROES_INJECTION_SQL = [
+    r"/\*.*?\*/",      # Comentários de bloco
+    r"--",             # Comentários de linha
+    r";",              # Múltiplos statements (evita execução de queries seguidas)
+    r"\bUNION\b",      # Bloqueia UNION para evitar vazamento entre tabelas
+    r"\bSLEEP\(",      # Evita ataques de negação de serviço (DoS)
+    r"\bLOAD_FILE\b"   # Evita leitura de arquivos do servidor
+]
+
+# Proteção contra Prompt Injection (Jailbreak)
 _PADROES_INJECTION_PROMPT = [
     r"(?:ignore|forget|override|bypass|skip)\s+(?:previous|above|all|your|my)\s+(?:instructions|instructions|prompts)",
     r"you\s+(?:are|are)\s+now",
@@ -27,164 +72,84 @@ _PADROES_INJECTION_PROMPT = [
     r"em\s+vez\s+de",
 ]
 
-_PADROES_INJECTION_SQL = [
-    r"--\s*$",
-    r"#\s*$",
-    r"/\*\s*$",
-    r";\s*(?:SELECT|INSERT|UPDATE|DELETE|DROP)",
-    r"\'\s*or\s*\'",
-    r"\"\s*or\s*\"",
-    r"\'\s*1\s*=\s*1",
-    r"UNION\s+(?:SELECT|ALL)",
-    r"CASE\s+WHEN",
-]
+# ==============================================================
+# FUNÇÕES DE VALIDAÇÃO
+# ==============================================================
 
-_MAX_COMPRIMENTO_PERGUNTA = 2048
-
-_TERMOS_DOMINIO = {
-    "cliente",
-    "clientes",
-    "consumidor",
-    "consumidores",
-    "pedido",
-    "pedidos",
-    "produto",
-    "produtos",
-    "ticket",
-    "tickets",
-    "avaliacao",
-    "avaliacoes",
-    "avaliação",
-    "avaliações",
-    "vendedor",
-    "vendedores",
-    "receita",
-    "faturamento",
-    "categoria",
-    "categorias",
-    "compra",
-    "compras",
-    "comprou",
-    "compraram",
-    "suporte",
-    "sac",
-    "crm",
-    "v-commerce",
-    "vcommerce",
-}
-
-
-def validar_input_usuario(pergunta: str) -> tuple[bool, str]:
-    """Valida entrada do usuário contra prompt injection e SQL injection.
-
-    Realiza verificações de segurança em camadas:
-    1. Valida tipo e comprimento
-    2. Detecta padrões de prompt injection (EN/PT)
-    3. Detecta padrões de SQL injection
-    4. Verifica caracteres perigosos/incomuns
-
-    Args:
-        pergunta: Pergunta em linguagem natural do usuário.
-
-    Returns:
-        Tupla (válido: bool, motivo: str). Se válido=True, motivo é vazio.
-        Se válido=False, motivo descreve o tipo de injção ou violação.
+def validar_pergunta_usuario(pergunta: str) -> str:
+    """
+    Valida a pergunta do usuário antes de enviar para a IA.
+    Retorna uma string vazia se for válida, ou uma mensagem de erro.
     """
     if not pergunta:
-        return False, "Pergunta vazia"
+        return "A pergunta não pode estar vazia."
 
-    if not isinstance(pergunta, str):
-        return False, "Pergunta não é string"
+    pergunta_clean = pergunta.lower()
 
-    pergunta_limpa = pergunta.strip()
-    if not pergunta_limpa:
-        return False, "Pergunta contém apenas espaços"
-
-    if len(pergunta_limpa) > _MAX_COMPRIMENTO_PERGUNTA:
-        return False, f"Pergunta excede {_MAX_COMPRIMENTO_PERGUNTA} caracteres"
-
-    motivo = _detectar_prompt_injection(pergunta_limpa)
-    if motivo:
-        return False, motivo
-
-    motivo = _detectar_sql_injection(pergunta_limpa)
-    if motivo:
-        return False, motivo
-
-    motivo = _detectar_fora_do_escopo(pergunta_limpa)
-    if motivo:
-        return False, motivo
-
-    return True, ""
-
-
-def _detectar_prompt_injection(pergunta: str) -> str:
-    """Detecta padrões de prompt injection em português e inglês."""
-    pergunta_lower = pergunta.lower()
+    # 1. Detectar tentativa de Jailbreak
     for padrao in _PADROES_INJECTION_PROMPT:
-        if re.search(padrao, pergunta_lower, re.IGNORECASE):
-            logger.warning("Prompt injection detectado: %s", padrao)
-            return f"Padrão suspeito de injection detectado: {padrao}"
+        if re.search(padrao, pergunta_clean):
+            logger.warning(f"Tentativa de Jailbreak detectada: {pergunta}")
+            return "Comando inválido. Por favor, faça apenas perguntas sobre os dados de CRM."
+
+    # 2. Verificar se está dentro do domínio de negócio (Tokens)
+    tokens = set(re.findall(r"[a-z0-9_]+", pergunta_clean))
+    if not tokens.intersection(_TERMOS_DOMINIO):
+        return "Desculpe, só posso responder perguntas relacionadas ao CRM V-Commerce (Clientes, Vendas, Produtos e Suporte)."
+
     return ""
 
-
-def _detectar_sql_injection(pergunta: str) -> str: #discutir
-    """Detecta padrões comuns de SQL injection."""
-    for padrao in _PADROES_INJECTION_SQL:
-        if re.search(padrao, pergunta, re.IGNORECASE):
-            logger.warning("SQL injection detectado: %s", padrao)
-            return f"Padrão suspeito de SQL injection: {padrao}"
-    return ""
-
-
-def _detectar_fora_do_escopo(pergunta: str) -> str:
-    """Detecta se a pergunta não parece pertencer ao domínio V-Commerce CRM 360."""
-    tokens = set(re.findall(r"[a-z0-9_]+", pergunta.lower()))
-    if not tokens:
-        return "Pergunta fora do escopo do CRM V-Commerce"
-
-    if tokens.intersection(_TERMOS_DOMINIO):
-        return ""
-
-    return "Pergunta fora do escopo do CRM V-Commerce"
-
-
-def validar_sql_somente_leitura(sql: str) -> bool:
-    """Valida se o SQL representa uma consulta segura de leitura.
-
-    Regras de segurança:
-    - Deve iniciar com SELECT ou WITH.
-    - Não pode conter palavras-chave de escrita/mutação/DDL.
-    - Não pode conter comentários SQL sem encerramento (-- ao final).
-    - Não pode ter múltiplas statements (;).
-
-    Args:
-        sql: String SQL a validar.
-
-    Returns:
-        True se SQL é válido e seguro (somente leitura), False caso contrário.
+def validar_sql_seguro(sql: str) -> bool:
+    """
+    Verifica se o SQL gerado pela IA é seguro para execução.
+    Permite CASE WHEN e Subqueries, desde que restritos à Whitelist.
     """
     if not sql:
         return False
 
-    if not _PADRAO_SQL_INICIO_VALIDO.search(sql):
-        logger.warning("SQL não inicia com SELECT ou WITH")
+    sql_lower = sql.lower().strip()
+
+    # 1. Deve ser obrigatoriamente um SELECT ou um Common Table Expression (WITH)
+    if not _PADRAO_SQL_INICIO_VALIDO.search(sql_lower):
+        logger.error("SQL rejeitado: Não inicia com SELECT ou WITH.")
         return False
 
-    if _PADRAO_PALAVRAS_PROIBIDAS.search(sql):
-        logger.warning("SQL contém palavras-chave proibidas")
+    # 2. Bloquear palavras-chave proibidas (Escrita/Alteração)
+    if _PADRAO_PALAVRAS_PROIBIDAS.search(sql_lower):
+        logger.error("SQL rejeitado: Contém termos de alteração de dados (DML/DDL).")
         return False
 
-    if _validar_sem_injection_sql(sql) is False:
-        logger.warning("SQL contém padrões de injection detectados")
-        return False
-
-    return True
-
-
-def _validar_sem_injection_sql(sql: str) -> bool:
-    """Verifica se SQL não contém padrões de injection."""
+    # 3. Bloquear padrões de Injeção conhecidos
     for padrao in _PADROES_INJECTION_SQL:
-        if re.search(padrao, sql, re.IGNORECASE):
+        if re.search(padrao, sql_lower):
+            logger.error(f"SQL rejeitado: Padrão de injeção detectado ({padrao}).")
             return False
+
+    # 4. VALIDAÇÃO DE WHITELIST (Inclusive em Subqueries)
+    # Este regex captura nomes de tabelas que aparecem após FROM ou JOIN
+    tabelas_na_query = re.findall(r"(?:from|join)\s+([a-z0-9_]+)", sql_lower)
+    
+    if not tabelas_na_query:
+        # Se a query não tem FROM (ex: SELECT 1), podemos avaliar se permitimos ou não.
+        # No contexto de CRM, geralmente deve haver uma tabela.
+        logger.warning("Query sem tabelas detectada.")
+    
+    for tabela in tabelas_na_query:
+        if tabela not in TABELAS_PERMITIDAS:
+            logger.error(f"SQL rejeitado: Tentativa de acesso à tabela proibida '{tabela}'.")
+            return False
+
     return True
+
+# ==============================================================
+# EXPLICABILIDADE (Opcional - Para a IA usar na resposta)
+# ==============================================================
+
+def normalizar_valor_bruto(valor):
+    """
+    Auxiliar para garantir que a IA trate valores nulos ou 
+    formatos brutos antes de exibir ao usuário final.
+    """
+    if valor is None:
+        return "N/A"
+    return valor
