@@ -12,7 +12,7 @@ export function LayoutPrincipal({ titulo, children }: Props) {
     <div className="min-h-screen bg-[#f6f7f9]">
       <BarraLateral />
       <BarraTopo titulo={titulo} />
-      <main className="ml-[104px] mt-[87px] pl-[58px] pr-[62px] py-6 bg-white rounded-tl-[41px] min-h-[calc(100vh-87px)] overflow-y-auto">
+      <main className="ml-[104px] mt-[87px] pl-[58px] pr-[56px] pt-[32px] pb-[45px] bg-white rounded-tl-[41px] border-l border-t border-[#e0e0e0] min-h-[calc(100vh-87px)] overflow-y-auto">
         {children}
       </main>
     </div>

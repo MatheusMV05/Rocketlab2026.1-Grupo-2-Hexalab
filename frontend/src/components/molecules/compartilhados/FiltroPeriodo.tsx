@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { DropdownFiltro } from '../../atoms/compartilhados/DropdownFiltro'
 import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_NOME } from '../../../constants/opcoesFiltro'
 
@@ -39,17 +40,18 @@ export function FiltroPeriodo({ filtros, onChange }: Props) {
         valor={filtros.localidade}
         onChange={(v) => onChange({ ...filtros, localidade: v })}
         rotulo="Localidade"
+        pesquisavel
       />
       <button
         onClick={() => onChange(FILTRO_VAZIO)}
         disabled={!temFiltro}
-        className={`flex items-center gap-[5px] h-[30px] px-[10px] text-[14px] transition-colors whitespace-nowrap ${
+        className={`flex items-center gap-[6px] h-[30px] px-[8px] text-[14px] transition-colors whitespace-nowrap ${
           temFiltro
-            ? 'text-[#343434] hover:text-[#c20000] cursor-pointer'
-            : 'text-[#b0b0b0] cursor-default'
+            ? 'text-[#666666] hover:text-[#c20000] cursor-pointer'
+            : 'text-[#b8b8b8] cursor-default'
         }`}
       >
-        <span className="leading-none">&times;</span>
+        <X size={14} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
         <span>Limpar</span>
       </button>
     </div>

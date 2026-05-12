@@ -85,7 +85,7 @@ export function GraficoTaxaSatisfacao({ filtrosGlobais }: Props) {
   return (
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto y=13 do card, alinhado à direita — conforme SVG */}
-      <div className="absolute top-[13px] right-[14px]">
+      <div className="absolute top-[5px] left-[28px]">
         <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 

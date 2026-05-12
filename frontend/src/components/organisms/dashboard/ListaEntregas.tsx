@@ -255,27 +255,27 @@ export function ListaEntregas() {
         <div className="flex items-center justify-between gap-3 px-[6px] flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             {filtro.ano && (
-              <span className="flex items-center gap-1 px-3 py-1 border border-[#d1d5db] rounded-full text-[13px] text-[#343434]">
+              <span className="flex items-center gap-[12px] border-2 border-black rounded-[10px] p-[10px] text-[12px] text-black font-normal">
                 {filtro.ano}
-                <button onClick={() => setFiltro((f) => ({ ...f, ano: '', mes: '' }))} className="ml-1 text-[#4d4d4d] hover:text-[#c20000]"><X size={12} /></button>
+                <button onClick={() => setFiltro((f) => ({ ...f, ano: '', mes: '' }))}><X size={16} strokeWidth={2} /></button>
               </span>
             )}
             {filtro.mes && (
-              <span className="flex items-center gap-1 px-3 py-1 border border-[#d1d5db] rounded-full text-[13px] text-[#343434] uppercase">
+              <span className="flex items-center gap-[12px] border-2 border-black rounded-[10px] p-[10px] text-[12px] text-black font-normal uppercase">
                 {filtro.mes}
-                <button onClick={() => setFiltro((f) => ({ ...f, mes: '' }))} className="ml-1 text-[#4d4d4d] hover:text-[#c20000]"><X size={12} /></button>
+                <button onClick={() => setFiltro((f) => ({ ...f, mes: '' }))}><X size={16} strokeWidth={2} /></button>
               </span>
             )}
             {filtro.localidades.map((loc) => (
-              <span key={loc} className="flex items-center gap-1 px-3 py-1 border border-[#d1d5db] rounded-full text-[13px] text-[#343434]">
+              <span key={loc} className="flex items-center gap-[12px] border-2 border-black rounded-[10px] p-[10px] text-[12px] text-black font-normal">
                 {loc}
-                <button onClick={() => setFiltro((f) => ({ ...f, localidades: f.localidades.filter((l) => l !== loc) }))} className="ml-1 text-[#4d4d4d] hover:text-[#c20000]"><X size={12} /></button>
+                <button onClick={() => setFiltro((f) => ({ ...f, localidades: f.localidades.filter((l) => l !== loc) }))}><X size={16} strokeWidth={2} /></button>
               </span>
             ))}
             {filtro.status.map((s) => (
-              <span key={s} className="flex items-center gap-1 px-3 py-1 border border-[#d1d5db] rounded-full text-[13px] text-[#343434]">
+              <span key={s} className="flex items-center gap-[12px] border-2 border-black rounded-[10px] p-[10px] text-[12px] text-black font-normal">
                 {STATUS_CONFIG[s]?.label ?? s}
-                <button onClick={() => setFiltro((f) => ({ ...f, status: f.status.filter((x) => x !== s) }))} className="ml-1 text-[#4d4d4d] hover:text-[#c20000]"><X size={12} /></button>
+                <button onClick={() => setFiltro((f) => ({ ...f, status: f.status.filter((x) => x !== s) }))}><X size={16} strokeWidth={2} /></button>
               </span>
             ))}
           </div>

@@ -102,7 +102,7 @@ export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
 
   return (
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
-      <div className="absolute top-[13px] right-[14px]">
+      <div className="absolute top-[5px] right-[19px]">
         <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 

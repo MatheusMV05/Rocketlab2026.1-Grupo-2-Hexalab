@@ -55,7 +55,7 @@ export default function Dashboard() {
   return (
     <LayoutPrincipal titulo="DASHBOARD">
       {/* Filtros globais — alinhados à direita conforme protótipo */}
-      <div className="flex justify-end mb-[25px]">
+      <div className="flex justify-end mb-[17px]">
         <div className="flex items-center gap-3">
           <span className="text-[14px] font-semibold text-[#1d5358]">Filtros globais:</span>
           <FiltroPeriodo filtros={filtrosGlobais} onChange={setFiltrosGlobais} />
@@ -63,7 +63,7 @@ export default function Dashboard() {
       </div>
 
       {/* Cards KPI */}
-      <div className="grid grid-cols-4 gap-[14px] mb-[41px]">
+      <div className="flex gap-[14px] mb-[40px]">
         {cardsKpi.map((card) => (
           <CardKpi
             key={card.titulo}
@@ -77,18 +77,18 @@ export default function Dashboard() {
       </div>
 
       {/* Linha 1: Receita Mensal (578×433) + Taxa de Satisfação (578×433) */}
-      <div className="grid grid-cols-2 gap-[62px] mb-[46px]" style={{ height: 435 }}>
+      <div className="grid grid-cols-2 gap-[60px] mb-[46px]" style={{ height: 435 }}>
         <GraficoReceitaMensal filtrosGlobais={filtrosGlobais} />
         <GraficoTaxaSatisfacao filtrosGlobais={filtrosGlobais} />
       </div>
 
       {/* Linha 2: Matriz de Satisfação vs Performance — largura total */}
-      <div className="mb-[44px]" style={{ height: 580 }}>
+      <div className="mb-[44px]" style={{ height: 487 }}>
         <MatrizSatisfacaoPerformance filtrosGlobais={filtrosGlobais} />
       </div>
 
       {/* Linha 3: Distribuição de Pedidos (578×417) + Top 5 Produtos (578×417) */}
-      <div className="grid grid-cols-2 gap-[62px] mb-[46px]" style={{ height: 417 }}>
+      <div className="grid grid-cols-2 gap-[60px] mb-[43px]" style={{ height: 418 }}>
         <GraficoDistribuicaoPedidos filtrosGlobais={filtrosGlobais} />
         <GraficoTop5Produtos filtrosGlobais={filtrosGlobais} />
       </div>

@@ -93,13 +93,19 @@ function BadgeQuadrante({
   )
 }
 
-// Constantes do label
-const DOT_R = 6
+// Constantes do label (pílula: dot + nome)
+const DOT_R = 5
+const PILL_H = 25
+const PILL_DOT_R = 5
+const PILL_DOT_CX = 10
+const PILL_PAD_LEFT = 22
+const PILL_PAD_RIGHT = 8
 const LABEL_FONT = 11
-const LABEL_PAD_X = 10
-const LABEL_PAD_Y = 5
-const LABEL_H = LABEL_FONT + LABEL_PAD_Y * 2
 const CHART_MARGIN = { top: 16, right: 24, left: 36, bottom: 20 }
+// valores legados mantidos para calcLabelPositions
+const LABEL_PAD_X = PILL_PAD_LEFT
+const LABEL_PAD_Y = (PILL_H - LABEL_FONT) / 2
+const LABEL_H = PILL_H
 const CHART_H = 400
 
 interface ProdutoComLabel {
@@ -134,17 +140,20 @@ function calcLabelPositions(
   return items.map((item) => {
     const px = toPixX(item.volume)
     const py = toPixY(item.satisfacao)
-    const lw = item.nome.length * 6.5 + LABEL_PAD_X * 2
+    const lw = item.nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT
 
+    // base: dot da pílula alinha com (px, py) → pillLeft = px - PILL_DOT_CX, pillTop = py - PILL_H/2
+    const BASE_DX = -PILL_DOT_CX
+    const BASE_DY = -PILL_H / 2
     const candidates: [number, number][] = [
-      [gap, -LABEL_H / 2],
-      [gap, -LABEL_H - 4],
-      [gap, 4],
-      [-lw - gap, -LABEL_H / 2],
-      [-lw - gap, -LABEL_H - 4],
-      [-lw - gap, 4],
-      [-lw / 2, -LABEL_H - gap],
-      [-lw / 2, gap],
+      [BASE_DX,           BASE_DY],                    // right-center (padrão)
+      [BASE_DX,           BASE_DY - PILL_H - 4],       // above
+      [BASE_DX,           BASE_DY + PILL_H + 4],       // below
+      [-lw + PILL_DOT_CX, BASE_DY],                    // left-center
+      [-lw + PILL_DOT_CX, BASE_DY - PILL_H - 4],      // left-above
+      [-lw + PILL_DOT_CX, BASE_DY + PILL_H + 4],      // left-below
+      [-lw / 2,           BASE_DY - PILL_H - gap],     // top-center
+      [-lw / 2,           BASE_DY + PILL_H + gap],     // bottom-center
     ]
 
     let dx = candidates[0][0]
@@ -203,7 +212,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
   return (
     <div ref={containerRef} className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 flex flex-col">
       {/* Filtro absoluto no topo direito */}
-      <div className="absolute top-3 right-3">
+      <div className="absolute top-[7px] right-[75px]">
         <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
@@ -275,7 +284,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
               />
             </YAxis>
 
-            <Tooltip content={<TooltipMatriz />} />
+            <Tooltip content={<TooltipMatriz />} cursor={false} />
 
             {/* ── Quadrantes coloridos (ReferenceArea) com badges nos cantos ── */}
 
@@ -378,24 +387,33 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
                 const nome = payload?.nome ?? ''
                 const ldx = payload?.labelDx ?? DOT_R + 5
                 const ldy = payload?.labelDy ?? -LABEL_H / 2
-                const lw = nome.length * 6.5 + LABEL_PAD_X * 2
+                const lw = nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT
 
                 return (
                   <g>
-                    <circle cx={cx} cy={cy} r={DOT_R} fill={cor} />
+                    {/* pílula: fundo branco totalmente arredondado */}
                     <rect
                       x={cx + ldx}
                       y={cy + ldy}
                       width={lw}
-                      height={LABEL_H}
+                      height={PILL_H}
                       fill="white"
                       stroke="#d0d0d0"
                       strokeWidth={1}
-                      rx={4}
+                      rx={PILL_H / 2}
+                      ry={PILL_H / 2}
                     />
+                    {/* dot colorido à esquerda da pílula */}
+                    <circle
+                      cx={cx + ldx + PILL_DOT_CX}
+                      cy={cy + ldy + PILL_H / 2}
+                      r={PILL_DOT_R}
+                      fill={cor}
+                    />
+                    {/* nome do produto */}
                     <text
-                      x={cx + ldx + LABEL_PAD_X}
-                      y={cy + ldy + LABEL_FONT + LABEL_PAD_Y - 2}
+                      x={cx + ldx + PILL_PAD_LEFT}
+                      y={cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1}
                       fontSize={LABEL_FONT}
                       fontWeight={500}
                       fontFamily="inherit"
