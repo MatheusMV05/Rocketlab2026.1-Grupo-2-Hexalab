@@ -121,6 +121,69 @@ git push origin --delete feature/nome-da-feature
 
 ---
 
+## 5. Estrutura de Pull Request
+
+Para todo PR é ideal que ele contenha uma descrição seguindo o modelo abaixo:
+
+### Título do PR
+
+O título deve seguir o mesmo padrão de Conventional Commits da seção 2:
+
+```
+<tipo>(<escopo>): <descrição curta>
+```
+
+Exemplos:
+```
+feat(clientes): adiciona listagem paginada com filtros
+fix(pedidos): corrige validação de data_fim anterior a data_inicio
+test(produtos): adiciona testes E2E com Cypress para CRUD
+```
+
+
+## O que foi alterado?
+
+Explique brevemente o que foi implementado.
+
+## Por quê?
+
+Explique o motivo ou o problema que este PR resolve.
+
+## Como funciona?
+
+Descreva o fluxo principal ou o comportamento técnico.
+
+## Feature / User Story relacionada
+
+Feature: F-XX Nome da Feature
+
+User Story: US-XX Nome da User Story
+
+
+### Exemplo
+
+
+## O que foi alterado?
+
+Implementada a listagem paginada de clientes com filtros por nome, e-mail e estado.
+
+## Por quê?
+
+Permite que analistas de CRM localizem clientes rapidamente sem percorrer toda a base.
+
+## Como funciona?
+
+O hook `useClientes(filters)` dispara `GET /api/clientes` com os parâmetros de filtro e paginação.
+A tabela atualiza reativamente via React Query com debounce de 400ms na busca por texto.
+
+## Feature / User Story relacionada
+
+Feature: F-02 Gestão de Clientes
+
+User Story: US-05 Listagem e Busca de Clientes
+
+
+---
 
 ## 6. O que NÃO commitar
 

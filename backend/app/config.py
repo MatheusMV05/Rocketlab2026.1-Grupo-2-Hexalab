@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     class Config:
-        env_file = ".env"
+        env_file = Path(__file__).resolve().parents[1] / ".env"
+        env_file_encoding = "utf-8"
 
 
 settings = Settings()
