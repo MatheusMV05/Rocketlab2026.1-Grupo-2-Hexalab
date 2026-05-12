@@ -63,3 +63,30 @@ def test_decompositor_normaliza_few_shot_e_lê_saida_pydantic(monkeypatch):
     assert capturado["template_name"] == "decompositor"
     assert capturado["examples"][0]["question"] == "Qual produto com mais lucro no ultimo mes"
     assert capturado["examples"][0]["sql"] == "SELECT nome_produto FROM fat_pedidos"
+
+
+def test_decompositor_busca_few_shot_com_parametro_path(monkeypatch):
+    agente = AgenteDecompositor(config=Config(api_key=""))
+
+    capturado = {}
+
+    class _FakeRetriever:
+        def __init__(self, path):
+            capturado["path"] = path
+
+        def retrieve(self, pergunta, k=3):
+            capturado["pergunta"] = pergunta
+            capturado["k"] = k
+            return []
+
+    monkeypatch.setattr(
+        "app.agent.agentes.agente_decompositor.FewShotRetriever",
+        _FakeRetriever,
+    )
+
+    resultado = agente._buscar_exemplos_few_shot("Pergunta teste")
+
+    assert resultado == []
+    assert capturado["path"] == agente.config.few_shot_path
+    assert capturado["pergunta"] == "Pergunta teste"
+    assert capturado["k"] == 3
