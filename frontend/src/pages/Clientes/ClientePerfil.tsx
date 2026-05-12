@@ -18,7 +18,8 @@ import {
   MinusSquare,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  User
 } from 'lucide-react'
 import { CIDADES_MOCK, ESTADOS_MAP } from '../../constants/cidades'
 import { DropdownOrganizarLista } from '../../components/molecules/clientes/DropdownOrganizarLista'
@@ -168,9 +169,12 @@ export default function ClientePerfil() {
             </button>
           </div>
 
-          <div className="w-[120px] h-[120px] shrink-0 rounded-full bg-gray-200 overflow-hidden">
-            {/* Foto de placeholder fiel ao mockup */}
-            <img src="https://i.pravatar.cc/300?img=47" alt="Perfil" className="w-full h-full object-cover" />
+          <div className="w-[120px] h-[120px] shrink-0 rounded-full bg-[#f6f7f9] overflow-hidden flex items-center justify-center border border-[#e0e0e0]">
+            {cliente.nome === 'Maria Day' ? (
+              <img src="https://i.pravatar.cc/300?img=47" alt="Perfil" className="w-full h-full object-cover" />
+            ) : (
+              <User size={60} className="text-[#b3b3b3]" />
+            )}
           </div>
 
           <div className="flex flex-col gap-6 flex-1">
