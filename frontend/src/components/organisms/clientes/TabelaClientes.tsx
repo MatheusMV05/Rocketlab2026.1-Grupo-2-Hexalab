@@ -18,7 +18,7 @@ import { BotaoFiltro } from '../../atoms/compartilhados/BotaoFiltro'
 import { MESES_FILTRO } from '../../../constants/opcoesFiltro'
 import { CIDADES_MOCK, ESTADOS_MAP } from '../../../constants/cidades'
 
-import { GET_MOCK_POR_PAGINA } from '../../../constants/mockClientes'
+import { GET_MOCK_POR_PAGINA, CLIENTES_MOCK_ALL } from '../../../constants/mockClientes'
 const CLIENTES_MOCK_INICIAL = GET_MOCK_POR_PAGINA(1)
 
 const ANOS_CLIENTES = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014']
@@ -43,17 +43,45 @@ export function TabelaClientes() {
   const [ordenacao, setOrdenacao] = useState('')
   const [selecionados, setSelecionados] = useState<string[]>([])
   const [paginaAtual, setPaginaAtual] = useState(1)
-  const totalPaginas = 6
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    setClientes(GET_MOCK_POR_PAGINA(paginaAtual))
-    setSelecionados([])
-  }, [paginaAtual])
-
   const [filtroAberto, setFiltroAberto] = useState(false)
   const [filtro, setFiltro] = useState<FiltroClientes>(FILTRO_VAZIO)
   const [filtroTemp, setFiltroTemp] = useState<FiltroClientes>(FILTRO_VAZIO)
+
+  const navigate = useNavigate()
+
+  // Calcula os clientes filtrados
+  const clientesFiltrados = CLIENTES_MOCK_ALL.filter(cliente => {
+    let match = true
+    if (filtro.localizacao) {
+      match = match && cliente.uf.toLowerCase().includes(filtro.localizacao.toLowerCase())
+    }
+    if (filtro.ano) {
+      match = match && cliente.cadastro.includes(filtro.ano)
+    }
+    if (filtro.mes) {
+      const mesIndex = MESES_FILTRO.findIndex(m => m.label === filtro.mes) + 1
+      const mesStr = mesIndex.toString().padStart(2, '0')
+      match = match && cliente.cadastro.split('/')[1] === mesStr
+    }
+    if (filtro.source.length > 0) {
+      match = match && filtro.source.includes(cliente.source)
+    }
+    return match
+  })
+
+  const totalPaginas = Math.max(1, Math.ceil(clientesFiltrados.length / 9))
+  
+  // Garante que a página atual não passe do total após um filtro
+  const paginaValida = Math.min(paginaAtual, totalPaginas)
+
+  useEffect(() => {
+    const inicio = (paginaValida - 1) * 9
+    const fim = inicio + 9
+    setClientes(clientesFiltrados.slice(inicio, fim))
+    setSelecionados([])
+  }, [paginaValida, filtro])
+
+
 
   const [modalEditar, setModalEditar] = useState(false)
   const [edicao, setEdicao] = useState<any>(null)
@@ -488,7 +516,7 @@ export function TabelaClientes() {
         </button>
 
         <div className="flex items-center gap-[4px]">
-          {[1, 2, 3, 4, 5, 6].map((p) => (
+          {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
               onClick={() => setPaginaAtual(p)}
