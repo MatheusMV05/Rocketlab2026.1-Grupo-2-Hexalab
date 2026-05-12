@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import {
   Square,
   CheckSquare,
+  MinusSquare,
   Search,
   Filter,
   Edit2,
@@ -71,6 +72,7 @@ export function TabelaClientes() {
   const uploadRef = useRef<HTMLDivElement>(null)
 
   const todosSelecionados = selecionados.length === clientes.length && clientes.length > 0
+  const algunsSelecionados = selecionados.length > 0 && selecionados.length < clientes.length
   const temFiltroAtivo = filtro.localizacao || filtro.ano || filtro.mes || filtro.source.length > 0
 
   useEffect(() => {
@@ -417,13 +419,18 @@ export function TabelaClientes() {
       {/* Tabela (Com scroll caso estoure a altura) */}
       <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
         <div className="bg-[#f6f7f9] rounded-[8px] flex items-center px-4 py-3 mx-1 shrink-0 sticky top-0 z-10">
-          <button className="w-8 shrink-0 flex items-center justify-center" onClick={toggleTodos}>
+          <div
+            className="w-8 shrink-0 flex items-center justify-center cursor-pointer"
+            onClick={toggleTodos}
+          >
             {todosSelecionados ? (
-              <CheckSquare size={18} strokeWidth={2} className="text-[#1c5258]" />
+              <CheckSquare size={18} strokeWidth={2} className="text-[#343434]" />
+            ) : algunsSelecionados ? (
+              <MinusSquare size={18} strokeWidth={2} className="text-[#343434]" />
             ) : (
-              <Square size={18} strokeWidth={2} className="text-[#4d4d4d]" />
+              <Square size={18} strokeWidth={2} className="text-[#898989]" />
             )}
-          </button>
+          </div>
           <span className="text-[13px] font-semibold text-[#1c5258] w-[100px] shrink-0">ID</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5]">Nome</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.2]">Telefone</span>
