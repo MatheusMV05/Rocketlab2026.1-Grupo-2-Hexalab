@@ -28,6 +28,14 @@ class ResultadoDecompositorLLM(BaseModel):
         description="Consulta SQL somente leitura pronta para execução."
     )
 
+class ResultadoRefinadorLLM(BaseModel):
+    """Saída estruturada retornada pelo PydanticAI no agente refinador."""
+    reasoning: str = Field(
+        description="Explicação do que foi corrigido e por quê."
+    )
+    sql: str = Field(
+        description="Consulta SQL corrigida, somente leitura, pronta para execução."
+    )
 
 @dataclass
 class ResultadoSeletor:
@@ -57,4 +65,25 @@ class ResultadoDecompositor:
 
     sql: str
     raciocinio: str
+    tokens_usados: int
+
+@dataclass
+class ResultadoRefinador:
+    """Resultado retornado por `AgenteRefinador`.
+
+    Attributes:
+        sql: SQL final corrigido, ou o candidato se já estava correto.
+        raciocinio: Explicação do que foi corrigido.
+        sucesso: True se o SQL executou com sucesso dentro das tentativas.
+        impossivel: True se o LLM declarou que não consegue responder.
+        tentativas: Quantas iterações foram feitas.
+        ultimo_erro: Último erro do banco, se houver.
+        tokens_usados: Total de tokens consumidos em todas as tentativas.
+    """
+    sql: str
+    raciocinio: str
+    sucesso: bool
+    impossivel: bool
+    tentativas: int
+    ultimo_erro: str | None
     tokens_usados: int

@@ -128,6 +128,9 @@ def validar_sql_seguro(sql: str) -> bool:
     # 4. VALIDAÇÃO DE WHITELIST (Inclusive em Subqueries)
     # Este regex captura nomes de tabelas que aparecem após FROM ou JOIN
     tabelas_na_query = re.findall(r"(?:from|join)\s+([a-z0-9_]+)", sql_lower)
+
+    # Ignora CTEs declaradas no próprio WITH, que também aparecem em FROM/JOIN.
+    ctes_declaradas = set(re.findall(r"(?:with|,)\s+([a-z0-9_]+)\s+as\s*\(", sql_lower))
     
     if not tabelas_na_query:
         # Se a query não tem FROM (ex: SELECT 1), podemos avaliar se permitimos ou não.
@@ -135,6 +138,8 @@ def validar_sql_seguro(sql: str) -> bool:
         logger.warning("Query sem tabelas detectada.")
     
     for tabela in tabelas_na_query:
+        if tabela in ctes_declaradas:
+            continue
         if tabela not in TABELAS_PERMITIDAS:
             logger.error(f"SQL rejeitado: Tentativa de acesso à tabela proibida '{tabela}'.")
             return False

@@ -1,5 +1,7 @@
 from __future__ import annotations
  
+import asyncio
+import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -111,10 +113,15 @@ class AgenteBase(ABC):
  
         deps = ContextoAgente(config=self.config, sistema=sistema)
         try:
-            resultado = self._agent.run_sync(usuario, deps=deps)
+            if hasattr(self._agent, "run_sync"):
+                resultado = self._agent.run_sync(usuario, deps=deps)
+            else:
+                resultado = asyncio.run(self._agent.run(usuario, deps=deps))
             texto = str(resultado.data)
             uso = resultado.usage()
             tokens_usados = uso.total_tokens if uso else 0
+            if hasattr(resultado.data, "model_dump"):
+                texto = json.dumps(resultado.data.model_dump(), ensure_ascii=False)
         except Exception:
             # Fallback seguro caso ocorra falha de conexão / parser no PydanticAI
             texto = ""
