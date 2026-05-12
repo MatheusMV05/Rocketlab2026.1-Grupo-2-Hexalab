@@ -1,101 +1,25 @@
 import { useState, useRef, useEffect } from 'react'
-import {
-  Square,
-  CheckSquare,
+import { 
+  Search, 
+  Filter, 
+  Upload, 
+  Edit2, 
+  Square, 
+  CheckSquare, 
   MinusSquare,
-  Search,
-  Filter,
-  Edit2,
-  Upload,
-  ChevronLeft,
-  ChevronRight,
   X,
   Check,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { DropdownOrganizarLista } from '../../molecules/clientes/DropdownOrganizarLista'
 import { BotaoFiltro } from '../../atoms/compartilhados/BotaoFiltro'
 import { MESES_FILTRO } from '../../../constants/opcoesFiltro'
 import { CIDADES_MOCK, ESTADOS_MAP } from '../../../constants/cidades'
 
-// Dados de exemplo baseados no Figma
-const CLIENTES_MOCK_INICIAL = [
-  { id: '#f3221', nome: 'Maria Day', telefone: '55 (14) 9977-1729', uf: 'Jaguaribara - CE', cadastro: '05/12/2016', source: 'REFERRAL' },
-  { id: '#2f02d', nome: 'Kevin Cantu', telefone: '55 (81) 1347-4824', uf: 'Rio de Janeiro - RJ', cadastro: '03/02/2024', source: 'REFERRAL' },
-  { id: '#30746', nome: 'Ronald Daniel', telefone: '55 (85) 8822-6332', uf: 'Rio Branco - AC', cadastro: '12/04/2016', source: 'WEB' },
-  { id: '#15a69', nome: 'Katherine Smith', telefone: '55 (98) 4894-1347', uf: 'Cuiabá - MT', cadastro: '21/06/2019', source: 'WEB' },
-  { id: '#9a15d', nome: 'Brandon Glover', telefone: '55 (95) 9732-5436', uf: 'Blumenau - SC', cadastro: '09/01/2022', source: 'REFERRAL' },
-  { id: '#76c37', nome: 'Toni Li', telefone: '55 (93) 2382-8559', uf: 'Salvador - BA', cadastro: '25/11/2023', source: 'APP' },
-  { id: '#0131c', nome: 'Barbara Luna', telefone: '55 (82) 3045-0948', uf: 'Taubaté - SP', cadastro: '27/02/2016', source: 'REFERRAL' },
-  { id: '#1cf37', nome: 'Richard Benson', telefone: '55 (83) 5281-0372', uf: 'Lagoa da Prata - MG', cadastro: '08/04/2018', source: 'WEB' },
-  { id: '#10ddb', nome: 'James Alin', telefone: '55 (19) 7487-6994', uf: 'Maceió - AL', cadastro: '05/03/2023', source: 'APP' },
-]
-
-const MOCK_PAGINA_2 = [
-  { id: '#01fc2', nome: 'Jay Jones', telefone: 'N/A', uf: 'Mirandópolis - SP', cadastro: '05/03/2023', source: 'WEB' },
-  { id: '#9ce1d', nome: 'Aaron White', telefone: '55 (77) 1424-0980', uf: 'São Paulo - SP', cadastro: '12/07/2023', source: 'WEB' },
-  { id: '#acda2', nome: 'James Mejia', telefone: '55 (75) 5022-2886', uf: 'São Paulo - SP', cadastro: '09/05/2015', source: 'WEB' },
-  { id: '#cfe85', nome: 'Kyle Romero', telefone: '55 (84) 3092-8803', uf: 'Itapagipe - MG', cadastro: '05/09/2018', source: 'REFERRAL' },
-  { id: '#8e223', nome: 'Wayne Smith', telefone: '55 (83) 7163-1353', uf: 'Tucano - BA', cadastro: '23/12/2021', source: 'REFERRAL' },
-  { id: '#9ed64', nome: 'Leslie Reynolds', telefone: '55 (93) 9341-8236', uf: 'Paço do Lumiar - MA', cadastro: '23/06/2016', source: 'REFERRAL' },
-  { id: '#ec148', nome: 'Alan Brown', telefone: '55 (67) 2046-0252', uf: 'Jequitinhonha - MG', cadastro: '03/10/2023', source: 'REFERRAL' },
-  { id: '#43834', nome: 'Deborah Wright', telefone: '55 (12) 6993-8096', uf: 'São Paulo - SP', cadastro: '29/11/2017', source: 'APP' },
-  { id: '#421a0', nome: 'Michael Ross', telefone: '55 (77) 0041-9470', uf: 'Ilhéus - BA', cadastro: '29/06/2016', source: 'WEB' },
-]
-
-const MOCK_PAGINA_3 = [
-  { id: '#8da3e', nome: 'Nathaniel Wagner', telefone: '55 (87) 7308-2086', uf: 'Ilha Solteira - SP', cadastro: '07/06/2024', source: 'APP' },
-  { id: '#2402c', nome: 'Thomas Weeks', telefone: '55 (77) 7133-4446', uf: 'Passos - MG', cadastro: '27/10/2017', source: 'WEB' },
-  { id: '#9d14c', nome: 'Kendra Burton', telefone: '55 (16) 2979-6775', uf: 'Paragominas - PA', cadastro: '06/08/2021', source: 'REFERRAL' },
-  { id: '#54689', nome: 'Caitlin Hernandez', telefone: '55 (75) 9000-2424', uf: 'Salvador - BA', cadastro: '05/10/2016', source: 'WEB' },
-  { id: '#fec1b', nome: 'Jose Kirk', telefone: '55 (85) 1072-5576', uf: 'Campinas - SP', cadastro: '29/07/2024', source: 'REFERRAL' },
-  { id: '#b43d6', nome: 'Juan Morrison', telefone: '55 (61) 2723-0113', uf: 'Porto Alegre - RS', cadastro: '03/06/2024', source: 'REFERRAL' },
-  { id: '#42318', nome: 'Lauren Parker', telefone: '55 (79) 3970-4145', uf: 'Ibiá - MG', cadastro: '07/03/2018', source: 'WEB' },
-  { id: '#23777', nome: 'Kevin Hart', telefone: '55 (88) 2082-7385', uf: 'Matão - SP', cadastro: '10/08/2024', source: 'APP' },
-  { id: '#5c723', nome: 'Samantha Rivera', telefone: '55 (83) 8807-7361', uf: 'Cruz Machado - PR', cadastro: '02/02/2020', source: 'APP' },
-]
-
-const MOCK_PAGINA_4 = [
-  { id: '#bee30', nome: 'Michael Smith', telefone: '55 (97) 3704-9594', uf: 'Lagoa Santa - MG', cadastro: '08/08/2018', source: 'WEB' },
-  { id: '#46be1', nome: 'Jonathan Smith', telefone: '55 (79) 3117-6830', uf: 'Belo Horizonte - MG', cadastro: '04/11/2018', source: 'WEB' },
-  { id: '#0613f', nome: 'Cheyenne Wallace', telefone: '55 (93) 8823-7521', uf: 'Paulino Neves - MA', cadastro: '22/03/2019', source: 'REFERRAL' },
-  { id: '#9381d', nome: 'Dana Smith', telefone: '55 (94) 3448-8643', uf: 'Ceará-Mirim - RN', cadastro: '28/07/2015', source: 'REFERRAL' },
-  { id: '#77d05', nome: 'Andrew Gordon', telefone: '55 (74) 4577-1224', uf: 'Belo Horizonte - MG', cadastro: '25/06/2021', source: 'REFERRAL' },
-  { id: '#9cd09', nome: 'Travis Thomas', telefone: '55 (89) 1014-6998', uf: 'Niterói - RJ', cadastro: '31/07/2017', source: 'APP' },
-  { id: '#17958', nome: 'Donna kirby', telefone: '55 (11) 0477-3598', uf: 'Araraquara - SP', cadastro: '07/11/2016', source: 'REFERRAL' },
-  { id: '#a0b47', nome: 'Chris Riley', telefone: '55 (81) 2270-3188', uf: 'São João do Caiuá - PR', cadastro: '18/02/2017', source: 'APP' },
-  { id: '#05b0a', nome: 'Tina Alvarez', telefone: '55 (45) 0400-1071', uf: 'Águas Lindas de Goiás - GO', cadastro: '07/08/2019', source: 'REFERRAL' },
-]
-
-const MOCK_PAGINA_5 = [
-  { id: '#03448', nome: 'Jennifer Morrison', telefone: '55 (89) 5482-6724', uf: 'Parnamirim - RN', cadastro: '22/06/2014', source: 'REFERRAL' },
-  { id: '#1e682', nome: 'Tara Avila', telefone: '55 (88) 1951-7223', uf: 'Amélia Rodrigues - BA', cadastro: '08/01/2016', source: 'WEB' },
-  { id: '#7f18d', nome: 'Jessica Moreno', telefone: '55 (83) 4140-5757', uf: 'Paragominas - PA', cadastro: '09/12/2023', source: 'WEB' },
-  { id: '#72cc5', nome: 'Elizabeth Jones', telefone: '55 (87) 2655-7918', uf: 'Passos - MG', cadastro: '07/08/2021', source: 'APP' },
-  { id: '#2fe28', nome: 'Tim Marshall', telefone: '55 (22) 8685-6959', uf: 'Santa Bárbara - MG', cadastro: '18/02/2016', source: 'APP' },
-  { id: '#6c014', nome: 'Jason thompson', telefone: '55 (86) 0319-5667', uf: 'Camaçari - BA', cadastro: '01/01/2014', source: 'WEB' },
-  { id: '#ce07f', nome: 'Tina Carter', telefone: '55 (87) 6706-3302', uf: 'Balsa Nova - PR', cadastro: '25/08/2021', source: 'WEB' },
-  { id: '#ce07f2', nome: 'Tina Carter', telefone: '55 (87) 6706-3302', uf: 'Balsa Nova - PR', cadastro: '25/08/2021', source: 'WEB' },
-  { id: '#8a74f', nome: 'Tanya Mckay', telefone: '55 (81) 3754-7231', uf: 'Manaus - AM', cadastro: '06/07/2019', source: 'REFERRAL' },
-]
-
-const MOCK_PAGINA_6 = [
-  { id: '#e7d32', nome: 'Lawrence Brown', telefone: '55 (88) 6861-2563', uf: 'Uberaba - MG', cadastro: '12/04/2015', source: 'APP' },
-  { id: '#8954d', nome: 'Melinda Miranda', telefone: 'N/A', uf: 'São Paulo - SP', cadastro: '07/11/2021', source: 'WEB' },
-  { id: '#90daf', nome: 'Lori King', telefone: '55 (22) 9768-0679', uf: 'Ibiapina - CE', cadastro: '12/10/2014', source: 'REFERRAL' },
-  { id: '#9a303', nome: 'Diana Watkins', telefone: '55 (77) 0173-8500', uf: 'Serra - ES', cadastro: '28/02/2023', source: 'APP' },
-  { id: '#7aefe', nome: 'Mark Herring', telefone: '55 (94) 0938-2229', uf: 'Brazabrantes - GO', cadastro: '05/02/2020', source: 'APP' },
-]
-
-const GET_MOCK_POR_PAGINA = (pagina: number) => {
-  switch (pagina) {
-    case 2: return MOCK_PAGINA_2
-    case 3: return MOCK_PAGINA_3
-    case 4: return MOCK_PAGINA_4
-    case 5: return MOCK_PAGINA_5
-    case 6: return MOCK_PAGINA_6
-    default: return CLIENTES_MOCK_INICIAL
-  }
-}
+import { GET_MOCK_POR_PAGINA } from '../../../constants/mockClientes'
+const CLIENTES_MOCK_INICIAL = GET_MOCK_POR_PAGINA(1)
 
 const ANOS_CLIENTES = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014']
 const SOURCES = ['WEB', 'APP', 'REFERRAL']
@@ -120,6 +44,7 @@ export function TabelaClientes() {
   const [selecionados, setSelecionados] = useState<string[]>([])
   const [paginaAtual, setPaginaAtual] = useState(1)
   const totalPaginas = 6
+  const navigate = useNavigate()
 
   useEffect(() => {
     setClientes(GET_MOCK_POR_PAGINA(paginaAtual))
@@ -521,9 +446,15 @@ export function TabelaClientes() {
                   className={`flex items-center px-4 py-4 cursor-pointer transition-colors ${
                     selecionado ? 'bg-[#e5ebeb]' : 'hover:bg-[#fcfdfd]'
                   }`}
-                  onClick={() => toggleSelecionado(cliente.id)}
+                  onClick={() => navigate(`/clientes/${cliente.id.replace('#', '')}`)}
                 >
-                  <div className="w-8 shrink-0 flex items-center justify-center">
+                  <div 
+                    className="w-8 shrink-0 flex items-center justify-center cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelecionado(cliente.id);
+                    }}
+                  >
                     {selecionado ? (
                       <CheckSquare size={18} strokeWidth={2} className="text-[#1c5258]" />
                     ) : (
