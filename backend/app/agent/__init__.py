@@ -4,6 +4,7 @@ from .agentes.agente_seletor import AgenteSeletor
 from .agentes.agente_refinador import AgenteRefinador
 from .agentes.agente_sugestor import AgenteSugestor
 from .models.resultado import ResultadoDecompositor, ResultadoSeletor, ResultadoRefinador, ResultadoSugestor
+from .orquestrador import Orquestrador, ResultadoOrquestrador
 
 __all__ = [
     "Config",
@@ -14,5 +15,7 @@ __all__ = [
     "ResultadoSeletor",
     "ResultadoDecompositor",
     "ResultadoRefinador",
+    "Orquestrador",
+    "ResultadoOrquestrador",
     "ResultadoSugestor",
 ]
