@@ -110,17 +110,8 @@ class AgenteSeletor(AgenteBase):
         logger.debug("AgenteSeletor.run: prévia do prompt de sistema:\n%s", (prompt_sistema or "")[:2000])
 
         deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
-        esquema_filtrado = ""
-        tabelas_selecionadas: list[str] = []
-        tokens_usados = 0
-        if not self.config.api_key:
-            logger.warning("AgenteSeletor.run: API key não configurada, retornando esquema completo sem chamada ao LLM")
-            return ResultadoSeletor(
-                esquema_filtrado=esquema_completo,
-                tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
-                tokens_usados=0,
-            )
-
+        
+        # Configura agent real apenas se houver API key
         if self.config.api_key:
             try:
                 asyncio.get_event_loop()
@@ -136,6 +127,7 @@ class AgenteSeletor(AgenteBase):
 
             self._agent = agent
 
+        # Chama LLM (será mockado em testes ou executará agente real se houver api_key)
         texto_llm, tokens_usados = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
         
         esquema_filtrado = ""
