@@ -27,12 +27,18 @@ python baixar_banco.py
 ```
 *Este comando criará o arquivo em `backend/data/database.db`.*
 
-### Passo 3: Configurar Variáveis de Ambiente
+### Passo 3: Validar o Banco de Dados (Opcional)
+Você pode verificar se o download foi bem-sucedido e se o arquivo está íntegro rodando o script de diagnóstico:
+```bash
+python teste_banco.py
+```
+
+### Passo 4: Configurar Variáveis de Ambiente
 Crie um arquivo `.env` na pasta `backend/` baseado no exemplo:
 ```bash
 cp backend/.env.example backend/.env
 ```
-*Não se preocupe, o DATABASE_URL já vem configurado corretamente para o SQLite local.*
+*Importante:* Para usar as funcionalidades de IA (agente), você precisará adicionar sua `MISTRAL_API_KEY` no arquivo `.env` recém-criado.
 
 ---
 
@@ -62,6 +68,26 @@ docker-compose up --build
 1. Entre na pasta: `cd frontend`
 2. Instale as dependências: `npm install`
 3. Rode o projeto: `npm run dev`
+
+---
+
+## 5. Executando Testes ✅
+
+Para garantir que o backend está funcionando corretamente, você pode rodar os testes:
+
+### Teste de Integração (Pipeline de Agentes)
+Este teste valida o fluxo completo de extração de esquema e geração de SQL:
+```bash
+cd backend
+python run_test.py
+```
+
+### Testes Automatizados (Pytest)
+Para rodar a suíte completa de testes unitários e de integração:
+```bash
+cd backend
+python -m pytest
+```
 
 ---
 
