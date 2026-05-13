@@ -52,8 +52,7 @@ def run():
     decompositor = AgenteDecompositor(config=config)
 
     # Pergunta que exige filtro de datas para testar as tabelas
-    pergunta = "Qual produto com mais lucro no ultimo mes?"
-
+    pergunta = "Qual foi o total de vendas por produto no último trimestre"
     print(f"\n❓ PERGUNTA: {pergunta}")
 
     # --- PASSO 1 ---
