@@ -1,25 +1,16 @@
-// TooltipMatriz — tooltip personalizado do ScatterChart da Matriz de Satisfação vs. Performance
-interface TooltipPayloadItem {
-  payload: {
-    nome: string
-    volume: number
-    satisfacao: number
-  }
-}
-
+// TooltipMatriz — tooltip posicionado abaixo da pílula do produto na matriz
 interface Props {
-  active?: boolean
-  payload?: TooltipPayloadItem[]
+  nome: string
+  volume: number
+  satisfacao: number
 }
 
-export function TooltipMatriz({ active, payload }: Props) {
-  if (!active || !payload?.length) return null
-  const d = payload[0].payload
+export function TooltipMatriz({ nome, volume, satisfacao }: Props) {
   return (
-    <div className="bg-white border border-[#e0e0e0] rounded-[5px] p-2 text-[11px]">
-      <p className="font-semibold">{d.nome}</p>
-      <p>Volume: {d.volume.toLocaleString('pt-BR')}</p>
-      <p>Satisfação: {d.satisfacao.toFixed(1)} ★</p>
+    <div className="bg-white border border-[#e0e0e0] rounded-[5px] p-2 text-[11px] shadow-sm whitespace-nowrap">
+      <p className="font-semibold">{nome}</p>
+      <p>Volume: {volume.toLocaleString('pt-BR')}</p>
+      <p>Satisfação: {satisfacao.toFixed(1)} ★</p>
     </div>
   )
 }

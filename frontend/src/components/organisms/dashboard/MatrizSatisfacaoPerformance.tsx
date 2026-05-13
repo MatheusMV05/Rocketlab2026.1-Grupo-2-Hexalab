@@ -1,13 +1,12 @@
 // TODO: remover os mocks e conectar a matriz ao backend
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   ScatterChart,
   Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   ReferenceLine,
   ReferenceArea,
@@ -23,17 +22,17 @@ const COR_PONTO: Record<string, string> = {
   ruim: '#c20000',
 }
 
-// Configuração do gráfico
-// Valor do eixo X onde a linha de divisão vertical é desenhada
 const CORTE_X = 1750
-// Valor do eixo Y onde a linha de divisão horizontal é desenhada
 const CORTE_Y = 3.0
-
 const DOM_X: [number, number] = [0, 3800]
 const DOM_Y: [number, number] = [1, 5]
 
-// Badge de quadrante renderizada dentro do SVG via <Label>
-// Render prop passado para <ReferenceArea label>: cria um badge com fundo colorido e texto nos cantos do quadrante
+// TODO: remover mock de teste após validar agrupamento
+const MOCKS_TESTE: ProdutoBase[] = [
+  { nome: 'Arroz Integral Premium', volume: 600, satisfacao: 4.2, status: 'bom' },
+  { nome: 'Azeite Extra Virgem', volume: 600, satisfacao: 4.2, status: 'bom' },
+]
+
 function BadgeQuadrante({
   viewBox,
   texto,
@@ -45,84 +44,72 @@ function BadgeQuadrante({
   texto: string
   corTexto: string
   corFundo: string
-  // onde fixar o badge dentro do quadrante
   ancoragem: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 }) {
   if (!viewBox) return null
   const { x, y, width, height } = viewBox
-
   const PAD_X = 8
   const PAD_Y = 6
   const FONT = 10
-  // estimativa de largura do texto (recharts SVG não tem getBBox fácil)
   const CHAR_W = 6.5
   const textWidth = texto.length * CHAR_W
   const boxWidth = textWidth + PAD_X * 2
   const boxHeight = FONT + PAD_Y * 2
-
   let bx = x
   let by = y
-
-  if (ancoragem === 'top-left') { bx = x + 6; by = y + 6 }
-  if (ancoragem === 'top-right') { bx = x + width - boxWidth - 6; by = y + 6 }
-  if (ancoragem === 'bottom-left') { bx = x + 6; by = y + height - boxHeight - 6 }
+  if (ancoragem === 'top-left')     { bx = x + 6;               by = y + 6 }
+  if (ancoragem === 'top-right')    { bx = x + width - boxWidth - 6; by = y + 6 }
+  if (ancoragem === 'bottom-left')  { bx = x + 6;               by = y + height - boxHeight - 6 }
   if (ancoragem === 'bottom-right') { bx = x + width - boxWidth - 6; by = y + height - boxHeight - 6 }
-
   return (
     <g>
-      <rect
-        x={bx}
-        y={by}
-        width={boxWidth}
-        height={boxHeight}
-        rx={4}
-        ry={4}
-        fill={corFundo}
-      />
-      <text
-        x={bx + PAD_X}
-        y={by + PAD_Y + FONT - 1}
-        fontSize={FONT}
-        fontWeight={700}
-        fontFamily="inherit"
-        fill={corTexto}
-      >
+      <rect x={bx} y={by} width={boxWidth} height={boxHeight} rx={4} ry={4} fill={corFundo} />
+      <text x={bx + PAD_X} y={by + PAD_Y + FONT - 1} fontSize={FONT} fontWeight={700} fontFamily="inherit" fill={corTexto}>
         {texto}
       </text>
     </g>
   )
 }
 
-// Constantes do label (pílula: dot + nome)
+// Constantes da pílula
 const DOT_R = 5
 const PILL_H = 25
 const PILL_DOT_R = 5
 const PILL_DOT_CX = 10
 const PILL_PAD_LEFT = 22
 const PILL_PAD_RIGHT = 8
+const PILL_CHEVRON_W = 14
 const LABEL_FONT = 11
 const CHART_MARGIN = { top: 16, right: 24, left: 36, bottom: 20 }
-// valores legados mantidos para calcLabelPositions
-const LABEL_PAD_X = PILL_PAD_LEFT
-const LABEL_PAD_Y = (PILL_H - LABEL_FONT) / 2
 const LABEL_H = PILL_H
 const CHART_H = 400
 
-interface ProdutoComLabel {
-  nome: string
-  volume: number
-  satisfacao: number
-  status: string
+type ProdutoBase = { nome: string; volume: number; satisfacao: number; status: string }
+
+interface ProdutoAgrupado extends ProdutoBase {
+  membros: ProdutoBase[]
+}
+
+interface ProdutoComLabel extends ProdutoAgrupado {
   labelDx: number
   labelDy: number
 }
 
-// Pré-computa offsets de label evitando sobreposição
-// Testa candidatos de posição em ordem de preferência e escolhe o primeiro livre
-function calcLabelPositions(
-  items: { nome: string; volume: number; satisfacao: number; status: string }[],
-  containerWidth: number
-): ProdutoComLabel[] {
+// Agrupa produtos com mesma posição (volume + satisfacao), exibindo o 1º alfabeticamente
+function agruparPorPosicao(items: ProdutoBase[]): ProdutoAgrupado[] {
+  const map = new Map<string, ProdutoBase[]>()
+  for (const item of items) {
+    const key = `${item.volume}|${item.satisfacao}`
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(item)
+  }
+  return Array.from(map.values()).map(grupo => {
+    const sorted = [...grupo].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    return { ...sorted[0], membros: sorted }
+  })
+}
+
+function calcLabelPositions(items: ProdutoAgrupado[], containerWidth: number): ProdutoComLabel[] {
   const plotW = containerWidth - CHART_MARGIN.left - CHART_MARGIN.right
   const plotH = CHART_H - CHART_MARGIN.top - CHART_MARGIN.bottom
   const toPixX = (v: number) => CHART_MARGIN.left + ((v - DOM_X[0]) / (DOM_X[1] - DOM_X[0])) * plotW
@@ -133,27 +120,25 @@ function calcLabelPositions(
   const gap = DOT_R + 5
 
   const overlaps = (b: Box) =>
-    placed.some(
-      (p) => b.x < p.x + p.w + 2 && b.x + b.w + 2 > p.x && b.y < p.y + p.h + 2 && b.y + b.h + 2 > p.y
-    )
+    placed.some(p => b.x < p.x + p.w + 2 && b.x + b.w + 2 > p.x && b.y < p.y + p.h + 2 && b.y + b.h + 2 > p.y)
 
-  return items.map((item) => {
+  return items.map(item => {
     const px = toPixX(item.volume)
     const py = toPixY(item.satisfacao)
-    const lw = item.nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT
+    const isGrupo = item.membros.length > 1
+    const lw = item.nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT + (isGrupo ? PILL_CHEVRON_W : 0)
 
-    // base: dot da pílula alinha com (px, py) → pillLeft = px - PILL_DOT_CX, pillTop = py - PILL_H/2
     const BASE_DX = -PILL_DOT_CX
     const BASE_DY = -PILL_H / 2
     const candidates: [number, number][] = [
-      [BASE_DX,           BASE_DY],                    // right-center (padrão)
-      [BASE_DX,           BASE_DY - PILL_H - 4],       // above
-      [BASE_DX,           BASE_DY + PILL_H + 4],       // below
-      [-lw + PILL_DOT_CX, BASE_DY],                    // left-center
-      [-lw + PILL_DOT_CX, BASE_DY - PILL_H - 4],      // left-above
-      [-lw + PILL_DOT_CX, BASE_DY + PILL_H + 4],      // left-below
-      [-lw / 2,           BASE_DY - PILL_H - gap],     // top-center
-      [-lw / 2,           BASE_DY + PILL_H + gap],     // bottom-center
+      [BASE_DX,           BASE_DY],
+      [BASE_DX,           BASE_DY - PILL_H - 4],
+      [BASE_DX,           BASE_DY + PILL_H + 4],
+      [-lw + PILL_DOT_CX, BASE_DY],
+      [-lw + PILL_DOT_CX, BASE_DY - PILL_H - 4],
+      [-lw + PILL_DOT_CX, BASE_DY + PILL_H + 4],
+      [-lw / 2,           BASE_DY - PILL_H - gap],
+      [-lw / 2,           BASE_DY + PILL_H + gap],
     ]
 
     let dx = candidates[0][0]
@@ -161,14 +146,10 @@ function calcLabelPositions(
 
     for (const [cdx, cdy] of candidates) {
       const box: Box = { x: px + cdx, y: py + cdy, w: lw, h: LABEL_H }
-      if (!overlaps(box)) {
-        dx = cdx; dy = cdy
-        placed.push(box)
-        break
-      }
+      if (!overlaps(box)) { dx = cdx; dy = cdy; placed.push(box); break }
     }
 
-    if (!placed.some((p) => p.x === px + dx && p.y === py + dy)) {
+    if (!placed.some(p => p.x === px + dx && p.y === py + dy)) {
       placed.push({ x: px + dx, y: py + dy, w: lw, h: LABEL_H })
     }
 
@@ -176,16 +157,34 @@ function calcLabelPositions(
   })
 }
 
-// Props
 interface Props {
   filtrosGlobais: FiltrosPeriodo
 }
 
-// Componente
+interface TooltipPill {
+  cx: number; cy: number; ldx: number; ldy: number; lw: number
+  produto: ProdutoBase
+}
+
+interface GrupoAberto {
+  key: string; cx: number; cy: number; ldx: number; ldy: number; lw: number
+  membros: ProdutoBase[]
+}
+
+interface TooltipDrop {
+  produto: ProdutoBase; left: number; top: number
+}
+
 export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
   const [filtros, setFiltros] = useState(filtrosGlobais)
   const [chartWidth, setChartWidth] = useState(1000)
+  const [tooltipPill, setTooltipPill] = useState<TooltipPill | null>(null)
+  const [grupoAberto, setGrupoAberto] = useState<GrupoAberto | null>(null)
+  const [tooltipDrop, setTooltipDrop] = useState<TooltipDrop | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const chartAreaRef = useRef<HTMLDivElement>(null)
+
+  const clearPillHover = useCallback(() => setTooltipPill(null), [])
 
   useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
 
@@ -201,236 +200,217 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
 
   const top10 = useMemo(() => {
     const items = data?.items ?? []
-    return [...items].sort((a, b) => b.volume - a.volume).slice(0, 10)
+    const base = [...items].sort((a, b) => b.volume - a.volume).slice(0, 10)
+    return [...base, ...MOCKS_TESTE]
   }, [data])
 
   const produtos = useMemo(
-    () => calcLabelPositions(top10, chartWidth),
+    () => calcLabelPositions(agruparPorPosicao(top10), chartWidth),
     [top10, chartWidth]
   )
 
   return (
     <div ref={containerRef} className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 flex flex-col">
-      {/* Filtro absoluto no topo direito */}
       <div className="absolute top-[7px] right-[75px]">
         <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
-      {/* Cabeçalho */}
       <div className="mb-2 pr-4">
         <h3 className="text-[18px] font-bold text-[#1d5358]">
           Matriz de Satisfação vs. Performance
         </h3>
-        {/* TODO: integrar agente de insights — exibir aqui a mensagem gerada automaticamente
-             com os produtos em situação crítica identificados pela IA (quadrante ALERTA VERMELHO).
-             O card abaixo é o template visual a ser preenchido com o conteúdo do agente. */}
         <div className="hidden flex items-center gap-2 mt-1 bg-[#e0e0e0] rounded-[5px] px-2 py-1 text-[10px] text-[#343434] font-medium max-w-xl">
           <span className="text-[10px]">✦</span>
           <span />
         </div>
       </div>
 
-      {/* Gráfico de dispersão */}
-      <div style={{ height: 400 }}>
+      <div ref={chartAreaRef} className="relative" style={{ height: 400 }}>
         {isLoading && (
-          <div className="flex items-center justify-center h-full text-[#4d4d4d] text-sm">
-            Carregando...
-          </div>
+          <div className="flex items-center justify-center h-full text-[#4d4d4d] text-sm">Carregando...</div>
         )}
         {isError && (
-          <div className="flex items-center justify-center h-full text-[#c20000] text-sm">
-            Erro ao carregar dados
+          <div className="flex items-center justify-center h-full text-[#c20000] text-sm">Erro ao carregar dados</div>
+        )}
+
+        {!isLoading && !isError && (
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={{ top: 16, right: 24, left: 0, bottom: 20 }} onMouseLeave={clearPillHover}>
+              <CartesianGrid strokeDasharray="4 4" stroke="#e8e8e8" />
+
+              <XAxis type="number" dataKey="volume" name="Volume" domain={DOM_X}
+                tick={{ fontSize: 9, fill: '#343434' }} axisLine={false} tickLine={false}>
+                <Label value="Volume de vendas" position="insideBottom" offset={-14} fontSize={11} fill="#343434" />
+              </XAxis>
+
+              <YAxis type="number" dataKey="satisfacao" name="Satisfação" domain={DOM_Y}
+                tick={{ fontSize: 9, fill: '#343434' }} axisLine={false} tickLine={false} width={36}>
+                <Label value="Satisfação ★" angle={-90} position="insideLeft" offset={10} fontSize={11} fill="#343434" />
+              </YAxis>
+
+              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={CORTE_Y} y2={DOM_Y[1]}
+                fill="#FFF9C9" fillOpacity={0.6} stroke="none"
+                label={(props) => <BadgeQuadrante {...props} texto="OPORTUNIDADES" corTexto="#D97706" corFundo="#FFF9C9" ancoragem="top-left" />}
+              />
+              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={CORTE_Y} y2={DOM_Y[1]}
+                fill="#DCFCE7" fillOpacity={0.6} stroke="none"
+                label={(props) => <BadgeQuadrante {...props} texto="ESTRELAS" corTexto="#15803D" corFundo="#DCFCE7" ancoragem="top-right" />}
+              />
+              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={DOM_Y[0]} y2={CORTE_Y}
+                fill="#F3F4F6" fillOpacity={0.6} stroke="none"
+                label={(props) => <BadgeQuadrante {...props} texto="OFENSORES" corTexto="#4B5563" corFundo="#F3F4F6" ancoragem="bottom-left" />}
+              />
+              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={DOM_Y[0]} y2={CORTE_Y}
+                fill="#FEE2E2" fillOpacity={0.6} stroke="none"
+                label={(props) => <BadgeQuadrante {...props} texto="ALERTA VERMELHO" corTexto="#B91C1C" corFundo="#FEE2E2" ancoragem="bottom-right" />}
+              />
+
+              <ReferenceLine x={CORTE_X} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
+              <ReferenceLine y={CORTE_Y} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
+
+              <Scatter
+                data={produtos}
+                shape={(props: { cx?: number; cy?: number; payload?: ProdutoComLabel }) => {
+                  const { cx = 0, cy = 0, payload } = props
+                  if (!payload) return <g />
+                  const cor = COR_PONTO[payload.status ?? 'neutro']
+                  const nome = payload.nome
+                  const ldx = payload.labelDx
+                  const ldy = payload.labelDy
+                  const isGrupo = payload.membros.length > 1
+                  const lw = nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT + (isGrupo ? PILL_CHEVRON_W : 0)
+                  const grupoKey = `${payload.volume}|${payload.satisfacao}`
+                  const isAberto = grupoAberto?.key === grupoKey
+
+                  return (
+                    <g
+                      onClick={() => {
+                        if (!isGrupo) return
+                        setTooltipPill(null)
+                        setGrupoAberto(prev =>
+                          prev?.key === grupoKey ? null : { key: grupoKey, cx, cy, ldx, ldy, lw, membros: payload.membros }
+                        )
+                      }}
+                      onMouseEnter={() => {
+                        if (!isGrupo) setTooltipPill({ cx, cy, ldx, ldy, lw, produto: payload })
+                      }}
+                      onMouseLeave={clearPillHover}
+                      style={{ cursor: isGrupo ? 'pointer' : 'default' }}
+                    >
+                      {/* pílula */}
+                      <rect
+                        x={cx + ldx} y={cy + ldy} width={lw} height={PILL_H}
+                        fill={isAberto ? '#f0f0f0' : 'white'}
+                        stroke={isAberto ? '#aaa' : '#d0d0d0'}
+                        strokeWidth={1} rx={PILL_H / 2} ry={PILL_H / 2}
+                      />
+                      {/* dot colorido */}
+                      <circle cx={cx + ldx + PILL_DOT_CX} cy={cy + ldy + PILL_H / 2} r={PILL_DOT_R} fill={cor} />
+                      {/* nome */}
+                      <text
+                        x={cx + ldx + PILL_PAD_LEFT}
+                        y={cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1}
+                        fontSize={LABEL_FONT} fontWeight={500} fontFamily="inherit" fill="#343434"
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        {nome}
+                      </text>
+                      {/* chevron ▾ para grupos — posicionado logo após o nome */}
+                      {isGrupo && (
+                        <text
+                          x={cx + ldx + PILL_PAD_LEFT + nome.length * 6.5 + 3}
+                          y={cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1}
+                          fontSize={13} fill="#555" fontFamily="inherit"
+                          style={{ pointerEvents: 'none' }}
+                        >
+                          ▾
+                        </text>
+                      )}
+                    </g>
+                  )
+                }}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        )}
+
+        {/* Tooltip da pílula simples */}
+        {tooltipPill && (
+          <div
+            className="absolute pointer-events-none z-50"
+            style={{
+              left: tooltipPill.cx + tooltipPill.ldx + tooltipPill.lw / 2,
+              top: tooltipPill.cy + tooltipPill.ldy + PILL_H + 6,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <TooltipMatriz
+              nome={tooltipPill.produto.nome}
+              volume={tooltipPill.produto.volume}
+              satisfacao={tooltipPill.produto.satisfacao}
+            />
           </div>
         )}
-        {!isLoading && !isError && <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 16, right: 24, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="4 4" stroke="#e8e8e8" />
 
-            <XAxis
-              type="number"
-              dataKey="volume"
-              name="Volume"
-              domain={DOM_X}
-              tick={{ fontSize: 9, fill: '#343434' }}
-              axisLine={false}
-              tickLine={false}
-            >
-              <Label
-                value="Volume de vendas"
-                position="insideBottom"
-                offset={-14}
-                fontSize={11}
-                fill="#343434"
-              />
-            </XAxis>
+        {/* Overlay para fechar dropdown ao clicar fora */}
+        {grupoAberto && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => { setGrupoAberto(null); setTooltipDrop(null) }}
+          />
+        )}
 
-            <YAxis
-              type="number"
-              dataKey="satisfacao"
-              name="Satisfação"
-              domain={DOM_Y}
-              tick={{ fontSize: 9, fill: '#343434' }}
-              axisLine={false}
-              tickLine={false}
-              width={36}
-            >
-              <Label
-                value="Satisfação ★"
-                angle={-90}
-                position="insideLeft"
-                offset={10}
-                fontSize={11}
-                fill="#343434"
-              />
-            </YAxis>
+        {/* Dropdown do grupo */}
+        {grupoAberto && (
+          <div
+            className="absolute z-50 bg-white border border-[#e0e0e0] rounded-[5px] shadow-md py-1 min-w-[140px]"
+            style={{
+              left: grupoAberto.cx + grupoAberto.ldx,
+              top: grupoAberto.cy + grupoAberto.ldy + PILL_H + 4,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {grupoAberto.membros.map(membro => (
+              <div
+                key={membro.nome}
+                className="px-3 py-1.5 text-[11px] text-[#343434] hover:bg-[#f5f5f5] cursor-default"
+                onMouseEnter={e => {
+                  const itemRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                  const chartRect = chartAreaRef.current?.getBoundingClientRect()
+                  if (!chartRect) return
+                  setTooltipDrop({
+                    produto: membro,
+                    left: itemRect.left - chartRect.left + itemRect.width / 2,
+                    top: itemRect.bottom - chartRect.top + 4,
+                  })
+                }}
+                onMouseLeave={() => setTooltipDrop(null)}
+              >
+                {membro.nome}
+              </div>
+            ))}
+          </div>
+        )}
 
-            <Tooltip content={<TooltipMatriz />} cursor={false} />
-
-            {/* ── Quadrantes coloridos (ReferenceArea) com badges nos cantos ── */}
-
-            {/* Superior-esquerdo: OPORTUNIDADES (alto vol < corte, alta satisf) */}
-            <ReferenceArea
-              x1={DOM_X[0]} x2={CORTE_X}
-              y1={CORTE_Y} y2={DOM_Y[1]}
-              fill="#FFF9C9"
-              fillOpacity={0.6}
-              stroke="none"
-              label={(props) => (
-                <BadgeQuadrante
-                  {...props}
-                  texto="OPORTUNIDADES"
-                  corTexto="#D97706"
-                  corFundo="#FFF9C9"
-                  ancoragem="top-left"
-                />
-              )}
+        {/* Tooltip do item do dropdown */}
+        {tooltipDrop && (
+          <div
+            className="absolute pointer-events-none z-[60]"
+            style={{
+              left: tooltipDrop.left,
+              top: tooltipDrop.top,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <TooltipMatriz
+              nome={tooltipDrop.produto.nome}
+              volume={tooltipDrop.produto.volume}
+              satisfacao={tooltipDrop.produto.satisfacao}
             />
-
-            {/* Superior-direito: ESTRELAS (alto vol, alta satisf) */}
-            <ReferenceArea
-              x1={CORTE_X} x2={DOM_X[1]}
-              y1={CORTE_Y} y2={DOM_Y[1]}
-              fill="#DCFCE7"
-              fillOpacity={0.6}
-              stroke="none"
-              label={(props) => (
-                <BadgeQuadrante
-                  {...props}
-                  texto="ESTRELAS"
-                  corTexto="#15803D"
-                  corFundo="#DCFCE7"
-                  ancoragem="top-right"
-                />
-              )}
-            />
-
-            {/* Inferior-esquerdo: OFENSORES (baixo vol, baixa satisf) */}
-            <ReferenceArea
-              x1={DOM_X[0]} x2={CORTE_X}
-              y1={DOM_Y[0]} y2={CORTE_Y}
-              fill="#F3F4F6"
-              fillOpacity={0.6}
-              stroke="none"
-              label={(props) => (
-                <BadgeQuadrante
-                  {...props}
-                  texto="OFENSORES"
-                  corTexto="#4B5563"
-                  corFundo="#F3F4F6"
-                  ancoragem="bottom-left"
-                />
-              )}
-            />
-
-            {/* Inferior-direito: ALERTA VERMELHO (alto vol, baixa satisf) */}
-            <ReferenceArea
-              x1={CORTE_X} x2={DOM_X[1]}
-              y1={DOM_Y[0]} y2={CORTE_Y}
-              fill="#FEE2E2"
-              fillOpacity={0.6}
-              stroke="none"
-              label={(props) => (
-                <BadgeQuadrante
-                  {...props}
-                  texto="ALERTA VERMELHO"
-                  corTexto="#B91C1C"
-                  corFundo="#FEE2E2"
-                  ancoragem="bottom-right"
-                />
-              )}
-            />
-
-            {/* ── Linhas divisórias ── */}
-            <ReferenceLine
-              x={CORTE_X}
-              stroke="#94A3B8"
-              strokeWidth={1}
-              strokeDasharray="5 4"
-            />
-            <ReferenceLine
-              y={CORTE_Y}
-              stroke="#94A3B8"
-              strokeWidth={1}
-              strokeDasharray="5 4"
-            />
-
-            {/* ── Pontos de dispersão (top 10 por volume) ── */}
-            <Scatter
-              data={produtos}
-              shape={(props: {
-                cx?: number
-                cy?: number
-                payload?: ProdutoComLabel
-              }) => {
-                const { cx = 0, cy = 0, payload } = props
-                const cor = COR_PONTO[payload?.status ?? 'neutro']
-                const nome = payload?.nome ?? ''
-                const ldx = payload?.labelDx ?? DOT_R + 5
-                const ldy = payload?.labelDy ?? -LABEL_H / 2
-                const lw = nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT
-
-                return (
-                  <g>
-                    {/* pílula: fundo branco totalmente arredondado */}
-                    <rect
-                      x={cx + ldx}
-                      y={cy + ldy}
-                      width={lw}
-                      height={PILL_H}
-                      fill="white"
-                      stroke="#d0d0d0"
-                      strokeWidth={1}
-                      rx={PILL_H / 2}
-                      ry={PILL_H / 2}
-                    />
-                    {/* dot colorido à esquerda da pílula */}
-                    <circle
-                      cx={cx + ldx + PILL_DOT_CX}
-                      cy={cy + ldy + PILL_H / 2}
-                      r={PILL_DOT_R}
-                      fill={cor}
-                    />
-                    {/* nome do produto */}
-                    <text
-                      x={cx + ldx + PILL_PAD_LEFT}
-                      y={cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1}
-                      fontSize={LABEL_FONT}
-                      fontWeight={500}
-                      fontFamily="inherit"
-                      fill="#343434"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      {nome}
-                    </text>
-                  </g>
-                )
-              }}
-            />
-          </ScatterChart>
-        </ResponsiveContainer>}
+          </div>
+        )}
       </div>
 
-      {/* Legenda */}
       <div className="flex items-center gap-4 mt-2 text-[10px] text-[#343434]">
         {[
           { cor: '#1a9a45', label: 'Alta satisfação' },
@@ -438,10 +418,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
           { cor: '#c20000', label: 'Baixa satisfação' },
         ].map(({ cor, label }) => (
           <div key={label} className="flex items-center gap-1">
-            <span
-              className="inline-block w-2 h-2 rounded-full"
-              style={{ backgroundColor: cor }}
-            />
+            <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: cor }} />
             <span>{label}</span>
           </div>
         ))}
