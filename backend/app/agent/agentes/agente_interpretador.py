@@ -13,9 +13,15 @@ from app.agent.models.resultado import ResultadoInterpretador, ResultadoInterpre
 
 
 class AgenteInterpretador(AgenteBase):
-    """Agente responsavel por gerar resposta final em linguagem natural."""
+    """Converte o resultado do SQL em uma resposta curta e natural para o usuario.
+
+    O agente recebe a pergunta original, o SQL executado, as colunas retornadas
+    e os dados obtidos no banco. A partir desse contexto, ele produz uma
+    resposta em portugues que resume o resultado sem expor detalhes tecnicos.
+    """
 
     def __init__(self, config: Config | None = None) -> None:
+        """Inicializa o agente com a configuracao compartilhada do projeto."""
         super().__init__(config)
 
     def run(
@@ -26,7 +32,18 @@ class AgenteInterpretador(AgenteBase):
         dados: list[tuple],
         erro: str | None,
     ) -> ResultadoInterpretador:
-        """Interpreta o resultado final da consulta e gera texto para o usuario."""
+        """Executa a interpretacao final e devolve a resposta de negocio.
+
+        Args:
+            pergunta: Pergunta original feita pelo usuario.
+            sql_final: Consulta SQL que foi executada.
+            colunas: Nomes das colunas retornadas pela consulta.
+            dados: Linhas retornadas pelo banco de dados.
+            erro: Mensagem de erro da execucao, quando houver.
+
+        Returns:
+            ResultadoInterpretador com o texto final e o total de tokens usados.
+        """
         prompt_sistema = self._render(
             "interpretador",
             pergunta=pergunta,
@@ -65,6 +82,13 @@ class AgenteInterpretador(AgenteBase):
 
     @staticmethod
     def _interpretar_saida_llm(texto_llm: str) -> str:
+        """Normaliza a saida do LLM aceitando JSON valido ou texto puro.
+
+        O interpretador tenta primeiro validar o payload estruturado esperado.
+        Se a resposta vier como JSON com a chave ``resposta``, esse valor e
+        extraido. Caso a resposta venha em formato livre, o texto e retornado
+        como fallback para nao perder informacao.
+        """
         texto_llm = (texto_llm or "").strip()
         if not texto_llm:
             return ""

@@ -1,6 +1,6 @@
 # prompts/ — Templates de Prompts Jinja2
 
-## 🎯 Objetivo
+## Objetivo
 
 Este diretório contém os **5 templates Jinja2** usados pelos agentes da pipeline Text-to-SQL para gerar instruções ao modelo de linguagem (Mistral).
 

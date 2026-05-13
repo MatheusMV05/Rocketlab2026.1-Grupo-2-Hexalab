@@ -52,7 +52,7 @@ A pipeline converte **perguntas em linguagem natural** em **SQL estruturado**, e
 
 ---
 
-## 🤖 Os 5 Agentes
+## Os 5 Agentes
 
 ### 1. **AgenteSeletor** (`agente_seletor.py`)
 
@@ -182,7 +182,7 @@ Orquestrador.responder(pergunta: str) → ResultadoOrquestrador:
 
 ---
 
-## 📁 Estrutura de Arquivos
+## Estrutura de Arquivos
 
 ```
 app/agent/agentes/

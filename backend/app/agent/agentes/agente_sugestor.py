@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 from pathlib import Path
 
 from pydantic_ai import Agent
@@ -18,9 +17,16 @@ from app.agent.models.resultado import ResultadoSugestor, ResultadoSugestorLLM
 logger = logging.getLogger(__name__)
 
 class AgenteSugestor(AgenteBase):
-	"""Agente responsavel por sugerir proximas 3 perguntas analiticas."""
+	"""Gera tres perguntas de follow-up com base na consulta executada.
+
+	O agente analisa a pergunta original, o SQL gerado, as tabelas envolvidas
+	e uma amostra do resultado para propor novas perguntas que facam sentido
+	no mesmo contexto analitico. Ele tambem tenta identificar a tabela principal
+	e as tabelas adjacentes para orientar sugestoes mais relevantes.
+	"""
 
 	def __init__(self, config: Config | None = None) -> None:
+		"""Inicializa o agente e carrega o dicionario de descricoes das tabelas."""
 		super().__init__(config)
 		self._descricao_tabelas = self._carregar_descricao_tabelas()
 
@@ -31,7 +37,17 @@ class AgenteSugestor(AgenteBase):
 		schema: str | None = None,
 		amostra_resultado: str = "",
 	) -> ResultadoSugestor:
-		"""Gera exatamente 3 sugestoes com base em pergunta, SQL, amostra e topologia."""
+		"""Gera exatamente tres sugestoes contextualizadas para o usuario.
+
+		Args:
+			pergunta: Pergunta original que iniciou a analise.
+			sql_gerado: SQL executado com sucesso no fluxo anterior.
+			schema: Schema filtrado opcional, usado como contexto adicional.
+			amostra_resultado: Texto compacto com uma amostra das linhas retornadas.
+
+		Returns:
+			ResultadoSugestor com as perguntas sugeridas e metadados de contexto.
+		"""
 		tabelas_sql = self._extrair_tabelas_do_sql(sql_gerado)
 
 		tabela_principal = ""
@@ -40,7 +56,7 @@ class AgenteSugestor(AgenteBase):
 		elif self._descricao_tabelas:
 			tabela_principal = next(iter(self._descricao_tabelas))
 
-		tabelas_adjacentes = tabelas_sql[1:6]
+		tabelas_adjacentes = tabelas_sql[1:]
 		resumo_tabelas = self._montar_resumo_tabelas(
 			tabela_principal=tabela_principal,
 			tabelas_adjacentes=tabelas_adjacentes,
@@ -54,7 +70,6 @@ class AgenteSugestor(AgenteBase):
 			tabelas_adjacentes=tabelas_adjacentes,
 			resumo_tabelas=resumo_tabelas,
 			amostra_resultado=amostra_resultado,
-			
 		)
 
 		if self.config.api_key:
@@ -83,6 +98,13 @@ class AgenteSugestor(AgenteBase):
 		)
 
 	def _interpretar_saida_llm(self, texto_llm: str) -> list[str]:
+		"""Converte a resposta do LLM em uma lista limpa de tres sugestoes.
+
+		O metodo aceita tres formatos:
+		1. JSON estruturado com a chave ``perguntas``.
+		2. JSON simples com ``sugestoes`` ou ``perguntas``.
+		3. Texto livre com uma sugestao por linha.
+		"""
 		texto_llm = (texto_llm or "").strip()
 		if not texto_llm:
 			return []
@@ -107,6 +129,7 @@ class AgenteSugestor(AgenteBase):
 
 	@staticmethod
 	def _normalizar_lista_sugestoes(sugestoes: list[object]) -> list[str]:
+		"""Remove duplicatas, limpa espacos e limita a saida a tres itens."""
 		normalizadas: list[str] = []
 		vistos: set[str] = set()
 		for item in sugestoes:
@@ -124,8 +147,11 @@ class AgenteSugestor(AgenteBase):
 
 	@staticmethod
 	def _extrair_tabelas_do_sql(sql: str) -> list[str]:
+		"""Extrai nomes de tabelas usados no SQL, preferindo o parser sqlglot.
+
+		Se o parser falhar, retorna uma lista vazia para nao quebrar o fluxo.
+		"""
 		tabelas: list[str] = []
-		# Parse com sqlglot para evitar heuristicas regex em SQL complexo.
 		try:
 			import sqlglot  # type: ignore[import-not-found]
 			from sqlglot import expressions as exp  # type: ignore[import-not-found]
@@ -141,6 +167,7 @@ class AgenteSugestor(AgenteBase):
 
 	@staticmethod
 	def _normalizar_nome_tabela(nome: str) -> str:
+		"""Normaliza nomes de tabela removendo aspas, schema e caixa alta."""
 		nome_limpo = (nome or "").strip().strip("`\"[]")
 		if not nome_limpo:
 			return ""
@@ -149,6 +176,11 @@ class AgenteSugestor(AgenteBase):
 		return nome_limpo.lower()
 
 	def _carregar_descricao_tabelas(self) -> dict[str, str]:
+		"""Carrega o mapa de descricoes das tabelas a partir do JSON local.
+
+		O metodo tenta caminhos alternativos para funcionar tanto no backend
+		executado localmente quanto em ambientes de teste com diretorios distintos.
+		"""
 		candidatos = [
 			Path(__file__).resolve().parents[1] / "db" / "descricao_tabelas.json",
 			Path.cwd() / "backend" / "app" / "agent" / "db" / "descricao_tabelas.json",
@@ -180,6 +212,12 @@ class AgenteSugestor(AgenteBase):
 		tabela_principal: str,
 		tabelas_adjacentes: list[str],
 	) -> str:
+		"""Monta um resumo JSON com descricoes das tabelas relevantes.
+
+		Se houver descricoes para a tabela principal ou adjacentes, retorna
+		apenas essas entradas. Caso contrario, retorna o dicionario completo
+		como fallback para manter o contexto disponivel ao LLM.
+		"""
 		tabelas_usadas = {
 			self._normalizar_nome_tabela(nome)
 			for nome in [tabela_principal, *tabelas_adjacentes]
