@@ -153,8 +153,8 @@ export default function ClientePerfil() {
         </button>
 
         {/* Card Perfil */}
-        <div className="bg-white rounded-[16px] shadow-[0px_8px_30px_0px_rgba(0,0,0,0.05)] p-8 flex items-center gap-8 relative">
-          <div className="absolute top-6 right-6 flex gap-2">
+        <div className="bg-white rounded-[16px] shadow-[0px_8px_30px_0px_rgba(0,0,0,0.05)] p-6 md:p-8 flex flex-col lg:flex-row items-center gap-6 md:gap-8 relative">
+          <div className="absolute top-4 right-4 md:top-6 md:right-6 flex gap-2">
             <button 
               onClick={() => { setEdicao({...cliente}); setModalEditar(true) }}
               className="w-[36px] h-[36px] rounded-[8px] flex items-center justify-center text-[#343434] hover:bg-[#f6f7f9] transition-colors"
@@ -177,17 +177,17 @@ export default function ClientePerfil() {
             )}
           </div>
 
-          <div className="flex flex-col gap-6 flex-1">
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-6 flex-1 w-full">
+            <div className="flex flex-col gap-1.5 items-center lg:items-start text-center lg:text-left mt-4 lg:mt-0">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
                 <h1 className="text-[20px] font-bold text-[#111111] leading-none">{cliente.nome}</h1>
-                <span className="px-2.5 py-1 bg-white text-[#1a9a45] rounded-full text-[11px] font-bold border border-[#1a9a45] leading-none">Cliente ativo</span>
-                <span className="px-2.5 py-1 bg-white text-[#e67a00] rounded-full text-[11px] font-bold border border-[#e67a00] leading-none">Tickets em aberto</span>
+                <span className="px-2.5 py-1 bg-white text-[#1a9a45] rounded-full text-[11px] font-bold border border-[#1a9a45] leading-none whitespace-nowrap">Cliente ativo</span>
+                <span className="px-2.5 py-1 bg-white text-[#e67a00] rounded-full text-[11px] font-bold border border-[#e67a00] leading-none whitespace-nowrap">Tickets em aberto</span>
               </div>
               <p className="text-[12px] font-medium text-[#898989]">Cliente desde {cliente.clienteDesde} • Última compra a {cliente.ultimaCompra}</p>
             </div>
 
-            <div className="flex items-center justify-between gap-4 max-w-[800px]">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
               <div className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold text-[#b3b3b3]">Telefone</span>
                 <span className="text-[13px] font-medium text-[#343434]">{cliente.telefone}</span>
@@ -213,7 +213,7 @@ export default function ClientePerfil() {
         </div>
 
         {/* KPIs */}
-        <div className="flex gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <CardKpi titulo="Taxa de satisfação" valor="68%" variacao="+10%" tipo="bom" icone={<Smile size={24} />} />
           <CardKpi titulo="Média de compra" valor="05 itens /cliente" variacao="ABR/2026" tipo="bom" icone={<ShoppingBag size={24} />} />
           <CardKpi titulo="Ticket Médio" valor="R$ 335" variacao="+12%" tipo="bom" icone={<Tag size={24} className="rotate-90" />} />
@@ -227,8 +227,8 @@ export default function ClientePerfil() {
             <p className="text-[12px] font-medium text-[#b3b3b3]">{MOCK_PEDIDOS.length.toString().padStart(2, '0')} pedidos no total</p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2 items-center">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
               <DropdownOrganizarLista />
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -237,7 +237,7 @@ export default function ClientePerfil() {
                 <input 
                   type="text" 
                   placeholder="Pesquisar..." 
-                  className="h-[36px] pl-9 pr-4 rounded-[100px] bg-[#f6f7f9] border-none text-[13px] font-medium text-[#111111] outline-none placeholder:text-[#898989] w-[200px]"
+                  className="h-[36px] pl-9 pr-4 rounded-[100px] bg-[#f6f7f9] border-none text-[13px] font-medium text-[#111111] outline-none placeholder:text-[#898989] w-full sm:w-[200px]"
                 />
               </div>
             </div>
@@ -262,8 +262,8 @@ export default function ClientePerfil() {
           </div>
 
           {/* Tabela Pedidos */}
-          <div className="flex flex-col">
-            <div className="flex items-center px-4 py-3 bg-[#f6f7f9] border-b border-[#e0e0e0] rounded-t-[8px]">
+          <div className="flex flex-col overflow-x-auto">
+            <div className="min-w-[800px] flex items-center px-4 py-3 bg-[#f6f7f9] border-b border-[#e0e0e0] rounded-t-[8px]">
               <div className="w-8 shrink-0 flex items-center justify-center cursor-pointer" onClick={toggleTodos}>
                 {todosSelecionados ? <CheckSquare size={18} strokeWidth={2} className="text-[#343434]" /> : algunsSelecionados ? <MinusSquare size={18} strokeWidth={2} className="text-[#343434]" /> : <Square size={18} strokeWidth={2} className="text-[#898989]" />}
               </div>
@@ -276,7 +276,7 @@ export default function ClientePerfil() {
               <span className="text-[13px] font-semibold text-[#1c5258] w-[50px] shrink-0 text-right pr-2">Qtd.</span>
             </div>
 
-            <div className="flex flex-col pb-2">
+            <div className="flex flex-col pb-2 min-w-[800px]">
               {MOCK_PEDIDOS.map((pedido, idx) => {
                 const isSelected = selecionados.includes(pedido.id)
                 return (

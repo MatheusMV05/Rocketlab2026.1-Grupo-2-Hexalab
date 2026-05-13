@@ -443,8 +443,8 @@ export function TabelaClientes() {
       )}
 
       {/* Tabela (Com scroll caso estoure a altura) */}
-      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-        <div className="bg-[#f6f7f9] rounded-[8px] flex items-center px-4 py-3 mx-1 shrink-0 sticky top-0 z-10">
+      <div className="flex flex-col flex-1 min-h-0 overflow-auto overflow-x-auto">
+        <div className="bg-[#f6f7f9] rounded-[8px] flex items-center px-4 py-3 mx-1 shrink-0 sticky top-0 z-10 min-w-[1000px]">
           <div
             className="w-8 shrink-0 flex items-center justify-center cursor-pointer"
             onClick={toggleTodos}
@@ -458,14 +458,14 @@ export function TabelaClientes() {
             )}
           </div>
           <span className="text-[13px] font-semibold text-[#1c5258] w-[100px] shrink-0">ID</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5]">Nome</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.2]">Telefone</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5]">UF</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-1">Cadastro</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-1">Source</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">Nome</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.2] min-w-[120px]">Telefone</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">UF</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Cadastro</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Source</span>
         </div>
 
-        <div className="mt-2 flex flex-col pb-2">
+        <div className="mt-2 flex flex-col pb-2 min-w-[1000px]">
           {clientes.map((cliente, idx) => {
             const selecionado = selecionados.includes(cliente.id)
             return (
@@ -490,11 +490,11 @@ export function TabelaClientes() {
                     )}
                   </div>
                   <span className="text-[14px] text-[#343434] font-medium w-[100px] shrink-0">{cliente.id}</span>
-                  <span className="text-[14px] text-[#111111] font-semibold flex-[1.5]">{cliente.nome}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-[1.2]">{cliente.telefone}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-[1.5]">{cliente.uf}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-1">{cliente.cadastro}</span>
-                  <span className="text-[14px] text-[#111111] font-semibold flex-1">{cliente.source}</span>
+                  <span className="text-[14px] text-[#111111] font-semibold flex-[1.5] min-w-[150px]">{cliente.nome}</span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-[1.2] min-w-[120px]">{cliente.telefone}</span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-[1.5] min-w-[150px]">{cliente.uf}</span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[100px]">{cliente.cadastro}</span>
+                  <span className="text-[14px] text-[#111111] font-semibold flex-1 min-w-[100px]">{cliente.source}</span>
                 </div>
                 {idx < clientes.length - 1 && <div className="border-t border-[#f0f0f0] mx-4" />}
               </div>

@@ -8,7 +8,7 @@ interface Props {
 
 export function BarraTopo({ titulo }: Props) {
   return (
-    <header className="fixed left-[104px] right-0 top-0 h-[87px] bg-[#f6f7f9] z-10 flex items-center px-6 border-b border-[#e0e0e0]">
+    <header className="fixed left-[60px] md:left-[104px] right-0 top-0 h-[60px] md:h-[87px] bg-[#f6f7f9] z-10 flex items-center px-4 md:px-6 border-b border-[#e0e0e0]">
       {/* Título da página */}
       <h1 className="text-[20px] font-semibold text-[#343434] tracking-wide mr-auto">
         {titulo}
@@ -29,7 +29,7 @@ export function BarraTopo({ titulo }: Props) {
           className="flex items-center gap-2 text-[#343434] hover:text-[#3f7377] transition-colors"
         >
           <img src={logoAgente} alt="Logo Agente" className="w-[32px] h-[32px] object-contain" />
-          <span className="text-[20px] font-semibold">Assistente</span>
+          <span className="text-[20px] font-semibold hidden md:inline">Assistente</span>
         </Link>
 
         <div className="w-px h-10 bg-[#e0e0e0]" />
