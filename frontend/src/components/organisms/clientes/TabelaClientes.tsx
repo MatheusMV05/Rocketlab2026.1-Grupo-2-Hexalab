@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { DropdownOrganizarLista } from '../../molecules/clientes/DropdownOrganizarLista'
+import { ModalSucesso } from '../../molecules/compartilhados/ModalSucesso'
+
 import { BotaoFiltro } from '../../atoms/compartilhados/BotaoFiltro'
 import { MESES_FILTRO } from '../../../constants/opcoesFiltro'
 import { CIDADES_MOCK, ESTADOS_MAP } from '../../../constants/cidades'
@@ -710,16 +712,7 @@ export function TabelaClientes() {
 
       {/* Toast Sucesso Exportação */}
       {modalSucesso && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-          <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.15)] w-[300px] p-8 flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-full border-2 border-[#1a9a45] flex items-center justify-center">
-              <Check size={28} strokeWidth={2.5} className="text-[#1a9a45]" />
-            </div>
-            <h2 className="text-[18px] font-semibold text-[#111111] text-center leading-snug">
-              Lista exportada com<br />sucesso!
-            </h2>
-          </div>
-        </div>
+        <ModalSucesso mensagem="Lista exportada com sucesso!" />
       )}
 
       {/* Modal Confirmar Alterações (Edição) */}
@@ -753,16 +746,7 @@ export function TabelaClientes() {
 
       {/* Toast Sucesso Edição */}
       {modalSucessoEdicao && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-          <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.15)] w-[300px] p-8 flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-full border-2 border-[#1a9a45] flex items-center justify-center">
-              <Check size={28} strokeWidth={2.5} className="text-[#1a9a45]" />
-            </div>
-            <h2 className="text-[18px] font-semibold text-[#111111] text-center leading-snug">
-              Lista editada com<br />sucesso!
-            </h2>
-          </div>
-        </div>
+        <ModalSucesso mensagem="Lista editada com sucesso!" />
       )}
 
     </div>

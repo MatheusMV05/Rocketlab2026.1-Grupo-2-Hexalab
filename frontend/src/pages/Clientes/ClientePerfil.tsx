@@ -23,6 +23,8 @@ import {
 } from 'lucide-react'
 import { CIDADES_MOCK, ESTADOS_MAP } from '../../constants/cidades'
 import { DropdownOrganizarLista } from '../../components/molecules/clientes/DropdownOrganizarLista'
+import { ModalSucesso } from '../../components/molecules/compartilhados/ModalSucesso'
+
 
 import { CLIENTES_MOCK_ALL } from '../../constants/mockClientes'
 
@@ -213,7 +215,7 @@ export default function ClientePerfil() {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-[14px]">
           <CardKpi titulo="Taxa de satisfação" valor="68%" variacao="+10%" tipo="bom" icone={<Smile size={24} />} />
           <CardKpi titulo="Média de compra" valor="05 itens /cliente" variacao="ABR/2026" tipo="bom" icone={<ShoppingBag size={24} />} />
           <CardKpi titulo="Ticket Médio" valor="R$ 335" variacao="+12%" tipo="bom" icone={<Tag size={24} className="rotate-90" />} />
@@ -436,16 +438,7 @@ export default function ClientePerfil() {
 
         {/* Toast Sucesso Edição */}
         {modalSucesso && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-            <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.15)] w-[300px] p-8 flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-[#1a9a45] flex items-center justify-center">
-                <Check size={28} strokeWidth={2.5} className="text-[#1a9a45]" />
-              </div>
-              <h2 className="text-[18px] font-semibold text-[#111111] text-center leading-snug">
-                Perfil editado com<br />sucesso!
-              </h2>
-            </div>
-          </div>
+          <ModalSucesso mensagem="Perfil editado com sucesso!" />
         )}
 
         {/* Modal Exportar */}
@@ -470,16 +463,7 @@ export default function ClientePerfil() {
 
         {/* Toast Sucesso Exportação */}
         {modalExportarSucesso && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-            <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.15)] w-[300px] p-8 flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-[#1a9a45] flex items-center justify-center">
-                <Check size={28} strokeWidth={2.5} className="text-[#1a9a45]" />
-              </div>
-              <h2 className="text-[18px] font-semibold text-[#111111] text-center leading-snug">
-                Perfil exportado com<br />sucesso!
-              </h2>
-            </div>
-          </div>
+          <ModalSucesso mensagem="Perfil exportado com sucesso!" />
         )}
 
       </div>

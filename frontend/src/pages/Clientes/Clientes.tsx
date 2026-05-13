@@ -8,7 +8,7 @@ export default function Clientes() {
     <LayoutPrincipal titulo="CLIENTES">
       <div className="flex flex-col gap-6 h-full min-h-[calc(100vh-140px)]">
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-[14px]">
           <CardKpi
             titulo="Total de Clientes"
             valor="175.258"
