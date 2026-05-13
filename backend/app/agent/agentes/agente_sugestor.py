@@ -87,7 +87,7 @@ class AgenteSugestor(AgenteBase):
 
 			self._agent = agent
 
-		texto_llm, tokens_usados = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+		texto_llm, tokens_usados, _ = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
 		sugestoes = self._interpretar_saida_llm(texto_llm)
 
 		return ResultadoSugestor(
