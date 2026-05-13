@@ -1,181 +1,371 @@
-# prompts/
+# prompts/ — Templates de Prompts Jinja2
 
-## Objetivo
+## 🎯 Objetivo
 
-Este diretório contém templates de prompts (Jinja2) usados pelos agentes da
-pipeline para gerar instruções ao modelo de linguagem. Os templates aqui
-presentes destinam-se a testes e avaliação de comportamento do LLM; os
-system prompts finais que serão usados em produção devem ser definidos e
-validados na etapa de integração.
+Este diretório contém os **5 templates Jinja2** usados pelos agentes da pipeline Text-to-SQL para gerar instruções ao modelo de linguagem (Mistral).
 
-Separar os prompts em arquivos `.j2` independentes do código Python permite
-que o wording seja iterado sem abrir nenhum agente — e garante que mudanças
-de linguagem e mudanças de lógica apareçam em diffs separados no Git.
-
+**Benefícios da separação:**
+-  Iteração de wording sem abrir código Python
+-  Git diffs claros (linguagem vs lógica separadas)
+-  Testes isolados dos templates
+-  Centralização de prompts (sem hardcoding em `.py`)
 ---
 
-## Uso
+##  Os 5 Prompts
 
-- Os templates são renderizados via Jinja2 por cada agente (ver `AgenteBase._render`).
-- Mantenha os templates focados: forneça apenas as variáveis necessárias
-  (`schema`, `question`, `examples`, etc.).
-- **Nunca coloque strings de prompt dentro de arquivos `.py`** — toda
-  linguagem natural fica aqui; toda lógica fica nos agentes.
+### 1. **seletor.j2** — Filtra Tabelas Relevantes
 
-### Variáveis por template
+**Agente:** `AgenteSeletor`  
+**Entrada:** Schema DDL completo + pergunta  
+**Saída:** DDL filtrado (apenas tabelas relevantes)
 
-| Template | Variáveis injetadas |
-|---|---|
-| `selector.j2` | `{{ schema }}`, `{{ question }}`, `{{ schema_summary }}` |
-| `decomposer.j2` | `{{ schema }}`, `{{ question }}`, `{{ examples }}` |
-| `refiner.j2` | `{{ schema }}`, `{{ question }}`, `{{ candidate_sql }}` |
+| Variável | Tipo | Descrição |
+|----------|------|-----------|
+| `{{ schema }}` | str | Schema completo do banco (CREATE TABLE statements) |
+| `{{ question }}` | str | Pergunta do usuário em português |
 
-Se uma variável referenciada no template não for passada na chamada,
-o ambiente Jinja2 está configurado com `StrictUndefined` e vai lançar
-`UndefinedError` imediatamente — falha explícita em vez de prompt
-silenciosamente incompleto chegando ao LLM.
-
----
-
-## Estrutura recomendada do template
-
+**Exemplo de render:**
 ```jinja2
-{# ---------------------------------------------------------------------------
-   selector.j2
-   Propósito: filtrar o schema completo, retornando apenas as tabelas e
-   colunas necessárias para responder à pergunta do usuário.
-   Saída esperada: DDL válido (CREATE TABLE statements). Sem texto adicional.
-   Alterações: descreva aqui o que mudou e por quê.
-   --------------------------------------------------------------------------- #}
-
-Você é o Agente Seletor em um pipeline de geração de SQL.
-
-Sua tarefa:
-- Analisar o esquema DDL completo do banco de dados e a pergunta do usuário.
-- Filtrar e manter apenas as tabelas, colunas e restrições (constraints) estritamente necessárias para responder à pergunta.
-- Preservar o formato SQL DDL original e válido.
-- Preservar os nomes das tabelas e colunas exatamente como aparecem no esquema, sem traduções ou abreviações.
-- Usar os tipos e nomes das colunas da tabela para garantir precisão na resposta.
-
-Esquema completo de entrada:
-{{ schema }}
-PERGUNTA DO USUÁRIO: {{ question }}
-
-Formato exigido (exemplo):
+Você é o Agente Seletor...
+Esquema completo: {{ schema }}
+Pergunta: {{ question }}
 ```
-CREATE TABLE customers (
-	id INTEGER PRIMARY KEY,
-	name TEXT,
-	email TEXT
-);
-```
-
-Importante: o texto acima é um exemplo do formato — a sua saída deve conter somente blocos `CREATE TABLE` copiados/modificados a partir do esquema de entrada, nunca linhas ou identificadores inventados.
-
-```
-
-**Regras de estrutura:**
-
-- **Comentário de cabeçalho** (`{# ... #}`) explicando propósito, saída esperada
-  e histórico de alterações. Comentários Jinja2 não aparecem no prompt renderizado.
-- **Instruções de saída explícitas** — o LLM deve saber exatamente o formato
-  esperado (ex.: `Reasoning: [...]\nSQL: [...]` para o Decompositor).
-- **Tags XML para delimitar seções** (`<schema>`, `<question>`, `<examples>`) —
-  ajudam o modelo a distinguir contextos e facilitam o parse do output.
-- **Exemplos few-shot quando aplicável** — use bloco `{% for %}` para
-  iterar dinamicamente (ver seção abaixo).
 
 ---
 
-## Recursos Jinja2 disponíveis
+### 2. **decompositor.j2** — Gera SQL Candidato
 
-### Iteração dinâmica de few-shots
+**Agente:** `AgenteDecompositor`  
+**Entrada:** Schema filtrado + pergunta + exemplos few-shot (opcional)  
+**Saída:** SQL + raciocínio (2 campos JSON)
 
-Em vez de duplicar exemplos manualmente, itere a lista injetada pelo agente:
+| Variável | Tipo | Descrição |
+|----------|------|-----------|
+| `{{ schema_filtrado }}` | str | DDL já filtrado pelo Seletor |
+| `{{ question }}` | str | Pergunta original |
+| `{{ exemplos }}` | list | Few-shot exemplos (opcional) |
 
+**Iteração de few-shots:**
 ```jinja2
-{% if examples %}
-Use the following examples as reference:
-
-{% for ex in examples %}
-Question: {{ ex.question }}
+{% if exemplos %}
+Exemplos para referência:
+{% for ex in exemplos %}
+P: {{ ex.question }}
 SQL: {{ ex.sql }}
 {% endfor %}
 {% endif %}
 ```
 
-O bloco `{% if examples %}` garante que a seção só aparece quando exemplos
-foram fornecidos — o mesmo template funciona com e sem few-shots.
+---
 
-### Seções condicionais
+### 3. **refinador.j2** — Valida e Corrige SQL
 
-Use `{% if %}` para adaptar o prompt ao contexto da chamada sem duplicar templates:
+**Agente:** `AgenteRefinador`  
+**Entrada:** SQL candidato + schema + pergunta + erro de execução (se houver)  
+**Saída:** SQL corrigido + raciocínio
 
+| Variável | Tipo | Descrição |
+|----------|------|-----------|
+| `{{ schema }}` | str | Schema para referência de correção |
+| `{{ question }}` | str | Pergunta original (contexto) |
+| `{{ previous_sql }}` | str | SQL que falhou |
+| `{{ execution_result }}` | str | Erro ou resultado da execução |
+
+**Seção condicional (só mostra se houve erro):**
 ```jinja2
 {% if execution_result %}
-The previous SQL produced the following result or error:
+O SQL anterior produziu o seguinte erro:
 {{ execution_result }}
+
+Corrija o SQL para resolver o problema.
 {% endif %}
 ```
 
-### Comentários invisíveis
+---
 
-Use `{# ... #}` para documentar o template. Esses comentários são removidos
-pelo Jinja2 antes de o prompt ser enviado ao LLM — não consomem tokens.
+### 4. **interpretador.j2** — Gera Resposta em Linguagem Natural
 
+**Agente:** `AgenteInterpretador`  
+**Entrada:** SQL final + dados resultados + pergunta + erro (se houver)  
+**Saída:** Resposta em português (1 campo JSON)
+
+| Variável | Tipo | Descrição |
+|----------|------|-----------|
+| `{{ question }}` | str | Pergunta original do usuário |
+| `{{ sql_final }}` | str | SQL validado que foi executado |
+| `{{ colunas }}` | list | Nomes das colunas do resultado |
+| `{{ dados }}` | list[list] | Dados retornados (tabular) |
+| `{{ erro }}` | str \| None | Erro, se houve |
+
+**Exemplo de iteração:**
 ```jinja2
-{# Não remover a instrução abaixo: modelos tendem a adicionar markdown
-   em volta do SQL quando não há instrução explícita de formato. #}
-Return ONLY the SQL query. No backticks. No explanation.
+{% if dados %}
+Os resultados foram:
+{% for linha in dados[:3] %}
+  {{ linha }}
+{% endfor %}
+{% if dados|length > 3 %}
+  ... e {{ dados|length - 3 }} mais linhas
+{% endif %}
+{% else %}
+A query retornou 0 resultados.
+{% endif %}
 ```
 
 ---
 
-## Testando templates isoladamente
+### 5. **sugestor.j2** — Gera Próximas Perguntas
 
-Por serem arquivos separados do código, os templates podem ser testados
-sem instanciar nenhum agente ou mockar o LLM:
+**Agente:** `AgenteSugestor`  
+**Entrada:** Pergunta original + SQL gerado + schema + amostra resultado  
+**Saída:** 3 perguntas sugeridas (JSON com lista)
+
+| Variável | Tipo | Descrição |
+|----------|------|-----------|
+| `{{ question }}` | str | Pergunta original (contexto) |
+| `{{ sql_gerado }}` | str | SQL executado com sucesso |
+| `{{ schema }}` | str | Schema disponível (opcional) |
+| `{{ amostra_resultado }}` | str | Primeiras linhas dos resultados |
+
+**Exemplo:**
+```jinja2
+Com base na pergunta "{{ question }}" e nos resultados:
+{{ amostra_resultado }}
+
+Sugira 3 próximas perguntas analíticas que façam sentido.
+```
+
+---
+
+## Como Usar (Para Agentes)
+
+Cada agente chama `_render()` (método de `AgenteBase`):
+
+```python
+# Dentro do agente
+prompt_sistema = self._render(
+    "seletor",  # Nome do template (sem .j2)
+    schema=esquema_completo,
+    question=pergunta,
+)
+
+# Resultado: prompt pronto para enviar ao LLM
+```
+
+O método `_render()`:
+1. Carrega o template `.j2`
+2. Injeta variáveis
+3. Renderiza com Jinja2
+4. Retorna string pronta
+
+---
+
+##  Estrutura Recomendada do Template
+
+```jinja2
+{# ---------------------------------------------------------------------------
+   seletor.j2
+   
+   Propósito: Filtrar schema completo, retornando DDL apenas das tabelas
+   necessárias para responder à pergunta.
+   
+   Saída esperada: CREATE TABLE statements válidos. Sem texto extra.
+   
+   Histórico:
+   - v1 (original): Versão inicial
+   - v2 (mai/2026): Adicionado aviso sobre não inventar tabelas
+   --------------------------------------------------------------------------- #}
+
+Você é o Agente Seletor em um pipeline de geração de SQL.
+
+Tarefa:
+- Analisar o schema DDL completo e a pergunta do usuário
+- Filtrar e manter APENAS as tabelas estritamente necessárias
+- Preservar formato DDL original e válido
+- NÃO inventar colunas ou tabelas
+
+Schema:
+<schema>
+{{ schema }}
+</schema>
+
+Pergunta do usuário:
+<question>
+{{ question }}
+</question>
+
+Retorne somente blocos CREATE TABLE copiados do schema de entrada.
+Não adicione nada extra.
+```
+
+**Padrões importantes:**
+-  Comentário de cabeçalho com propósito, histórico, saída esperada
+-  Tags XML para delimitar seções (`<schema>`, `<question>`, etc)
+-  Instruções explícitas de formato esperado
+-  Comentário Jinja2 documentando decisões (`{# ... #}`)
+
+---
+
+##  Recursos Jinja2 Disponíveis
+
+### Condicionais
+
+```jinja2
+{% if exemplos %}
+  Exemplos recuperados:
+  {% for ex in exemplos %}
+    {{ ex.question }}
+  {% endfor %}
+{% endif %}
+```
+
+### Loops
+
+```jinja2
+{% for linha in dados %}
+  - {{ linha[0] }}: {{ linha[1] }}
+{% endfor %}
+```
+
+### Filtros
+
+```jinja2
+{{ pergunta | upper }}      {# Maiúsculas #}
+{{ lista | length }}        {# Tamanho #}
+{{ valor | default("N/A") }} {# Padrão #}
+```
+
+### Comentários (invisíveis)
+
+```jinja2
+{# Este comentário não aparece no prompt #}
+{# Muito útil para documentar decisões #}
+```
+
+---
+
+##  Checklist: Modificando um Prompt
+
+Antes de fazer commit de mudanças:
+
+- [ ] Template renderiza sem erros
+- [ ] Variáveis injetadas aparecem corretamente
+- [ ] Histórico de alterações atualizado no cabeçalho
+- [ ] Nenhuma hardcoded sensitive data (API keys, etc)
+- [ ] Instruções de formato são explícitas
+- [ ] Não há variáveis `undefined` (Jinja2 `StrictUndefined`)
+- [ ] Few-shots ou exemplos têm seções condicionais (`{% if %}`)
+- [ ] Testes unitários atualizados (se houver)
+
+---
+
+##  Testando Prompts Isoladamente
+
+Teste sem instanciar agente ou LLM:
 
 ```python
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+import pytest
 
-def test_selector_prompt_renders_schema():
+def test_seletor_j2_renders():
+    """Valida se template seletor.j2 renderiza com variáveis básicas."""
     env = Environment(
-      loader=FileSystemLoader("prompts/"),
-      undefined=StrictUndefined,
+        loader=FileSystemLoader("app/agent/prompts"),
+        undefined=StrictUndefined,
     )
-    rendered = env.get_template("selector.j2").render(
-        schema="CREATE TABLE orders (id INTEGER PRIMARY KEY);",
-        question="How many orders?",
+    rendered = env.get_template("seletor.j2").render(
+        schema="CREATE TABLE clientes (id INTEGER);",
+        question="Quantos clientes temos?",
     )
-    assert "CREATE TABLE orders" in rendered
-    assert "How many orders?" in rendered
+    assert "CREATE TABLE clientes" in rendered
+    assert "Quantos clientes temos?" in rendered
 
-def test_selector_prompt_raises_on_missing_variable():
-    env = Environment(loader=FileSystemLoader("prompts/"), undefined=StrictUndefined)
-    with pytest.raises(UndefinedError):
-        env.get_template("selector.j2").render(schema="...")
-        # 'question' não foi passada → UndefinedError imediato
+def test_seletor_j2_requires_question():
+    """Valida que template falha se variável obrigatória faltar."""
+    env = Environment(
+        loader=FileSystemLoader("app/agent/prompts"),
+        undefined=StrictUndefined,
+    )
+    with pytest.raises(jinja2.UndefinedError):
+        env.get_template("seletor.j2").render(schema="...")
+        # 'question' não foi passada → erro imediato
 ```
 
 ---
 
-## Integração
+##  Matriz: Templates × Agentes
 
-Antes de subir para produção, coordene a versão final do system prompt
-com a equipe.
-
-O histórico de alterações de cada template deve ser rastreável pelo Git —
-por isso mantenha um comentário de cabeçalho `{# ... #}` com a descrição
-da última mudança e sua motivação.
+| Template | Agente | Entrada | Saída |
+|----------|--------|---------|-------|
+| seletor.j2 | AgenteSeletor | schema + question | DDL filtrado |
+| decompositor.j2 | AgenteDecompositor | schema_filtrado + question + exemplos | SQL + reasoning |
+| refinador.j2 | AgenteRefinador | schema + question + sql + erro | SQL corrigido + reasoning |
+| interpretador.j2 | AgenteInterpretador | question + sql + dados + erro | resposta (português) |
+| sugestor.j2 | AgenteSugestor | question + sql + schema + amostra | 3 perguntas |
 
 ---
 
-## Contribuição
+##  Boas Práticas
 
-- Ao modificar um template, atualize o comentário de cabeçalho `{# ... #}`
-  explicando o que mudou e por quê.
-- Adicione ou atualize testes que validem o formato de saída renderizado.
-- Nunca remova uma variável do template sem verificar se ela ainda é
-  passada pelo agente correspondente — `StrictUndefined` vai capturar em
-  tempo de execução, mas um teste unitário captura antes.
+### 1. Nunca Hardcode Prompts em `.py`
+```python
+#  Errado
+prompt = "Você é um agente que..."  # Hardcoded!
+
+#  Certo
+prompt = self._render("seletor", schema=..., question=...)
+```
+
+### 2. Sempre Documente Mudanças
+```jinja2
+{# 
+Histórico:
+- v1: Versão inicial
+- v2 (mai/26): Adicionado aviso de não inventar tabelas
+- v3: Melhorou instrução de raciocínio
+#}
+```
+
+### 3. Use Seções Condicionais para Few-Shots
+```jinja2
+{% if exemplos %}
+  Exemplos:
+  {% for ex in exemplos %}
+    {{ ex.sql }}
+  {% endfor %}
+{% endif %}
+```
+
+Assim o template funciona com OU SEM exemplos.
+
+### 4. Seja Explícito sobre Formato de Saída
+```jinja2
+Retorne EXATAMENTE neste formato JSON:
+{
+  "reasoning": "...",
+  "sql": "..."
+}
+
+Nada além disso. Sem explicações adicionais.
+```
+
+---
+
+##  Suporte
+
+**Prompt não renderiza?**
+- Confira variáveis em `_render()` call
+- Use `StrictUndefined` para erro imediato
+
+**Resultado errado do LLM?**
+- Mude wording do template
+- Adicione exemplos few-shot
+- Seja mais explícito sobre formato esperado
+
+**Quer adicionar novo prompt?**
+- Crie `novo_agente.j2`
+- Documente propósito no cabeçalho
+- Chame `self._render("novo_agente", ...)` no agente
+- Adicione testes
+
+---

@@ -48,6 +48,14 @@ class ResultadoSugestorLLM(BaseModel):
     )
 
 
+class ResultadoInterpretadorLLM(BaseModel):
+    """Saida estruturada retornada pelo PydanticAI no agente interpretador."""
+
+    resposta: str = Field(
+        description="Resposta final em linguagem natural, clara e objetiva para o usuario."
+    )
+
+
 @dataclass
 class ResultadoSeletor:
     """Resultado retornado por `AgenteSeletor`.
@@ -114,4 +122,17 @@ class ResultadoSugestor:
     sugestoes: list[str]
     tabela_principal: str
     tabelas_adjacentes: list[str]
+    tokens_usados: int
+
+
+@dataclass
+class ResultadoInterpretador:
+    """Resultado retornado por `AgenteInterpretador`.
+
+    Attributes:
+        resposta: Texto final em linguagem natural para o usuario.
+        tokens_usados: Total de tokens consumidos na chamada ao LLM.
+    """
+
+    resposta: str
     tokens_usados: int
