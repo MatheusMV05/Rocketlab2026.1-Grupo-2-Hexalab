@@ -18,6 +18,7 @@ from app.dashboard.schemas import (
     EntregaItem,
     ReceitaGraficoItem,
     ReceitaGraficoResponse,
+    FiltrosOpcoesResponse,
 )
 
 
@@ -130,6 +131,11 @@ async def get_entregas(
         por_pagina=data["por_pagina"],
         total_paginas=data["total_paginas"],
     )
+
+
+async def get_filtros_opcoes(db: AsyncSession) -> FiltrosOpcoesResponse:
+    data = await repository.get_filtros_opcoes(db)
+    return FiltrosOpcoesResponse(**data)
 
 
 async def atualizar_entrega(db: AsyncSession, id_entrega: str, dados: dict) -> EntregaItem:

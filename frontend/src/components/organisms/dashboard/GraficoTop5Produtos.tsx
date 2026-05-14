@@ -29,15 +29,14 @@ export function GraficoTop5Produtos({ filtrosGlobais }: Props) {
   const top5 = (data?.items ?? []).slice(0, 5)
 
   const dados = top5.map((item, idx) => ({
-    // Label do eixo Y inclui a posição numérica (ex: "1° Produto")
     label: `${idx + 1}° ${item.nome_produto}`,
     nome: item.nome_produto,
     receita: item.receita_total,
-    // volume_vendas não vem da API ainda, usando receita como fallback
-    volume: item.receita_total,
+    volume: item.total_unidades,
   }))
 
   const receitaTotal = top5.reduce((s, i) => s + i.receita_total, 0)
+  const volumeTotal = top5.reduce((s, i) => s + i.total_unidades, 0)
   const isReceita = tipoDado === 'Receita'
 
   return (
@@ -75,10 +74,10 @@ export function GraficoTop5Produtos({ filtrosGlobais }: Props) {
           {isReceita ? 'Receita Total dos Top 5:' : 'Volume Total dos Top 5:'}
         </span>
         <span className="font-bold text-[#343434]">
-          {receitaTotal > 0
+          {top5.length > 0
             ? isReceita
               ? `R$ ${receitaTotal.toLocaleString('pt-BR')}`
-              : `${top5.reduce((s, i) => s + Math.round(i.receita_total / 100), 0).toLocaleString('pt-BR')} un.`
+              : `${volumeTotal.toLocaleString('pt-BR')} un.`
             : '—'}
         </span>
         {receitaTotal > 0 && (
@@ -124,14 +123,14 @@ export function GraficoTop5Produtos({ filtrosGlobais }: Props) {
                 width={155}
               />
               <Tooltip
-                formatter={(v: number) => [isReceita ? formatarReais(v) : `${Math.round(v / 100).toLocaleString('pt-BR')} un.`, tipoDado]}
+                formatter={(v: number) => [isReceita ? formatarReais(v) : `${v.toLocaleString('pt-BR')} un.`, tipoDado]}
                 contentStyle={{ fontSize: 11, borderColor: '#e0e0e0', borderRadius: 5 }}
               />
-              <Bar dataKey="receita" fill="#61878a" radius={[0, 2, 2, 0]} barSize={16}>
+              <Bar dataKey={isReceita ? 'receita' : 'volume'} fill="#61878a" radius={[0, 2, 2, 0]} barSize={16}>
                 <LabelList
-                  dataKey="receita"
+                  dataKey={isReceita ? 'receita' : 'volume'}
                   position="right"
-                  formatter={(v: number) => isReceita ? formatarReais(v) : `${Math.round(v / 100).toLocaleString('pt-BR')} un.`}
+                  formatter={(v: number) => isReceita ? formatarReais(v) : `${v.toLocaleString('pt-BR')} un.`}
                   style={{ fontSize: 9, fill: '#343434', fontWeight: 700 }}
                 />
               </Bar>

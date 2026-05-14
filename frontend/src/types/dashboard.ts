@@ -19,6 +19,7 @@ export interface TopProdutoItem {
   nome_produto: string
   categoria: string
   receita_total: number
+  total_unidades: number
 }
 
 export interface TopProdutosDados {

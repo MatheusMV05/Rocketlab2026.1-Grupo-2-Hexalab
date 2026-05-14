@@ -88,6 +88,14 @@ export function useEntregas(pagina: number, filtros?: FiltrosEntregas, porPagina
   })
 }
 
+export function useFiltrosOpcoes() {
+  return useQuery({
+    queryKey: ['dashboard', 'filtros-opcoes'],
+    queryFn: dashboardService.buscarFiltrosOpcoes,
+    staleTime: Infinity,
+  })
+}
+
 export function useAtualizarEntrega() {
   const queryClient = useQueryClient()
   return useMutation({

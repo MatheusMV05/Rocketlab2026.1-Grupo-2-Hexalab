@@ -13,10 +13,13 @@ import type {
 } from '../types/dashboard'
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: 'http://localhost:8080/api',
 })
 
 export const dashboardService = {
+  buscarFiltrosOpcoes: () =>
+    api.get<{ anos: string[]; estados: string[] }>('/dashboard/filtros-opcoes').then((r) => r.data),
+
   buscarKpis: () =>
     api.get<KpiDados>('/dashboard/kpis').then((r) => r.data),
 

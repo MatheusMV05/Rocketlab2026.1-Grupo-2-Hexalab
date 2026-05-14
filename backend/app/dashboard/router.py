@@ -17,9 +17,18 @@ from app.dashboard.schemas import (
     EntregaItem,
     ReceitaGraficoResponse,
     AtualizarEntregaRequest,
+    FiltrosOpcoesResponse,
 )
 
 router = APIRouter()
+
+
+@router.get("/filtros-opcoes", response_model=FiltrosOpcoesResponse)
+async def get_filtros_opcoes(db: AsyncSession = Depends(get_db)):
+    try:
+        return await service.get_filtros_opcoes(db)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao buscar opções de filtro.")
 
 
 @router.get("/kpis", response_model=KpiResponse)

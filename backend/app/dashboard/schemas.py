@@ -22,6 +22,7 @@ class TopProdutoItem(BaseModel):
     nome_produto: str
     categoria: str
     receita_total: float
+    total_unidades: int
 
 
 class TopProdutosResponse(BaseModel):
@@ -93,6 +94,11 @@ class EntregasResponse(BaseModel):
     pagina: int
     por_pagina: int
     total_paginas: int
+
+
+class FiltrosOpcoesResponse(BaseModel):
+    anos: list[str]
+    estados: list[str]
 
 
 class AtualizarEntregaRequest(BaseModel):

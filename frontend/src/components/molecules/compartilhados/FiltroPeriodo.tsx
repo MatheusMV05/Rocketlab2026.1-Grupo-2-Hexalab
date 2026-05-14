@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { DropdownFiltro } from '../../atoms/compartilhados/DropdownFiltro'
-import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_NOME } from '../../../constants/opcoesFiltro'
+import { MESES_FILTRO } from '../../../constants/opcoesFiltro'
+import { useFiltrosOpcoes } from '../../../hooks/useDashboard'
 
 export interface FiltrosPeriodo {
   ano: string
@@ -16,13 +17,16 @@ interface Props {
 }
 
 export function FiltroPeriodo({ filtros, onChange }: Props) {
+  const { data: opcoes } = useFiltrosOpcoes()
+  const anosOpcoes = opcoes?.anos ?? []
+  const estadosOpcoes = opcoes?.estados ?? []
   const temFiltro = !!(filtros.ano || filtros.mes || filtros.localidade)
 
   return (
     <div className="flex items-center gap-[21px]">
       <DropdownFiltro
         label="Ano"
-        opcoes={ANOS_FILTRO}
+        opcoes={anosOpcoes}
         valor={filtros.ano}
         onChange={(v) => onChange({ ...filtros, ano: v })}
         rotulo="Ano"
@@ -36,7 +40,7 @@ export function FiltroPeriodo({ filtros, onChange }: Props) {
       />
       <DropdownFiltro
         label="Localidade"
-        opcoes={ESTADOS_NOME}
+        opcoes={estadosOpcoes}
         valor={filtros.localidade}
         onChange={(v) => onChange({ ...filtros, localidade: v })}
         rotulo="Localidade"
