@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite+aiosqlite:///./data/vcommerce.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./data/database.db"
     ENVIRONMENT: str = "development"
 
     class Config:

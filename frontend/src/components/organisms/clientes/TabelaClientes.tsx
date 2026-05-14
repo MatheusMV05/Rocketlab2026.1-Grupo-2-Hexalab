@@ -10,7 +10,8 @@ import {
   X,
   Check,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { DropdownOrganizarLista } from '../../molecules/clientes/DropdownOrganizarLista'
@@ -18,10 +19,7 @@ import { ModalSucesso } from '../../molecules/compartilhados/ModalSucesso'
 
 import { BotaoFiltro } from '../../atoms/compartilhados/BotaoFiltro'
 import { MESES_FILTRO } from '../../../constants/opcoesFiltro'
-import { CIDADES_MOCK, ESTADOS_MAP } from '../../../constants/cidades'
-
-import { GET_MOCK_POR_PAGINA, CLIENTES_MOCK_ALL } from '../../../constants/mockClientes'
-const CLIENTES_MOCK_INICIAL = GET_MOCK_POR_PAGINA(1)
+import { useListaClientes, useLocalizacoes } from '../../../hooks/useClientes'
 
 const ANOS_CLIENTES = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014']
 const SOURCES = ['WEB', 'APP', 'REFERRAL']
@@ -40,58 +38,47 @@ function toggle<T>(arr: T[], val: T): T[] {
 }
 
 export function TabelaClientes() {
-  const [clientes, setClientes] = useState(CLIENTES_MOCK_INICIAL)
-
-  const [ordenacao, setOrdenacao] = useState('')
-  const [selecionados, setSelecionados] = useState<string[]>([])
   const [paginaAtual, setPaginaAtual] = useState(1)
-  const [filtroAberto, setFiltroAberto] = useState(false)
+  const [termoBusca, setTermoBusca] = useState('')
+  const [termoDebounced, setTermoDebounced] = useState('')
   const [filtro, setFiltro] = useState<FiltroClientes>(FILTRO_VAZIO)
   const [filtroTemp, setFiltroTemp] = useState<FiltroClientes>(FILTRO_VAZIO)
+  
+  const [ordenacao, setOrdenacao] = useState('')
+  const [selecionados, setSelecionados] = useState<string[]>([])
+  const [filtroAberto, setFiltroAberto] = useState(false)
+  const [buscaLocalizacaoEdicao, setBuscaLocalizacaoEdicao] = useState('')
+  const [buscaLocalizacaoFiltro, setBuscaLocalizacaoFiltro] = useState('')
 
-  const navigate = useNavigate()
+  // Debounce para busca
+  useEffect(() => {
+    const handler = setTimeout(() => setTermoDebounced(termoBusca), 500)
+    return () => clearTimeout(handler)
+  }, [termoBusca])
 
-  // Calcula os clientes filtrados
-  const clientesFiltrados = CLIENTES_MOCK_ALL.filter(cliente => {
-    let match = true
-    if (filtro.localizacao) {
-      match = match && cliente.uf.toLowerCase().includes(filtro.localizacao.toLowerCase())
-    }
-    if (filtro.ano) {
-      match = match && cliente.cadastro.includes(filtro.ano)
-    }
-    if (filtro.mes) {
-      const mesIndex = MESES_FILTRO.findIndex(m => m.label === filtro.mes) + 1
-      const mesStr = mesIndex.toString().padStart(2, '0')
-      match = match && cliente.cadastro.split('/')[1] === mesStr
-    }
-    if (filtro.source.length > 0) {
-      match = match && filtro.source.includes(cliente.source)
-    }
-    return match
+  // Hook de Dados Reais
+  const { data, isLoading, isError } = useListaClientes({
+    query: termoDebounced || undefined,
+    estado: filtro.localizacao || undefined,
+    pagina: paginaAtual,
+    tamanho: 9
   })
 
-  const totalPaginas = Math.max(1, Math.ceil(clientesFiltrados.length / 9))
-  
-  // Garante que a página atual não passe do total após um filtro
-  const paginaValida = Math.min(paginaAtual, totalPaginas)
+  // Hook de Sugestões de Localização (Autocomplete Dinâmico)
+  const { data: sugestoesLocalizacao = [] } = useLocalizacoes(buscaLocalizacaoFiltro)
+  const { data: sugestoesLocalizacaoEdicao = [] } = useLocalizacoes(buscaLocalizacaoEdicao)
 
-  useEffect(() => {
-    const inicio = (paginaValida - 1) * 9
-    const fim = inicio + 9
-    setClientes(clientesFiltrados.slice(inicio, fim))
-    setSelecionados([])
-  }, [paginaValida, filtro])
+  const clientes = data?.itens || []
+  const totalPaginas = data?.paginas || 1
+  const totalRegistros = data?.total || 0
 
-
+  const navigate = useNavigate()
 
   const [modalEditar, setModalEditar] = useState(false)
   const [edicao, setEdicao] = useState<any>(null)
   const [clienteOriginal, setClienteOriginal] = useState<any>(null)
   const [modalConfirmarEdicao, setModalConfirmarEdicao] = useState(false)
   const [modalSucessoEdicao, setModalSucessoEdicao] = useState(false)
-  const [buscaLocalizacaoEdicao, setBuscaLocalizacaoEdicao] = useState('')
-  const [buscaLocalizacaoFiltro, setBuscaLocalizacaoFiltro] = useState('')
 
   const [hoverExportar, setHoverExportar] = useState(false)
   const [modalExportar, setModalExportar] = useState(false)
@@ -113,28 +100,6 @@ export function TabelaClientes() {
     return () => document.removeEventListener('mousedown', fecharExportMenu)
   }, [])
 
-  function obterSugestoesLocalizacao(busca: string) {
-    if (!busca || busca.trim().length < 2) return []
-    
-    const termo = busca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    
-    let ufBuscada = ''
-    for (const [estado, sigla] of Object.entries(ESTADOS_MAP)) {
-      const estadoNorm = estado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      if (estadoNorm.includes(termo) || sigla.toLowerCase() === termo) {
-        ufBuscada = sigla
-        break
-      }
-    }
-
-    return CIDADES_MOCK.filter(cidade => {
-      const cidadeNorm = cidade.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      if (ufBuscada) {
-         return cidade.endsWith(ufBuscada)
-      }
-      return cidadeNorm.includes(termo)
-    }).slice(0, 5)
-  }
 
   function toggleSelecionado(id: string) {
     setSelecionados((prev) =>
@@ -221,7 +186,9 @@ export function TabelaClientes() {
       {/* Título e Subtítulo */}
       <div className="pt-2 pb-4 px-3 border-b border-[#e0e0e0] flex-shrink-0">
         <h3 className="text-[18px] font-bold text-[#1c5258] leading-tight">Lista de Clientes</h3>
-        <p className="text-[13px] text-[#898989] font-medium mt-0.5">122 clientes ativos no total</p>
+        <p className="text-[13px] text-[#898989] font-medium mt-0.5">
+          {isLoading ? 'Carregando...' : `${totalRegistros.toLocaleString('pt-BR')} clientes encontrados no total`}
+        </p>
       </div>
 
       {/* Seção de Filtros Ativos */}
@@ -277,9 +244,16 @@ export function TabelaClientes() {
       <div className="flex items-center justify-between py-4 px-3 flex-shrink-0 relative z-20">
         <div className="flex items-center gap-3">
           <DropdownOrganizarLista valor={ordenacao} onChange={setOrdenacao} />
-          <button className="flex items-center justify-center w-[42px] h-[42px] bg-[#f6f7f9] rounded-full hover:bg-[#e5ebeb] transition-colors text-[#4d4d4d]">
-            <Search size={18} strokeWidth={2} />
-          </button>
+          <div className="relative">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4d4d4d]" strokeWidth={2} />
+            <input
+              type="text"
+              value={termoBusca}
+              onChange={(e) => setTermoBusca(e.target.value)}
+              placeholder="Pesquisar por nome ou ID..."
+              className="h-[42px] pl-10 pr-4 bg-[#f6f7f9] rounded-full text-[13px] font-medium text-[#111111] outline-none placeholder:text-[#898989] border border-transparent focus:border-[#1c5258] transition-all w-[240px]"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-[6px]">
@@ -347,9 +321,9 @@ export function TabelaClientes() {
                 placeholder="Buscar (ex: Recife ou Pernambuco)..."
                 className="w-full h-[46px] pl-11 pr-4 border border-[#b3b3b3] rounded-[12px] text-[14px] text-[#343434] placeholder-[#898989] focus:outline-none focus:border-[#1c5258]"
               />
-              {buscaLocalizacaoFiltro.length >= 2 && obterSugestoesLocalizacao(buscaLocalizacaoFiltro).length > 0 && (
+              {buscaLocalizacaoFiltro.length >= 2 && sugestoesLocalizacao.length > 0 && (
                 <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-[#fcfdfd] border border-[#e0e0e0] rounded-[12px] flex flex-col py-2 shadow-sm z-50">
-                  {obterSugestoesLocalizacao(buscaLocalizacaoFiltro).map((sugestao) => (
+                  {sugestoesLocalizacao.map((sugestao) => (
                     <button
                       key={sugestao}
                       onClick={() => {
@@ -445,7 +419,13 @@ export function TabelaClientes() {
       )}
 
       {/* Tabela (Com scroll caso estoure a altura) */}
-      <div className="flex flex-col flex-1 min-h-0 overflow-auto overflow-x-auto">
+      <div className="flex flex-col flex-1 min-h-0 overflow-auto overflow-x-auto relative">
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center">
+            <Loader2 className="animate-spin text-[#1c5258]" size={32} />
+          </div>
+        )}
+        
         <div className="bg-[#f6f7f9] rounded-[8px] flex items-center px-4 py-3 mx-1 shrink-0 sticky top-0 z-10 min-w-[1000px]">
           <div
             className="w-8 shrink-0 flex items-center justify-center cursor-pointer"
@@ -459,15 +439,22 @@ export function TabelaClientes() {
               <Square size={18} strokeWidth={2} className="text-[#898989]" />
             )}
           </div>
-          <span className="text-[13px] font-semibold text-[#1c5258] w-[100px] shrink-0">ID</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] w-[150px] shrink-0">ID</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">Nome</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.2] min-w-[120px]">Telefone</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">UF</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">Localização</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Cadastro</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Source</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Origem</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Segmento</span>
         </div>
 
         <div className="mt-2 flex flex-col pb-2 min-w-[1000px]">
+          {!isLoading && clientes.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 text-[#898989]">
+              <Search size={48} strokeWidth={1} className="mb-4" />
+              <p className="text-[15px] font-medium">Nenhum cliente encontrado</p>
+            </div>
+          )}
+          
           {clientes.map((cliente, idx) => {
             const selecionado = selecionados.includes(cliente.id)
             return (
@@ -476,7 +463,7 @@ export function TabelaClientes() {
                   className={`flex items-center px-4 py-4 cursor-pointer transition-colors ${
                     selecionado ? 'bg-[#e5ebeb]' : 'hover:bg-[#fcfdfd]'
                   }`}
-                  onClick={() => navigate(`/clientes/${cliente.id.replace('#', '')}`)}
+                  onClick={() => navigate(`/clientes/${cliente.id}`)}
                 >
                   <div 
                     className="w-8 shrink-0 flex items-center justify-center cursor-pointer"
@@ -491,12 +478,16 @@ export function TabelaClientes() {
                       <Square size={18} strokeWidth={2} className="text-[#4d4d4d]" />
                     )}
                   </div>
-                  <span className="text-[14px] text-[#343434] font-medium w-[100px] shrink-0">{cliente.id}</span>
-                  <span className="text-[14px] text-[#111111] font-semibold flex-[1.5] min-w-[150px]">{cliente.nome}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-[1.2] min-w-[120px]">{cliente.telefone}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-[1.5] min-w-[150px]">{cliente.uf}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[100px]">{cliente.cadastro}</span>
-                  <span className="text-[14px] text-[#111111] font-semibold flex-1 min-w-[100px]">{cliente.source}</span>
+                  <span className="text-[12px] text-[#898989] font-medium w-[150px] shrink-0 truncate pr-4" title={cliente.id}>{cliente.id}</span>
+                  <span className="text-[14px] text-[#111111] font-semibold flex-[1.5] min-w-[150px]">{cliente.nome_completo}</span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-[1.5] min-w-[150px]">{cliente.cidade} - {cliente.estado}</span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[100px]">{cliente.data_cadastro}</span>
+                  <span className="text-[14px] text-[#111111] font-semibold flex-1 min-w-[100px] uppercase">{cliente.origem}</span>
+                  <span className="text-[13px] font-bold flex-1 min-w-[100px]">
+                    <span className="px-2 py-1 bg-[#f6f7f9] rounded-[4px] text-[#1c5258]">
+                      {cliente.segmento_rfm}
+                    </span>
+                  </span>
                 </div>
                 {idx < clientes.length - 1 && <div className="border-t border-[#f0f0f0] mx-4" />}
               </div>
@@ -506,42 +497,51 @@ export function TabelaClientes() {
       </div>
 
       {/* Paginação */}
-      <div className="flex items-center justify-center gap-[6px] py-4 border-t border-[#f0f0f0] mt-auto">
-        <button
-          onClick={() => setPaginaAtual(prev => Math.max(1, prev - 1))}
-          disabled={paginaAtual === 1}
-          className={`w-[26px] h-[26px] flex items-center justify-center rounded-full border border-[#e0e0e0] text-[#898989] transition-colors ${
-            paginaAtual === 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[#f6f7f9]'
-          }`}
-        >
-          <ChevronLeft size={16} strokeWidth={2.5} />
-        </button>
+      <div className="flex items-center justify-between px-6 py-4 border-t border-[#f0f0f0] bg-white shrink-0">
+        <span className="text-[13px] text-[#898989] font-medium">
+          Página <span className="text-[#111111]">{paginaAtual}</span> de {totalPaginas}
+        </span>
+        
+        <div className="flex items-center gap-[6px]">
+          <button
+            onClick={() => setPaginaAtual(prev => Math.max(1, prev - 1))}
+            disabled={paginaAtual === 1 || isLoading}
+            className="w-[32px] h-[32px] flex items-center justify-center rounded-full border border-[#e0e0e0] text-[#343434] hover:bg-[#f6f7f9] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={18} strokeWidth={2.5} />
+          </button>
 
-        <div className="flex items-center gap-[4px]">
-          {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPaginaAtual(p)}
-              className={`w-[26px] h-[26px] flex items-center justify-center rounded-full text-[11px] font-bold transition-colors ${
-                paginaAtual === p 
-                  ? 'bg-[#e0e0e0] text-[#343434]' 
-                  : 'text-[#898989] hover:bg-[#f6f7f9]'
-              }`}
-            >
-              {p.toString().padStart(2, '0')}
-            </button>
-          ))}
+          {/* Lógica de páginas limitadas */}
+          {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPaginas || (p >= paginaAtual - 2 && p <= paginaAtual + 2))
+            .map((p, idx, filteredArr) => {
+              const showEllipsis = idx > 0 && p !== filteredArr[idx - 1] + 1;
+              return (
+                <div key={p} className="flex items-center gap-[6px]">
+                  {showEllipsis && <span className="text-[#898989] px-1">...</span>}
+                  <button
+                    onClick={() => setPaginaAtual(p)}
+                    disabled={isLoading}
+                    className={`w-[32px] h-[32px] flex items-center justify-center rounded-full text-[12px] font-bold transition-all ${
+                      paginaAtual === p
+                        ? 'bg-[#1c5258] text-white shadow-md'
+                        : 'bg-[#f6f7f9] text-[#343434] hover:bg-[#e0e0e0]'
+                    }`}
+                  >
+                    {p.toString().padStart(2, '0')}
+                  </button>
+                </div>
+              )
+            })}
+
+          <button
+            onClick={() => setPaginaAtual(prev => Math.min(totalPaginas, prev + 1))}
+            disabled={paginaAtual === totalPaginas || isLoading}
+            className="w-[32px] h-[32px] flex items-center justify-center rounded-full border border-[#e0e0e0] text-[#343434] hover:bg-[#f6f7f9] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight size={18} strokeWidth={2.5} />
+          </button>
         </div>
-
-        <button
-          onClick={() => setPaginaAtual(prev => Math.min(totalPaginas, prev + 1))}
-          disabled={paginaAtual === totalPaginas}
-          className={`w-[26px] h-[26px] flex items-center justify-center rounded-full border border-[#e0e0e0] text-[#898989] transition-colors ${
-            paginaAtual === totalPaginas ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[#f6f7f9]'
-          }`}
-        >
-          <ChevronRight size={16} strokeWidth={2.5} />
-        </button>
       </div>
 
       {/* Modais Baseados no Design */}
@@ -607,9 +607,9 @@ export function TabelaClientes() {
                     placeholder="Buscar (ex: Recife ou Pernambuco)..."
                     className="w-full h-[40px] pl-9 pr-3 border border-[#b3b3b3] rounded-[8px] text-[13px] text-[#343434] placeholder-[#898989] bg-white focus:outline-none"
                   />
-                  {buscaLocalizacaoEdicao.length >= 2 && obterSugestoesLocalizacao(buscaLocalizacaoEdicao).length > 0 && (
+                  {buscaLocalizacaoEdicao.length >= 2 && sugestoesLocalizacaoEdicao.length > 0 && (
                     <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-[#fcfdfd] border border-[#e0e0e0] rounded-[8px] flex flex-col py-2 shadow-sm z-50">
-                      {obterSugestoesLocalizacao(buscaLocalizacaoEdicao).map((sugestao) => (
+                      {sugestoesLocalizacaoEdicao.map((sugestao) => (
                         <button
                           key={sugestao}
                           onClick={() => {

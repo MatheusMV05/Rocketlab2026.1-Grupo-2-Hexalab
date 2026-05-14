@@ -9,8 +9,7 @@ from app.dashboard.router import router as dashboard_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Banco já existe populado via pipeline de dados — não criar tabelas automaticamente
     yield
 
 app = FastAPI(

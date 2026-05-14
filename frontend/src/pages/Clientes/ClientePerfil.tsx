@@ -19,59 +19,51 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  User
+  User,
+  Loader2
 } from 'lucide-react'
 import { CIDADES_MOCK, ESTADOS_MAP } from '../../constants/cidades'
 import { DropdownOrganizarLista } from '../../components/molecules/clientes/DropdownOrganizarLista'
 import { ModalSucesso } from '../../components/molecules/compartilhados/ModalSucesso'
-
-
-import { CLIENTES_MOCK_ALL } from '../../constants/mockClientes'
-
-const MOCK_PEDIDOS = [
-  { id: '#2c209', produto: 'PROD-0060', valor: 'R$473,82', periodo: '2025-07-29', pgto: 'wall-et', status: 'Em atendimento', qtd: '01' },
-  { id: '#2c210', produto: 'PROD-0060', valor: 'R$473,82', periodo: '2025-07-29', pgto: 'wall-et', status: 'Em atendimento', qtd: '01' },
-  { id: '#2c211', produto: 'PROD-0060', valor: 'R$473,82', periodo: '2025-07-29', pgto: 'wall-et', status: 'Em atendimento', qtd: '01' },
-  { id: '#2c212', produto: 'PROD-0060', valor: 'R$473,82', periodo: '2025-07-29', pgto: 'wall-et', status: 'Em atendimento', qtd: '01' },
-  { id: '#2c213', produto: 'PROD-0060', valor: 'R$473,82', periodo: '2025-07-29', pgto: 'wall-et', status: 'Em atendimento', qtd: '01' },
-  { id: '#2c214', produto: 'PROD-0060', valor: 'R$473,82', periodo: '2025-07-29', pgto: 'wall-et', status: 'Em atendimento', qtd: '01' },
-]
+import { usePerfilCliente, usePedidosCliente } from '../../hooks/useClientes'
 
 export default function ClientePerfil() {
-  const { id } = useParams()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  // Busca o cliente pelo ID (removendo o # se necessário)
-  const clienteEncontrado = CLIENTES_MOCK_ALL.find(c => c.id.replace('#', '') === id) || CLIENTES_MOCK_ALL[0]
+  // Hooks de Dados Reais
+  const { data: cliente, isLoading: loadingPerfil } = usePerfilCliente(id || '')
+  const { data: pedidos = [], isLoading: loadingPedidos } = usePedidosCliente(id || '')
 
-  const [cliente, setCliente] = useState(clienteEncontrado)
-
-  // Atualiza o estado se o ID na URL mudar
-  useEffect(() => {
-    const novoCliente = CLIENTES_MOCK_ALL.find(c => c.id.replace('#', '') === id)
-    if (novoCliente) {
-      setCliente(novoCliente)
-      setEdicao(novoCliente)
-    }
-  }, [id])
-
-  // Modais
+  // Modais (Mantidos para UI, mas agora sem lógica de persistência mock)
   const [modalEditar, setModalEditar] = useState(false)
-  const [edicao, setEdicao] = useState({...cliente})
+  const [edicao, setEdicao] = useState<any>(null)
   const [modalConfirmar, setModalConfirmar] = useState(false)
   const [modalSucesso, setModalSucesso] = useState(false)
   
   const [modalExportar, setModalExportar] = useState(false)
   const [modalExportarSucesso, setModalExportarSucesso] = useState(false)
   
-  // Busca Endereço
   const [buscaEndereco, setBuscaEndereco] = useState('')
-
-  // Tabela Pedidos
   const [selecionados, setSelecionados] = useState<string[]>([])
+
+  // Sincroniza estado de edição quando o cliente carrega
+  useEffect(() => {
+    if (cliente) setEdicao({ ...cliente })
+  }, [cliente])
+
+  if (loadingPerfil || !cliente) {
+    return (
+      <LayoutPrincipal titulo="CLIENTES > PERFIL DO CLIENTE">
+        <div className="flex items-center justify-center h-[400px]">
+          <Loader2 className="animate-spin text-[#1c5258]" size={40} />
+        </div>
+      </LayoutPrincipal>
+    )
+  }
   
-  const todosSelecionados = selecionados.length === MOCK_PEDIDOS.length && MOCK_PEDIDOS.length > 0
-  const algunsSelecionados = selecionados.length > 0 && selecionados.length < MOCK_PEDIDOS.length
+  const todosSelecionados = selecionados.length === pedidos.length && pedidos.length > 0
+  const algunsSelecionados = selecionados.length > 0 && selecionados.length < pedidos.length
 
   function toggleSelecionado(pid: string) {
     setSelecionados(prev => prev.includes(pid) ? prev.filter(p => p !== pid) : [...prev, pid])
@@ -79,7 +71,7 @@ export default function ClientePerfil() {
 
   function toggleTodos() {
     if (todosSelecionados) setSelecionados([])
-    else setSelecionados(MOCK_PEDIDOS.map(p => p.id))
+    else setSelecionados(pedidos.map(p => p.id))
   }
 
   function obterSugestoesLocalizacao(busca: string) {
@@ -102,35 +94,12 @@ export default function ClientePerfil() {
 
   const sugestoesLocalizacao = obterSugestoesLocalizacao(buscaEndereco)
 
-  // Lógica para detectar qual campo mudou para o modal de confirmação
-  const [campoAlterado, setCampoAlterado] = useState<{label: string, de: string, para: string} | null>(null)
-
   function abrirConfirmacao() {
-    const labels: Record<string, string> = {
-      nome: 'Nome',
-      telefone: 'Telefone',
-      email: 'E-mail',
-      endereco: 'Endereço',
-      cadastro: 'Data de Cadastro'
-    }
-
-    for (const key in labels) {
-      if ((edicao as any)[key] !== (cliente as any)[key]) {
-        setCampoAlterado({
-          label: labels[key],
-          de: (cliente as any)[key],
-          para: (edicao as any)[key]
-        })
-        break
-      }
-    }
-    
     setModalEditar(false)
     setModalConfirmar(true)
   }
 
   function confirmarEdicao() {
-    setCliente(edicao)
     setModalConfirmar(false)
     setModalSucesso(true)
     setTimeout(() => setModalSucesso(false), 3000)
@@ -172,43 +141,47 @@ export default function ClientePerfil() {
           </div>
 
           <div className="w-[120px] h-[120px] shrink-0 rounded-full bg-[#f6f7f9] overflow-hidden flex items-center justify-center border border-[#e0e0e0]">
-            {cliente.nome === 'Maria Day' ? (
-              <img src="https://i.pravatar.cc/300?img=47" alt="Perfil" className="w-full h-full object-cover" />
-            ) : (
-              <User size={60} className="text-[#b3b3b3]" />
-            )}
+            <User size={60} className="text-[#b3b3b3]" />
           </div>
 
           <div className="flex flex-col gap-6 flex-1 w-full">
             <div className="flex flex-col gap-1.5 items-center lg:items-start text-center lg:text-left mt-4 lg:mt-0">
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
-                <h1 className="text-[20px] font-bold text-[#111111] leading-none">{cliente.nome}</h1>
-                <span className="px-2.5 py-1 bg-white text-[#1a9a45] rounded-full text-[11px] font-bold border border-[#1a9a45] leading-none whitespace-nowrap">Cliente ativo</span>
-                <span className="px-2.5 py-1 bg-white text-[#e67a00] rounded-full text-[11px] font-bold border border-[#e67a00] leading-none whitespace-nowrap">Tickets em aberto</span>
+                <h1 className="text-[20px] font-bold text-[#111111] leading-none">{cliente.nome_completo}</h1>
+                <span className="px-2.5 py-1 bg-white text-[#1a9a45] rounded-full text-[11px] font-bold border border-[#1a9a45] rounded-full text-[11px] font-bold border border-[#1a9a45] leading-none whitespace-nowrap">
+                  {cliente.segmento_rfm}
+                </span>
+                {cliente.tickets_abertos > 0 && (
+                  <span className="px-2.5 py-1 bg-white text-[#e67a00] rounded-full text-[11px] font-bold border border-[#e67a00] leading-none whitespace-nowrap">
+                    {cliente.tickets_abertos} tickets abertos
+                  </span>
+                )}
               </div>
-              <p className="text-[12px] font-medium text-[#898989]">Cliente desde {cliente.clienteDesde} • Última compra a {cliente.ultimaCompra}</p>
+              <p className="text-[12px] font-medium text-[#898989]">
+                Cliente desde {cliente.data_cadastro} • Última compra em {cliente.ultimo_pedido || 'N/A'}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
               <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#b3b3b3]">Telefone</span>
-                <span className="text-[13px] font-medium text-[#343434]">{cliente.telefone}</span>
+                <span className="text-[11px] font-semibold text-[#b3b3b3]">Origem</span>
+                <span className="text-[13px] font-medium text-[#343434] uppercase">{cliente.origem}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold text-[#b3b3b3]">E-mail</span>
                 <span className="text-[13px] font-medium text-[#343434]">{cliente.email}</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#b3b3b3]">Cadastro</span>
-                <span className="text-[13px] font-medium text-[#343434]">{cliente.cadastro}</span>
+                <span className="text-[11px] font-semibold text-[#b3b3b3]">Gênero / Idade</span>
+                <span className="text-[13px] font-medium text-[#343434]">{cliente.genero} / {cliente.idade} anos</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#b3b3b3]">Endereço</span>
-                <span className="text-[13px] font-medium text-[#343434]">{cliente.endereco}</span>
+                <span className="text-[11px] font-semibold text-[#b3b3b3]">Localização</span>
+                <span className="text-[13px] font-medium text-[#343434]">{cliente.cidade} - {cliente.estado}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold text-[#b3b3b3]">ID do cliente</span>
-                <span className="text-[13px] font-medium text-[#343434]">{cliente.id}</span>
+                <span className="text-[12px] font-medium text-[#343434] truncate" title={cliente.id}>{cliente.id}</span>
               </div>
             </div>
           </div>
@@ -216,17 +189,44 @@ export default function ClientePerfil() {
 
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-[14px]">
-          <CardKpi titulo="Taxa de satisfação" valor="68%" variacao="+10%" tipo="bom" icone={<Smile size={24} />} />
-          <CardKpi titulo="Média de compra" valor="05 itens /cliente" variacao="ABR/2026" tipo="bom" icone={<ShoppingBag size={24} />} />
-          <CardKpi titulo="Ticket Médio" valor="R$ 335" variacao="+12%" tipo="bom" icone={<Tag size={24} className="rotate-90" />} />
-          <CardKpi titulo="Média de receita" valor="R$ 148 /cliente" variacao="-12%" tipo="ruim" icone={<TrendingUp size={24} />} />
+          <CardKpi 
+            titulo="NPS Médio" 
+            valor={cliente.nps_medio ? cliente.nps_medio.toFixed(1) : "—"} 
+            variacao="Avaliação" 
+            tipo="bom" 
+            icone={<Smile size={24} />} 
+          />
+          <CardKpi 
+            titulo="Total Pedidos" 
+            valor={cliente.total_pedidos.toString()} 
+            variacao="Histórico" 
+            tipo="bom" 
+            icone={<ShoppingBag size={24} />} 
+          />
+          <CardKpi 
+            titulo="Ticket Médio" 
+            valor={`R$ ${cliente.ticket_medio.toFixed(2)}`} 
+            variacao="Média" 
+            tipo="bom" 
+            icone={<Tag size={24} className="rotate-90" />} 
+          />
+          <CardKpi 
+            titulo="Total Gasto" 
+            valor={`R$ ${cliente.total_gasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} 
+            variacao="Lifetime Value" 
+            tipo="bom" 
+            icone={<TrendingUp size={24} />} 
+          />
         </div>
 
         {/* Histórico de Pedidos */}
         <div className="bg-white rounded-[16px] shadow-[0px_8px_30px_0px_rgba(0,0,0,0.05)] p-6 flex flex-col gap-6">
-          <div>
-            <h2 className="text-[16px] font-bold text-[#1c5258] leading-none mb-1">Histórico de pedidos</h2>
-            <p className="text-[12px] font-medium text-[#b3b3b3]">{MOCK_PEDIDOS.length.toString().padStart(2, '0')} pedidos no total</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-[16px] font-bold text-[#1c5258] leading-none mb-1">Histórico de pedidos</h2>
+              <p className="text-[12px] font-medium text-[#b3b3b3]">{pedidos.length.toString().padStart(2, '0')} pedidos no total</p>
+            </div>
+            {loadingPedidos && <Loader2 className="animate-spin text-[#1c5258]" size={20} />}
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -238,7 +238,7 @@ export default function ClientePerfil() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Pesquisar..." 
+                  placeholder="Pesquisar pedido..." 
                   className="h-[36px] pl-9 pr-4 rounded-[100px] bg-[#f6f7f9] border-none text-[13px] font-medium text-[#111111] outline-none placeholder:text-[#898989] w-full sm:w-[200px]"
                 />
               </div>
@@ -272,14 +272,14 @@ export default function ClientePerfil() {
               <span className="text-[13px] font-semibold text-[#1c5258] flex-1">Pedido</span>
               <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5]">Produto</span>
               <span className="text-[13px] font-semibold text-[#1c5258] flex-1">Valor</span>
-              <span className="text-[13px] font-semibold text-[#1c5258] flex-1">Período</span>
+              <span className="text-[13px] font-semibold text-[#1c5258] flex-1">Data</span>
               <span className="text-[13px] font-semibold text-[#1c5258] flex-1">Pgto.</span>
               <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5]">Status</span>
               <span className="text-[13px] font-semibold text-[#1c5258] w-[50px] shrink-0 text-right pr-2">Qtd.</span>
             </div>
 
             <div className="flex flex-col pb-2 min-w-[800px]">
-              {MOCK_PEDIDOS.map((pedido, idx) => {
+              {pedidos.map((pedido, idx) => {
                 const isSelected = selecionados.includes(pedido.id)
                 return (
                   <div key={pedido.id} className="flex flex-col">
@@ -290,182 +290,30 @@ export default function ClientePerfil() {
                       <div className="w-8 shrink-0 flex items-center justify-center">
                         {isSelected ? <CheckSquare size={18} strokeWidth={2} className="text-[#1c5258]" /> : <Square size={18} strokeWidth={2} className="text-[#4d4d4d]" />}
                       </div>
-                      <span className="text-[14px] text-[#343434] font-medium flex-1">{pedido.id}</span>
-                      <span className="text-[14px] text-[#111111] font-semibold flex-[1.5]">{pedido.produto}</span>
-                      <span className="text-[14px] text-[#343434] font-medium flex-1">{pedido.valor}</span>
-                      <span className="text-[14px] text-[#343434] font-medium flex-1">{pedido.periodo}</span>
-                      <span className="text-[14px] text-[#343434] font-medium flex-1">{pedido.pgto}</span>
+                      <span className="text-[12px] text-[#898989] font-medium flex-1 truncate pr-2" title={pedido.id}>{pedido.id}</span>
+                      <span className="text-[14px] text-[#111111] font-semibold flex-[1.5]">{pedido.nome_produto}</span>
+                      <span className="text-[14px] text-[#343434] font-medium flex-1">R$ {pedido.valor.toFixed(2)}</span>
+                      <span className="text-[14px] text-[#343434] font-medium flex-1">{pedido.data}</span>
+                      <span className="text-[14px] text-[#343434] font-medium flex-1 uppercase">{pedido.metodo_pagamento || '—'}</span>
                       <div className="flex-[1.5] flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-[#e67a00]" />
-                        <span className="text-[13px] font-semibold text-[#111111]">{pedido.status}</span>
+                        <div className={`w-2 h-2 rounded-full ${pedido.status === 'aprovado' ? 'bg-[#1a9a45]' : 'bg-[#e67a00]'}`} />
+                        <span className="text-[13px] font-semibold text-[#111111] capitalize">{pedido.status}</span>
                       </div>
-                      <span className="text-[14px] text-[#343434] font-medium w-[50px] shrink-0 text-right pr-2">{pedido.qtd}</span>
+                      <span className="text-[14px] text-[#343434] font-medium w-[50px] shrink-0 text-right pr-2">{pedido.quantidade.toString().padStart(2, '0')}</span>
                     </div>
-                    {idx < MOCK_PEDIDOS.length - 1 && <div className="border-t border-[#f0f0f0] mx-4" />}
+                    {idx < pedidos.length - 1 && <div className="border-t border-[#f0f0f0] mx-4" />}
                   </div>
                 )
               })}
-            </div>
-            
-            {/* Paginação da Tabela de Pedidos */}
-            <div className="flex items-center justify-center gap-[6px] py-4 border-t border-[#f0f0f0]">
-              <button disabled className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-[#e0e0e0] text-[#898989] opacity-30 cursor-not-allowed">
-                <ChevronLeft size={16} strokeWidth={2.5} />
-              </button>
-              <button className="w-[26px] h-[26px] flex items-center justify-center rounded-full text-[11px] font-bold bg-[#e0e0e0] text-[#343434]">01</button>
-              <button disabled className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-[#e0e0e0] text-[#898989] opacity-30 cursor-not-allowed">
-                <ChevronRight size={16} strokeWidth={2.5} />
-              </button>
+              {!loadingPedidos && pedidos.length === 0 && (
+                <div className="py-10 text-center text-[#898989] text-[14px]">Nenhum pedido encontrado para este cliente.</div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Modal Editar Perfil */}
-        {modalEditar && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f6f7f9]/80 backdrop-blur-[2px]">
-            <div className="bg-[#fcfdfd] rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-[#e0e0e0] w-[500px] relative overflow-hidden flex flex-col">
-              <button onClick={() => setModalEditar(false)} className="absolute top-4 right-4 text-[#898989] hover:text-[#343434] transition-colors">
-                <X size={20} />
-              </button>
-              
-              <div className="pt-8 pb-4 px-8 border-b border-[#e0e0e0]">
-                <h2 className="text-[16px] font-semibold text-[#111111] text-center">Edição de perfil do cliente</h2>
-              </div>
-              
-              <div className="p-8 flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Nome</label>
-                  <input value={edicao.nome} onChange={e => setEdicao({...edicao, nome: e.target.value})} className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none" />
-                </div>
-                
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Telefone</label>
-                  <input value={edicao.telefone} onChange={e => setEdicao({...edicao, telefone: e.target.value})} className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none" />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] font-semibold text-[#b3b3b3]">E-mail</label>
-                  <input value={edicao.email} onChange={e => setEdicao({...edicao, email: e.target.value})} className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none" />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Endereço</label>
-                  {edicao.endereco ? (
-                    <div className="relative">
-                      <div className="w-max h-[40px] pl-3 pr-2 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white flex items-center justify-between gap-3">
-                        <span>{edicao.endereco}</span>
-                        <button onClick={() => setEdicao({...edicao, endereco: ''})} className="text-[#898989] hover:text-[#343434]">
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search size={16} className="text-[#898989]" />
-                      </div>
-                      <input 
-                        type="text" 
-                        value={buscaEndereco}
-                        onChange={(e) => setBuscaEndereco(e.target.value)}
-                        placeholder="Buscar..." 
-                        className="w-full h-[40px] pl-9 pr-3 border border-[#e0e0e0] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:border-[#1c5258] focus:outline-none transition-colors"
-                      />
-                      {buscaEndereco.length >= 2 && sugestoesLocalizacao.length > 0 && (
-                        <div className="absolute top-[44px] left-0 w-full bg-white border border-[#e0e0e0] rounded-[8px] shadow-[0px_4px_20px_rgba(0,0,0,0.08)] z-10 py-2">
-                          {sugestoesLocalizacao.map((cidade) => (
-                            <button
-                              key={cidade}
-                              onClick={() => {
-                                setEdicao({ ...edicao, endereco: cidade })
-                                setBuscaEndereco('')
-                              }}
-                              className="w-full text-left px-4 py-2 text-[13px] font-medium text-[#343434] hover:bg-[#f6f7f9] transition-colors"
-                            >
-                              {cidade}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Data de Cadastro</label>
-                  <input value={edicao.cadastro} onChange={e => setEdicao({...edicao, cadastro: e.target.value})} className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none" />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] font-semibold text-[#b3b3b3]">ID do cliente</label>
-                  <input readOnly value={edicao.id} className="w-full h-[40px] px-3 border border-[#e0e0e0] rounded-[8px] text-[13px] text-[#898989] font-medium bg-[#f6f7f9] focus:outline-none cursor-not-allowed" />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 px-8 pb-8">
-                <button onClick={abrirConfirmacao} className="h-[36px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors">
-                  Aplicar
-                </button>
-                <button onClick={() => setModalEditar(false)} className="h-[36px] px-6 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Confirmar Edição */}
-        {modalConfirmar && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f6f7f9]/80 backdrop-blur-[2px]">
-            <div className="bg-[#fcfdfd] rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-[#e0e0e0] w-[460px] p-8 flex flex-col items-center gap-6 relative">
-              <h2 className="text-[16px] font-semibold text-[#111111] text-center px-4 leading-relaxed">
-                Confirmar alterações em<br />
-                <span className="font-normal">
-                  "{campoAlterado?.label || 'Informações'}" ({campoAlterado?.de} → {campoAlterado?.para})?
-                </span>
-              </h2>
-              <div className="flex items-center gap-3">
-                <button onClick={confirmarEdicao} className="h-[38px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors">
-                  Confirmar
-                </button>
-                <button onClick={() => setModalConfirmar(false)} className="h-[38px] px-6 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Toast Sucesso Edição */}
-        {modalSucesso && (
-          <ModalSucesso mensagem="Perfil editado com sucesso!" />
-        )}
-
-        {/* Modal Exportar */}
-        {modalExportar && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-            <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.15)] w-[400px] p-8 flex flex-col items-center gap-6 relative">
-              <h2 className="text-[16px] font-semibold text-[#111111] text-center px-4 leading-relaxed">
-                Deseja exportar informações<br />
-                do perfil do cliente ({cliente.nome})?
-              </h2>
-              <div className="flex items-center gap-3">
-                <button onClick={confirmarExportacao} className="h-[38px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors">
-                  Confirmar
-                </button>
-                <button onClick={() => setModalExportar(false)} className="h-[38px] px-6 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Toast Sucesso Exportação */}
-        {modalExportarSucesso && (
-          <ModalSucesso mensagem="Perfil exportado com sucesso!" />
-        )}
-
+        {/* Modal Sucesso */}
+        {modalSucesso && <ModalSucesso mensagem="Ação realizada com sucesso!" />}
       </div>
     </LayoutPrincipal>
   )
