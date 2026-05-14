@@ -103,6 +103,7 @@ export function AssistenteProvider({ children }: Props) {
                 sqlUsado: resposta.sql_used,
                 dados: resposta.data,
                 foraDoEscopo: resposta.out_of_scope,
+                sugestoes: resposta.suggestions ?? [],
                 carregando: false,
               }
             : m,

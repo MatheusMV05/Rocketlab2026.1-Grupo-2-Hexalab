@@ -11,6 +11,7 @@ export interface ChatResponse {
   sql_used: string | null
   data: Array<Record<string, unknown>>
   out_of_scope: boolean
+  suggestions?: string[]
 }
 
 export type AutorMensagem = 'usuario' | 'assistente'
@@ -24,6 +25,7 @@ export interface Mensagem {
   foraDoEscopo?: boolean
   erro?: boolean
   carregando?: boolean
+  sugestoes?: string[]
 }
 
 export interface ChatHistoricoItem {

@@ -46,8 +46,16 @@ export function ConversaAssistente({ variante, onScrollChange }: Props) {
           </div>
         ) : (
           <div className="flex flex-col gap-[10px]">
-            {mensagens.map((m) => (
-              <BalaoMensagem key={m.id} mensagem={m} />
+            {mensagens.map((m, idx) => (
+              <BalaoMensagem
+                key={m.id}
+                mensagem={m}
+                perguntaOriginal={
+                  m.autor === 'assistente' && mensagens[idx - 1]?.autor === 'usuario'
+                    ? mensagens[idx - 1].texto
+                    : undefined
+                }
+              />
             ))}
             <div ref={finalRef} />
           </div>
