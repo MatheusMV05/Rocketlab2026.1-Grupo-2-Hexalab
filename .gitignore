@@ -20,7 +20,11 @@ frontend/dist-ssr/
 # Logs
 *.log
 npm-debug.log*
-
+logs
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # OS
 .DS_Store
@@ -32,4 +36,4 @@ Thumbs.db
 *.suo
 *.sw?
 
-run_selector_local.py
+scripts/

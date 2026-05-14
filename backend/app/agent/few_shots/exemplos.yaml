@@ -1,0 +1,347 @@
+# ==============================================================
+# Exemplos de Few-Shot Learning - V-Commerce CRM (Versão 3.0 Final)
+# Foco: Performance, Fidelização, Operação e Comportamento
+# ==============================================================
+
+# --- [CATEGORIA 1: PERFORMANCE DE PRODUTOS] ---
+
+- question: "Quais os 5 produtos com melhor desempenho em vendas (receita)?"
+  reasoning: |
+    Usa a mart de desempenho para listar os produtos que mais geraram dinheiro.
+  sql: |
+    SELECT nome_produto, receita_total_brl, total_unidades_vendidas
+    FROM mart_desempenho_produtos
+    ORDER BY receita_total_brl DESC
+    LIMIT 5
+
+- question: "Quais os 5 produtos com pior desempenho em vendas?"
+  reasoning: |
+    Busca produtos com menor faturamento para análise de descontinuação.
+  sql: |
+    SELECT nome_produto, receita_total_brl, total_unidades_vendidas
+    FROM mart_desempenho_produtos
+    ORDER BY receita_total_brl ASC
+    LIMIT 5
+
+- question: "Quais os 5 produtos com as piores notas de avaliação?"
+  reasoning: |
+    Filtra produtos que têm avaliações (não nulos) e ordena pelos mais odiados.
+  sql: |
+    SELECT nome_produto, avg_nota_produto, categoria
+    FROM mart_desempenho_produtos
+    WHERE avg_nota_produto IS NOT NULL
+    ORDER BY avg_nota_produto ASC
+    LIMIT 5
+
+- question: "Quais produtos estão com estoque crítico mas têm NPS acima de 8?"
+  reasoning: |
+    Cruza dados de estoque (dim) com satisfação (mart) para priorizar reposição.
+  sql: |
+    SELECT nome_produto, avg_nps, preco_brl
+    FROM mart_desempenho_produtos
+    WHERE avg_nps > 8 
+      AND id_produto IN (SELECT id_produto FROM dim_produtos WHERE status_estoque = 'estoque_critico')
+
+- question: "Liste os 10 produtos com mais visualizações que nunca foram vendidos."
+  reasoning: |
+    Identifica falhas no funil de conversão (muito interesse, pouca venda).
+  sql: |
+    SELECT nome_produto, sessoes_com_view, preco_brl
+    FROM mart_desempenho_produtos
+    WHERE total_pedidos = 0
+    ORDER BY sessoes_com_view DESC
+    LIMIT 10
+
+- question: "Qual o ticket médio de venda por categoria?"
+  reasoning: |
+    Calcula a média de valor gasto por pedido em cada categoria de produto.
+  sql: |
+    SELECT categoria, (SUM(receita_total_brl) / SUM(total_pedidos)) as ticket_medio
+    FROM mart_desempenho_produtos
+    GROUP BY categoria
+    ORDER BY ticket_medio DESC
+
+- question: "Quais os produtos considerados 'problemáticos' com mais de 10 tickets de suporte?"
+  reasoning: |
+    Filtra produtos sinalizados pela engenharia de dados como problemáticos e com alto volume de reclamações.
+  sql: |
+    SELECT nome_produto, total_tickets_suporte, categoria
+    FROM mart_desempenho_produtos
+    WHERE produto_problematico = 'true' AND total_tickets_suporte > 10
+
+# --- [CATEGORIA 2: CLIENTES E FIDELIZAÇÃO (CRM)] ---
+
+- question: "Quais os 10 clientes que mais compraram em nossa loja?"
+  reasoning: |
+    Lista os clientes com maior contagem de pedidos aprovados.
+  sql: |
+    SELECT nome, sobrenome, total_pedidos, receita_lifetime_brl
+    FROM mart_cliente_360
+    ORDER BY total_pedidos DESC
+    LIMIT 10
+
+- question: "Quais clientes de 'Belo Horizonte' estão há mais de 6 meses sem comprar?"
+  reasoning: |
+    Identifica risco de churn (abandono) em uma cidade específica.
+  sql: |
+    SELECT nome, sobrenome, dias_desde_ultimo_pedido
+    FROM mart_cliente_360
+    WHERE cidade = 'Belo Horizonte' AND dias_desde_ultimo_pedido > 180
+
+- question: "Quantos clientes novos de 2024 já fizeram mais de 3 pedidos?"
+  reasoning: |
+    Mede o sucesso da retenção de novos usuários adquiridos no ano atual.
+  sql: |
+    SELECT COUNT(*) as total_clientes
+    FROM mart_cliente_360 m
+    JOIN dim_clientes c ON m.id_cliente = c.id_cliente
+    WHERE c.data_cadastro >= '2024-01-01' AND m.total_pedidos > 3
+
+- question: "Qual o perfil de idade média dos clientes por segmento de valor?"
+  reasoning: |
+    Entende se os clientes VIP são mais velhos ou mais novos que os demais.
+  sql: |
+    SELECT segmento_valor, AVG(idade) as idade_media
+    FROM mart_cliente_360
+    GROUP BY segmento_valor
+
+- question: "Quais os 5 estados que geram a maior receita lifetime?"
+  reasoning: |
+    Ranking geográfico por valor total do cliente.
+  sql: |
+    SELECT estado, SUM(receita_lifetime_brl) as total_estado
+    FROM mart_cliente_360
+    GROUP BY estado
+    ORDER BY total_estado DESC
+    LIMIT 5
+
+- question: "Existe correlação entre a idade e o NPS? Agrupe por faixas de 10 anos."
+  reasoning: |
+    Usa divisão inteira para criar faixas etárias e calcula o NPS médio.
+  sql: |
+    SELECT (idade/10)*10 as faixa_etaria, AVG(nps_medio_cliente) as nps_medio
+    FROM mart_cliente_360
+    WHERE nps_medio_cliente IS NOT NULL
+    GROUP BY faixa_etaria
+
+# --- [CATEGORIA 3: SUPORTE E OPERAÇÃO] ---
+
+- question: "Qual o agente de suporte com a melhor média de avaliação?"
+  reasoning: |
+    Identifica o funcionário mais eficiente na satisfação do cliente.
+  sql: |
+    SELECT agente_suporte, AVG(nota_avaliacao) as media_nota
+    FROM fat_tickets_suporte
+    WHERE fl_resolvido = 'true'
+    GROUP BY agente_suporte
+    ORDER BY media_nota DESC
+    LIMIT 1
+
+- question: "Qual agente resolveu o maior número de tickets?"
+  reasoning: |
+    Ranking de produtividade da equipe de atendimento.
+  sql: |
+    SELECT agente_suporte, COUNT(*) as total_resolvidos
+    FROM fat_tickets_suporte
+    WHERE fl_resolvido = 'true'
+    GROUP BY agente_suporte
+    ORDER BY total_resolvidos DESC
+    LIMIT 1
+
+- question: "Qual a porcentagem de tickets resolvidos pela agente 'Ana Paula Ferreira'?"
+  reasoning: |
+    Cálculo de taxa de sucesso individual.
+  sql: |
+    SELECT (COUNT(CASE WHEN fl_resolvido = 'true' THEN 1 END) * 100.0 / COUNT(*)) as taxa_sucesso
+    FROM fat_tickets_suporte
+    WHERE agente_suporte = 'Ana Paula Ferreira'
+
+- question: "Qual o tempo médio de resolução de tickets por tipo de problema?"
+  reasoning: |
+    Identifica quais problemas (ex: Logística, Pagamento) demoram mais para resolver.
+  sql: |
+    SELECT tipo_problema, AVG(tempo_resolucao_horas) as media_horas
+    FROM fat_tickets_suporte
+    GROUP BY tipo_problema
+    ORDER BY media_horas DESC
+
+- question: "Quantos tickets do tipo 'pagamento' foram abertos por clientes VIP?"
+  reasoning: |
+    Monitora problemas críticos que afetam os clientes mais valiosos.
+  sql: |
+    SELECT COUNT(*) 
+    FROM fat_tickets_suporte t
+    JOIN mart_cliente_360 c ON t.id_cliente = c.id_cliente
+    WHERE t.tipo_problema = 'pagamento' AND c.segmento_valor = 'vip'
+
+# --- [CATEGORIA 4: COMPORTAMENTO DIGITAL E FUNIL] ---
+
+- question: "Qual a taxa de conversão média por tipo de dispositivo?"
+  reasoning: |
+    Compara Mobile vs Desktop usando a mart de comportamento digital.
+  sql: |
+    SELECT dispositivos_utilizados, AVG(taxa_conversao_sessao_pct) as avg_conv
+    FROM mart_comportamento_digital
+    GROUP BY dispositivos_utilizados
+
+- question: "Quantos clientes abandonaram o carrinho mas possuem engajamento 'alto'?"
+  reasoning: |
+    Foca em clientes que quase compraram e são ativos na plataforma.
+  sql: |
+    SELECT COUNT(*) 
+    FROM mart_comportamento_digital
+    WHERE eventos_abandono > 0 AND nivel_engajamento IN ('alto', 'muito_alto')
+
+- question: "Qual o canal de aquisição que traz os clientes com maior tempo médio de página?"
+  reasoning: |
+    Identifica qual fonte (Organic, Paid, etc) traz usuários mais interessados no conteúdo.
+  sql: |
+    SELECT c.origem, AVG(m.avg_tempo_pagina_seg) as tempo_medio
+    FROM mart_comportamento_digital m
+    JOIN dim_clientes c ON m.sk_cliente = c.sk_cliente
+    GROUP BY c.origem
+    ORDER BY tempo_medio DESC
+
+- question: "Qual o dia da semana com mais adições ao carrinho?"
+  reasoning: |
+    Mapeia a intenção de compra ao longo da semana.
+  sql: |
+    SELECT d.nome_dia_semana, COUNT(*) as total_add_carrinho
+    FROM fat_clickstream f
+    JOIN dim_data d ON f.sk_data_evento = d.sk_data
+    WHERE f.fl_adicao_carrinho = 'true'
+    GROUP BY d.nome_dia_semana
+    ORDER BY total_add_carrinho DESC
+
+# --- [CATEGORIA 5: FINANÇAS E MÉTRICAS DE NEGÓCIO] ---
+
+- question: "Qual a receita total por método de pagamento?"
+  reasoning: |
+    Entende a distribuição financeira (Pix vs Cartão).
+  sql: |
+    SELECT metodo_pagamento, SUM(receita_liquida_brl) as total_receita
+    FROM fat_pedidos
+    GROUP BY metodo_pagamento
+
+- question: "Qual o impacto financeiro (receita bruta) do fornecedor 'Global Electronics Ltda'?"
+  reasoning: |
+    Avalia a importância de um fornecedor específico para o faturamento.
+  sql: |
+    SELECT SUM(f.receita_bruta_brl) 
+    FROM fat_pedidos f
+    JOIN dim_produtos p ON f.sk_produto = p.sk_produto
+    WHERE p.fornecedor = 'Global Electronics Ltda'
+
+- question: "Qual a participação percentual de cada categoria na receita total?"
+  reasoning: |
+    Usa uma subquery para calcular o total geral e extrair a porcentagem por categoria.
+  sql: |
+    SELECT categoria, 
+           SUM(receita_total_brl) * 100.0 / (SELECT SUM(receita_total_brl) FROM mart_desempenho_produtos) as pct_share
+    FROM mart_desempenho_produtos
+    GROUP BY categoria
+
+- question: "Quais cidades do Rio de Janeiro tiveram tickets com status de SLA em 'alerta'?"
+  reasoning: |
+    Monitoramento geográfico de falhas operacionais críticas.
+  sql: |
+    SELECT DISTINCT c.cidade
+    FROM fat_tickets_suporte t
+    JOIN dim_clientes c ON t.id_cliente = c.id_cliente
+    WHERE c.estado = 'Rio de Janeiro' AND t.sla_status = 'alerta'
+
+- question: "Qual a média de idade dos clientes que compram na categoria 'esportes'?"
+  reasoning: |
+    Persona demográfica para campanhas de marketing esportivo.
+  sql: |
+    SELECT AVG(c.idade) 
+    FROM fat_pedidos f
+    JOIN dim_clientes c ON f.sk_cliente = c.sk_cliente
+    JOIN dim_produtos p ON f.sk_produto = p.sk_produto
+    WHERE p.categoria = 'esportes'
+
+- question: "Qual o mês de 2024 com o maior número de novos cadastros?"
+  reasoning: |
+    Análise de crescimento mensal da base de clientes.
+  sql: |
+    SELECT strftime('%m', data_cadastro) as mes, COUNT(*) as novos_clientes
+    FROM dim_clientes
+    WHERE data_cadastro LIKE '2024%'
+    GROUP BY mes
+    ORDER BY novos_clientes DESC
+    LIMIT 1
+
+- question: "Quantos pedidos foram feitos por clientes que vieram por 'indicacao'?"
+  reasoning: |
+    Valida a eficácia do programa de indicação ("Member get Member").
+  sql: |
+    SELECT COUNT(f.id_pedido)
+    FROM fat_pedidos f
+    JOIN dim_clientes c ON f.sk_cliente = c.sk_cliente
+    WHERE c.origem = 'indicacao'
+
+- question: "Liste os comentários das avaliações de pedidos não aprovados."
+  reasoning: |
+    Análise qualitativa de problemas no checkout ou cancelamentos.
+  sql: |
+    SELECT a.comentario 
+    FROM fat_avaliacoes a
+    JOIN fat_pedidos p ON a.sk_pedido = p.sk_pedido
+    WHERE p.status != 'aprovado'
+
+- question: "Qual a média de unidades por pedido (itens por cesta)?"
+  reasoning: |
+    Métrica de cross-selling: quanto o cliente leva por vez.
+  sql: |
+    SELECT AVG(quantidade) FROM fat_pedidos
+
+- question: "Qual o agente de suporte que atende mais clientes do segmento 'em_crescimento'?"
+  reasoning: |
+    Relaciona a operação de suporte com a estratégia de crescimento de contas.
+  sql: |
+    SELECT t.agente_suporte, COUNT(*) as total
+    FROM fat_tickets_suporte t
+    JOIN mart_cliente_360 c ON t.id_cliente = c.id_cliente
+    WHERE c.segmento_valor = 'em_crescimento'
+    GROUP BY t.agente_suporte
+    ORDER BY total DESC
+    LIMIT 1
+
+- question: Qual foi o total de vendas por produto no último trimestre
+  reasoning: |
+    1. **Identificar o último trimestre**: Primeiro, preciso determinar qual foi o último trimestre disponível nos dados. Para isso, vou usar a tabela `dim_data` para encontrar o maior trimestre presente no campo `trimestre`.
+
+    2. **Filtrar pedidos pelo último trimestre**: Com o trimestre identificado, vou filtrar os registros na tabela `fat_pedidos` que tenham ocorrido nesse período, usando a coluna `sk_data_pedido` para fazer a junção com a tabela `dim_data` e verificar o trimestre correspondente.
+
+    3. **Agrupar por produto e calcular total de vendas**: Após filtrar os pedidos do último trimestre, vou agrupar os dados por produto (usando `sk_produto` ou `id_produto`) e calcular o total de vendas. Isso envolve somar a `quantidade` vendida ou a `receita_liquida_brl` (ou ambas, se necessário).
+
+    4. **Junta as tabelas relevantes**: Vou realizar uma junção entre `fat_pedidos` e `dim_data` usando `sk_data_pedido` como chave estrangeira para acessar o trimestre correto.
+
+    5. **Agregação final**: Usarei `SUM(quantidade)` ou `SUM(receita_liquida_brl)` para calcular o total de vendas por produto, dependendo do que for mais apropriado para a pergunta.
+  sql: |
+    WITH ultimo_trimestre AS (
+        SELECT MAX(trimestre) AS trimestre_max
+        FROM dim_data
+    ),
+
+    pedidos_ultimo_trimestre AS (
+        SELECT
+            fp.sk_produto,
+            fp.id_produto,
+            fp.quantidade,
+            fp.receita_liquida_brl,
+            d.trimestre
+        FROM fat_pedidos fp
+        JOIN dim_data d ON fp.sk_data_pedido = d.sk_data
+        WHERE d.trimestre = (SELECT trimestre_max FROM ultimo_trimestre)
+    )
+
+    SELECT
+        p.id_produto,
+        p.nome_produto,
+        SUM(qt.quantidade) AS total_unidades_vendidas,
+        SUM(qt.receita_liquida_brl) AS total_receita_liquida_brl
+    FROM pedidos_ultimo_trimestre qt
+    JOIN dim_produtos p ON qt.sk_produto = p.sk_produto
+    GROUP BY p.id_produto, p.nome_produto
+    ORDER BY total_unidades_vendidas DESC

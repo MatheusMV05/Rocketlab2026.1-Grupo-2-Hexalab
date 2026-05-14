@@ -43,7 +43,7 @@ v-commerce-crm-360/
 │   │   ├── produtos/                    # mesma estrutura — inclui CRUD (POST/PUT/DELETE)
 │   │   ├── tickets/                     # mesma estrutura — service calcula `prioridade`
 │   │   │
-│   │   └── agent/
+│   │   └── agentes/
 │   │       ├── __init__.py
 │   │       ├── router.py                # POST /api/agent/chat
 │   │       ├── agent.py                 # lógica Text-to-SQL, guardrails, execução
@@ -63,7 +63,7 @@ v-commerce-crm-360/
 │   ├── requirements.txt
 │   └── .env.example
 │
-├── frontend/ -> sugestão usando Atomic Design
+├── frontend/ -> os tsx e ts dentro de cada diretorio pode sofrer alterações, eles servem apenas um exemplo de como deve ficar organizado e não uma regra estrita de implemnentação 
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── Dashboard.tsx
@@ -76,39 +76,52 @@ v-commerce-crm-360/
 │   │   │
 │   │   ├── components/
 │   │   │   ├── atoms/
-│   │   │   │   ├── Button.tsx
-│   │   │   │   ├── Badge.tsx
-│   │   │   │   ├── Input.tsx
-│   │   │   │   ├── Spinner.tsx
-│   │   │   │   ├── KpiCard.tsx
-│   │   │   │   └── EmptyState.tsx
+│   │   │   │   ├── dashboard/
+│   │   │   │   │   └── CartaoKpi.tsx 
+│   │   │   │   └── compartilhado/             # atoms reutilizados em 2+ páginas
+│   │   │   │       ├── Botao.tsx
+│   │   │   │       ├── Etiqueta.tsx
+│   │   │   │       ├── Campo.tsx
+│   │   │   │       ├── Carregador.tsx
+│   │   │   │       └── EstadoVazio.tsx
 │   │   │   │
 │   │   │   ├── molecules/
-│   │   │   │   ├── SearchBar.tsx
-│   │   │   │   ├── FilterSelect.tsx
-│   │   │   │   ├── DateRangePicker.tsx
-│   │   │   │   ├── Pagination.tsx
-│   │   │   │   ├── PriorityBadge.tsx
-│   │   │   │   └── SqlViewer.tsx
+│   │   │   │   ├── clientes/
+│   │   │   │   │   └── BarraBusca.tsx
+│   │   │   │   ├── tickets/
+│   │   │   │   │   └── EtiquetaPrioridade.tsx
+│   │   │   │   ├── chat/
+│   │   │   │   │   └── VisualizadorSql.tsx
+│   │   │   │   └── compartilhado/             # molecules reutilizadas em 2+ páginas
+│   │   │   │       ├── SeletorFiltro.tsx
+│   │   │   │       ├── SeletorPeriodo.tsx
+│   │   │   │       └── Paginacao.tsx
 │   │   │   │
 │   │   │   ├── organisms/
-│   │   │   │   ├── KpiGrid.tsx
-│   │   │   │   ├── SalesChart.tsx
-│   │   │   │   ├── TopProductsChart.tsx
-│   │   │   │   ├── StatusPieChart.tsx
-│   │   │   │   ├── RegionTable.tsx
-│   │   │   │   ├── ClienteTable.tsx
-│   │   │   │   ├── ClienteHeader.tsx
-│   │   │   │   ├── ClienteTabs.tsx
-│   │   │   │   ├── PedidoTable.tsx
-│   │   │   │   ├── ProdutoGrid.tsx
-│   │   │   │   ├── ProdutoModal.tsx
-│   │   │   │   ├── TicketTable.tsx
-│   │   │   │   └── ChatWindow.tsx
+│   │   │   │   ├── dashboard/
+│   │   │   │   │   ├── GradeKpi.tsx
+│   │   │   │   │   ├── GraficoVendas.tsx
+│   │   │   │   │   ├── GraficoTopProdutos.tsx
+│   │   │   │   │   ├── GraficoStatusPedidos.tsx
+│   │   │   │   │   └── TabelaRegiao.tsx
+│   │   │   │   ├── clientes/
+│   │   │   │   │   └── TabelaClientes.tsx
+│   │   │   │   ├── cliente-perfil/
+│   │   │   │   │   ├── CabecalhoCliente.tsx
+│   │   │   │   │   └── AbasCliente.tsx
+│   │   │   │   ├── pedidos/
+│   │   │   │   │   └── TabelaPedidos.tsx
+│   │   │   │   ├── produtos/
+│   │   │   │   │   ├── GradeProdutos.tsx
+│   │   │   │   │   └── ModalProduto.tsx
+│   │   │   │   ├── tickets/
+│   │   │   │   │   └── TabelaTickets.tsx
+│   │   │   │   └── chat/
+│   │   │   │       └── JanelaChat.tsx
 │   │   │   │
 │   │   │   └── templates/
-│   │   │       ├── PageLayout.tsx
-│   │   │       └── AuthLayout.tsx
+│   │   │       ├── LayoutPagina.tsx
+│   │   │       └── LayoutAutenticacao.tsx
 │   │   │
 │   │   ├── services/
 │   │   │   └── api.ts
@@ -119,7 +132,7 @@ v-commerce-crm-360/
 │   │   │   ├── usePedidos.ts
 │   │   │   ├── useProdutos.ts
 │   │   │   ├── useTickets.ts
-│   │   │   └── useAgent.ts
+│   │   │   └── useAgente.ts
 │   │   │
 │   │   ├── types/
 │   │   │   ├── dashboard.ts
@@ -127,7 +140,7 @@ v-commerce-crm-360/
 │   │   │   ├── pedidos.ts
 │   │   │   ├── produtos.ts
 │   │   │   ├── tickets.ts
-│   │   │   └── agent.ts
+│   │   │   └── agente.ts
 │   │   │
 │   │   └── App.tsx
 │   │
@@ -147,7 +160,7 @@ v-commerce-crm-360/
 |---|---|
 | Base URL | `http://localhost:8000` |
 | Content-Type | `application/json` |
-| Paginação padrão | `page=1`, `size=20` |
+| Paginação padrão | `pagina=1`, `tamanho=20` |
 | Formato de datas | `DD-MM-YYYY` |
 | Valores monetários | `float` com 2 casas decimais |
 | Campos nulos | retornar `null`, nunca omitir o campo |
@@ -236,13 +249,13 @@ Framework: `pytest` + `pytest-asyncio` + `httpx.AsyncClient`.
 - Criar `router.py` com `GET /api/dashboard/kpis` respondendo com `KpiResponse` e tratando exceções com 500
 
 **Frontend**
-- Criar atom `KpiCard.tsx` recebendo `label`, `value` e `prefix` como props
-- Criar organism `KpiGrid.tsx` compondo quatro instâncias de `KpiCard`
+- Criar atom `CartaoKpi.tsx` recebendo `label`, `value` e `prefix` como props
+- Criar organism `GradeKpi.tsx` compondo quatro instâncias de `CartaoKpi`
 - Criar hook `useKpis()` em `useDashboard.ts` consumindo `GET /api/dashboard/kpis` via React Query
 - Adicionar tipagem `KpiResponse` em `types/dashboard.ts`
 - Renderizar skeleton nos quatro cards durante carregamento e banner de erro em caso de falha
-- Formatar valores monetários em `R$ 1.234,56` dentro do `KpiCard`
-- Compor `KpiGrid` na página `Dashboard.tsx`
+- Formatar valores monetários em `R$ 1.234,56` dentro do `CartaoKpi`
+- Compor `GradeKpi` na página `Dashboard.tsx`
 
 **Testes**
 ```
@@ -282,12 +295,12 @@ Response 500
 - Criar `router.py` com `GET /api/dashboard/vendas-mensal`
 
 **Frontend**
-- Criar organism `SalesChart.tsx` usando `LineChart` do Recharts com meses no eixo X e receita em R$ no eixo Y
+- Criar organism `GraficoVendas.tsx` usando `LineChart` do Recharts com meses no eixo X e receita em R$ no eixo Y
 - Adicionar `Tooltip` exibindo valor exato ao hover em cada ponto
 - Criar hook `useVendasMensal()` em `useDashboard.ts`
 - Adicionar tipagem `VendasMensalItem[]` em `types/dashboard.ts`
 - Renderizar skeleton durante carregamento
-- Compor `SalesChart` na página `Dashboard.tsx`
+- Compor `GraficoVendas` na página `Dashboard.tsx`
 
 **Testes**
 ```
@@ -327,10 +340,10 @@ Response 500
 - Criar `router.py` com `GET /api/dashboard/top-produtos`
 
 **Frontend**
-- Criar organism `TopProductsChart.tsx` usando `BarChart` horizontal do Recharts exibindo nome, categoria e receita em R$
+- Criar organism `GraficoTopProdutos.tsx` usando `BarChart` horizontal do Recharts exibindo nome, categoria e receita em R$
 - Criar hook `useTopProdutos()` em `useDashboard.ts`
 - Adicionar tipagem correspondente em `types/dashboard.ts`
-- Compor `TopProductsChart` na página `Dashboard.tsx`
+- Compor `GraficoTopProdutos` na página `Dashboard.tsx`
 
 **Testes**
 ```
@@ -363,10 +376,10 @@ Response 200
 - Criar `router.py` com `GET /api/dashboard/status-pedidos`
 
 **Frontend**
-- Criar organism `StatusPieChart.tsx` usando `PieChart` do Recharts com cor distinta por status seguindo a tabela do design system
+- Criar organism `GraficoStatusPedidos.tsx` usando `PieChart` do Recharts com cor distinta por status seguindo a tabela do design system
 - Adicionar legenda com nome do status e percentual
 - Criar hook `useStatusPedidos()` em `useDashboard.ts`
-- Compor `StatusPieChart` na página `Dashboard.tsx`
+- Compor `GraficoStatusPedidos` na página `Dashboard.tsx`
 
 **Testes**
 ```
@@ -401,9 +414,9 @@ Response 200
 - Criar `router.py` com `GET /api/dashboard/por-regiao`
 
 **Frontend**
-- Criar organism `RegionTable.tsx` com colunas estado, receita formatada e total de pedidos com diferenciação visual entre linhas
+- Criar organism `TabelaRegiao.tsx` com colunas estado, receita formatada e total de pedidos com diferenciação visual entre linhas
 - Criar hook `usePorRegiao()` em `useDashboard.ts`
-- Compor `RegionTable` na página `Dashboard.tsx`
+- Compor `TabelaRegiao` na página `Dashboard.tsx`
 
 **Testes**
 ```
@@ -436,31 +449,31 @@ Response 200
 **Backend**
 - Criar `models.py` com ORM mapeando `gold_clientes_360`
 - Criar `repository.py` com query paginada aplicando filtro `query` com `LOWER()` sobre `nome_completo` e `email` e filtro `estado` com match exato
-- Criar `schemas.py` com `ClienteList` e `PaginatedClienteList` (items, total, page, size, pages)
-- Criar `router.py` com `GET /api/clientes` validando `page >= 1` e `1 <= size <= 100`, retornando `items: []` com 200 quando não houver resultados
+- Criar `schemas.py` com `ClienteList` e `ListaClientePaginada` (items, total, pagina, tamanho, paginas)
+- Criar `router.py` com `GET /api/clientes` validando `pagina >= 1` e `1 <= tamanho <= 100`, retornando `items: []` com 200 quando não houver resultados
 
 **Frontend**
-- Criar atom `EmptyState.tsx` com mensagem configurável por prop
-- Criar molecule `SearchBar.tsx` com `Input` e debounce de 400ms
-- Criar molecule `FilterSelect.tsx` com select de estado
-- Criar molecule `Pagination.tsx` com controles anterior, próxima e exibição do total de resultados
-- Criar organism `ClienteTable.tsx` com colunas nome, email, cidade, estado, total gasto, total pedidos e segmento RFM, navegando para `/clientes/:id` ao clicar em uma linha
+- Criar atom `EstadoVazio.tsx` com mensagem configurável por prop
+- Criar molecule `BarraBusca.tsx` com `Campo` e debounce de 400ms
+- Criar molecule `SeletorFiltro.tsx` com select de estado
+- Criar molecule `Paginacao.tsx` com controles anterior, próxima e exibição do total de resultados
+- Criar organism `TabelaClientes.tsx` com colunas nome, email, cidade, estado, total gasto, total pedidos e segmento RFM, navegando para `/clientes/:id` ao clicar em uma linha
 - Criar hook `useClientes(filters)` em `hooks/useClientes.ts`
-- Adicionar tipagem `ClienteList` e `PaginatedClienteList` em `types/clientes.ts`
-- Compor `ClienteTable`, `SearchBar`, `FilterSelect` e `Pagination` na página `Clientes.tsx`
+- Adicionar tipagem `ClienteList` e `ListaClientePaginada` em `types/clientes.ts`
+- Compor `TabelaClientes`, `BarraBusca`, `SeletorFiltro` e `Paginacao` na página `Clientes.tsx`
 
 **Testes**
 ```
 [HAPPY] GET /api/clientes → 200 com estrutura de paginação correta
 [ERRO]  GET /api/clientes?estado=INVALIDO → 200 com items: [] (filtro sem resultado não é erro)
-[ERRO]  GET /api/clientes?page=0 → 422
-[ERRO]  GET /api/clientes?size=0 → 422
-[ERRO]  GET /api/clientes?size=200 → 422
+[ERRO]  GET /api/clientes?pagina=0 → 422
+[ERRO]  GET /api/clientes?tamanho=0 → 422
+[ERRO]  GET /api/clientes?tamanho=200 → 422
 ```
 
 **Contrato**
 ```
-GET /api/clientes?query=string&estado=SP&page=1&size=20
+GET /api/clientes?query=string&estado=SP&pagina=1&tamanho=20
 ```
 
 Query params
@@ -468,8 +481,8 @@ Query params
 |---|---|---|---|---|
 | `query` | string | não | — | — |
 | `estado` | string | não | — | — |
-| `page` | int | não | 1 | >= 1 |
-| `size` | int | não | 20 | >= 1, <= 100 |
+| `pagina` | int | não | 1 | >= 1 |
+| `tamanho` | int | não | 20 | >= 1, <= 100 |
 
 Response 200
 ```json
@@ -487,14 +500,14 @@ Response 200
     }
   ],
   "total": int,
-  "page": int,
-  "size": int,
-  "pages": int
+  "pagina": int,
+  "tamanho": int,
+  "paginas": int
 }
 ```
 Response 422
 ```json
-{ "detail": [{ "loc": ["query", "page"], "msg": "Input should be greater than or equal to 1" }] }
+{ "detail": [{ "loc": ["query", "pagina"], "msg": "Input should be greater than or equal to 1" }] }
 ```
 
 ---
@@ -511,11 +524,11 @@ Response 422
 - Criar `router.py` com `GET /api/clientes/{id}` retornando 404 se ID não existir e 422 se ID não for inteiro
 
 **Frontend**
-- Criar organism `ClienteHeader.tsx` exibindo dados cadastrais e métricas em destaque
+- Criar organism `CabecalhoCliente.tsx` exibindo dados cadastrais e métricas em destaque
 - Exibir campos `null` como `—` em todos os campos do perfil
 - Criar hook `useClientePerfil(id)` em `hooks/useClientes.ts`
 - Adicionar tipagem `ClientePerfil` em `types/clientes.ts`
-- Renderizar `ClienteHeader` na página `ClientePerfil.tsx` com mensagem amigável de não encontrado ao receber 404
+- Renderizar `CabecalhoCliente` na página `ClientePerfil.tsx` com mensagem amigável de não encontrado ao receber 404
 
 **Testes**
 ```
@@ -570,13 +583,13 @@ Response 422
 - Criar `schemas.py` com `PedidoAba`, `AvaliacaoAba` e `TicketAba`
 
 **Frontend**
-- Criar organism `ClienteTabs.tsx` com três abas controladas por React state sem reload de página
-- Aba Pedidos: tabela com ID, nome produto, categoria, valor, data e `Badge` de status colorido
+- Criar organism `AbasCliente.tsx` com três abas controladas por React state sem reload de página
+- Aba Pedidos: tabela com ID, nome produto, categoria, valor, data e `Etiqueta` de status colorida
 - Aba Avaliações: tabela com ID pedido, nota produto, NPS e comentário (`—` se null)
 - Aba Tickets: tabela com ID, tipo problema, data abertura, tempo resolução e nota avaliação
-- Exibir `EmptyState` com mensagem específica em cada aba quando lista vier vazia
+- Exibir `EstadoVazio` com mensagem específica em cada aba quando lista vier vazia
 - Criar hooks `useClientePedidos(id)`, `useClienteAvaliacoes(id)` e `useClienteTickets(id)` em `hooks/useClientes.ts`
-- Compor `ClienteTabs` na página `ClientePerfil.tsx`
+- Compor `AbasCliente` na página `ClientePerfil.tsx`
 
 **Testes**
 ```
@@ -659,29 +672,29 @@ Response 404 (todos os três endpoints)
 - Criar `models.py` com ORM mapeando `gold_pedidos`
 - Criar `repository.py` com query paginada aplicando filtros `status` e `categoria` com match exato e filtros `data_inicio` e `data_fim` com `>=` e `<=`
 - Criar `service.py` validando que `data_fim >= data_inicio` quando ambos forem informados
-- Criar `schemas.py` com `PedidoItem` e `PaginatedPedidoList`
-- Criar `router.py` com `GET /api/pedidos` validando `page`, `size` e datas no formato `DD-MM-YYYY`
+- Criar `schemas.py` com `PedidoItem` e `ListaPedidoPaginada`
+- Criar `router.py` com `GET /api/pedidos` validando `pagina`, `tamanho` e datas no formato `DD-MM-YYYY`
 
 **Frontend**
-- Criar molecule `DateRangePicker.tsx` com dois inputs de data validando que `data_fim >= data_inicio` antes de submeter
-- Criar organism `PedidoTable.tsx` com colunas ID, cliente, produto, categoria, valor, quantidade, data, método de pagamento e status com `Badge` colorido
+- Criar molecule `SeletorPeriodo.tsx` com dois inputs de data validando que `data_fim >= data_inicio` antes de submeter
+- Criar organism `TabelaPedidos.tsx` com colunas ID, cliente, produto, categoria, valor, quantidade, data, método de pagamento e status com `Etiqueta` colorida
 - Criar hook `usePedidos(filters)` em `hooks/usePedidos.ts`
-- Adicionar tipagem `PedidoItem` e `PaginatedPedidoList` em `types/pedidos.ts`
-- Compor `PedidoTable`, `FilterSelect`, `DateRangePicker` e `Pagination` na página `Pedidos.tsx`
+- Adicionar tipagem `PedidoItem` e `ListaPedidoPaginada` em `types/pedidos.ts`
+- Compor `TabelaPedidos`, `SeletorFiltro`, `SeletorPeriodo` e `Paginacao` na página `Pedidos.tsx`
 
 **Testes**
 ```
 [HAPPY] GET /api/pedidos → 200 com estrutura de paginação correta
-[ERRO]  GET /api/pedidos?page=0 → 422
-[ERRO]  GET /api/pedidos?size=0 → 422
-[ERRO]  GET /api/pedidos?size=200 → 422
+[ERRO]  GET /api/pedidos?pagina=0 → 422
+[ERRO]  GET /api/pedidos?tamanho=0 → 422
+[ERRO]  GET /api/pedidos?tamanho=200 → 422
 [ERRO]  GET /api/pedidos?data_inicio=31-13-2024 → 422 (data inválida)
 [ERRO]  GET /api/pedidos?data_inicio=30-12-2024&data_fim=01-01-2024 → 422 (data_fim anterior)
 ```
 
 **Contrato**
 ```
-GET /api/pedidos?status=string&categoria=string&data_inicio=DD-MM-YYYY&data_fim=DD-MM-YYYY&page=1&size=20
+GET /api/pedidos?status=string&categoria=string&data_inicio=DD-MM-YYYY&data_fim=DD-MM-YYYY&pagina=1&tamanho=20
 ```
 
 Query params
@@ -691,8 +704,8 @@ Query params
 | `categoria` | string | não | — | — |
 | `data_inicio` | date | não | — | `DD-MM-YYYY` |
 | `data_fim` | date | não | — | `DD-MM-YYYY`, >= `data_inicio` |
-| `page` | int | não | 1 | >= 1 |
-| `size` | int | não | 20 | >= 1, <= 100 |
+| `pagina` | int | não | 1 | >= 1 |
+| `tamanho` | int | não | 20 | >= 1, <= 100 |
 
 Response 200
 ```json
@@ -711,9 +724,9 @@ Response 200
     }
   ],
   "total": int,
-  "page": int,
-  "size": int,
-  "pages": int
+  "pagina": int,
+  "tamanho": int,
+  "paginas": int
 }
 ```
 
@@ -730,29 +743,29 @@ Response 200
 - Criar `models.py` com ORM mapeando `gold_produtos_performance`
 - Criar `repository.py` com query paginada aplicando filtros `categoria` e `ativo`
 - `media_avaliacao` arredondada para 1 casa decimal; retornar `null` se produto sem avaliações
-- Criar `schemas.py` com `ProdutoItem` e `PaginatedProdutoList`
-- Criar `router.py` com `GET /api/produtos` validando `page`, `size` e que `ativo` seja bool
+- Criar `schemas.py` com `ProdutoItem` e `ListaProdutoPaginada`
+- Criar `router.py` com `GET /api/produtos` validando `pagina`, `tamanho` e que `ativo` seja bool
 
 **Frontend**
-- Criar organism `ProdutoGrid.tsx` exibindo cards com nome, categoria, preço, estoque, status e métricas de desempenho
-- Aplicar `Badge` de status: `Ativo` = verde, `Inativo` = cinza
-- Adicionar `FilterSelect` de categoria e de status ativo/inativo
+- Criar organism `GradeProdutos.tsx` exibindo cards com nome, categoria, preço, estoque, status e métricas de desempenho
+- Aplicar `Etiqueta` de status: `Ativo` = verde, `Inativo` = cinza
+- Adicionar `SeletorFiltro` de categoria e de status ativo/inativo
 - Criar hook `useProdutos(filters)` em `hooks/useProdutos.ts`
-- Adicionar tipagem `ProdutoItem` e `PaginatedProdutoList` em `types/produtos.ts`
-- Compor `ProdutoGrid` na página `Produtos.tsx`
+- Adicionar tipagem `ProdutoItem` e `ListaProdutoPaginada` em `types/produtos.ts`
+- Compor `GradeProdutos` na página `Produtos.tsx`
 
 **Testes**
 ```
 [HAPPY] GET /api/produtos → 200 com estrutura de paginação correta
-[ERRO]  GET /api/produtos?page=0 → 422
-[ERRO]  GET /api/produtos?size=0 → 422
-[ERRO]  GET /api/produtos?size=200 → 422
+[ERRO]  GET /api/produtos?pagina=0 → 422
+[ERRO]  GET /api/produtos?tamanho=0 → 422
+[ERRO]  GET /api/produtos?tamanho=200 → 422
 [ERRO]  GET /api/produtos?ativo=talvez → 422
 ```
 
 **Contrato**
 ```
-GET /api/produtos?categoria=string&ativo=bool&page=1&size=20
+GET /api/produtos?categoria=string&ativo=bool&pagina=1&tamanho=20
 ```
 Response 200
 ```json
@@ -772,9 +785,9 @@ Response 200
     }
   ],
   "total": int,
-  "page": int,
-  "size": int,
-  "pages": int
+  "pagina": int,
+  "tamanho": int,
+  "paginas": int
 }
 ```
 
@@ -791,7 +804,7 @@ Response 200
 - Criar `router.py` com `POST /api/produtos` retornando 201
 
 **Frontend**
-- Criar organism `ProdutoModal.tsx` em modo criação com campos nome, categoria, preço, estoque e ativo
+- Criar organism `ModalProduto.tsx` em modo criação com campos nome, categoria, preço, estoque e ativo
 - Validar campos obrigatórios e exibir mensagem de erro inline por campo antes de submeter
 - Abrir modal via botão "Novo Produto" na página `Produtos.tsx`
 - Exibir toast de sucesso após criação, fechar modal e atualizar listagem via `invalidateQueries`
@@ -854,8 +867,8 @@ Response 422
 - Criar `router.py` com `PUT /api/produtos/{id}` retornando 404 se não existir e 422 se validação falhar
 
 **Frontend**
-- Reutilizar `ProdutoModal.tsx` em modo edição com dados do produto pré-preenchidos
-- Abrir modal via botão de edição por card no `ProdutoGrid`
+- Reutilizar `ModalProduto.tsx` em modo edição com dados do produto pré-preenchidos
+- Abrir modal via botão de edição por card no `GradeProdutos`
 - Mesma lógica de toast e atualização de listagem da criação
 
 **Testes**
@@ -899,7 +912,7 @@ Response 404
 - Criar `router.py` com `DELETE /api/produtos/{id}` retornando 204 sem body e 404 se não existir
 
 **Frontend**
-- Adicionar botão de exclusão por card no `ProdutoGrid`
+- Adicionar botão de exclusão por card no `GradeProdutos`
 - Exibir modal de confirmação explícita antes de executar o DELETE
 - Remover o card da listagem sem reload completo via `invalidateQueries` após resposta 204
 
@@ -934,31 +947,31 @@ Response 404
 - Criar `models.py` com ORM mapeando `gold_tickets`
 - Criar `repository.py` com query paginada aplicando filtros `tipo_problema`, `status` e `agente` com `LOWER()` e `data_inicio`/`data_fim` com `>=` e `<=`
 - Criar `service.py` calculando campo `prioridade` por `tempo_resolucao_horas`: `Alta` se > 72 ou `null`, `Media` se 24–72, `Baixa` se < 24; campo nunca retorna `null`
-- Criar `schemas.py` com `TicketItem` incluindo `prioridade` e `PaginatedTicketList`
-- Criar `router.py` com `GET /api/tickets` validando `page`, `size` e datas
+- Criar `schemas.py` com `TicketItem` incluindo `prioridade` e `ListaTicketPaginada`
+- Criar `router.py` com `GET /api/tickets` validando `pagina`, `tamanho` e datas
 
 **Frontend**
-- Criar molecule `PriorityBadge.tsx` recebendo `prioridade` como prop e aplicando cor: `Alta` = vermelho, `Media` = amarelo, `Baixa` = verde
-- Criar organism `TicketTable.tsx` com colunas ID, cliente, tipo problema, status, abertura, resolução, tempo resolução, agente, nota e prioridade
+- Criar molecule `EtiquetaPrioridade.tsx` recebendo `prioridade` como prop e aplicando cor: `Alta` = vermelho, `Media` = amarelo, `Baixa` = verde
+- Criar organism `TabelaTickets.tsx` com colunas ID, cliente, tipo problema, status, abertura, resolução, tempo resolução, agente, nota e prioridade
 - Destacar visualmente linhas com `prioridade = Alta` com borda ou fundo diferenciado
-- Adicionar `FilterSelect` de tipo problema, status e agente e `DateRangePicker` de período
+- Adicionar `SeletorFiltro` de tipo problema, status e agente e `SeletorPeriodo` de período
 - Criar hook `useTickets(filters)` em `hooks/useTickets.ts`
-- Adicionar tipagem `TicketItem` e `PaginatedTicketList` em `types/tickets.ts`
-- Compor `TicketTable` com filtros e `Pagination` na página `Tickets.tsx`
+- Adicionar tipagem `TicketItem` e `ListaTicketPaginada` em `types/tickets.ts`
+- Compor `TabelaTickets` com filtros e `Paginacao` na página `Tickets.tsx`
 
 **Testes**
 ```
 [HAPPY] GET /api/tickets → 200 com campo prioridade presente em todos os itens
-[ERRO]  GET /api/tickets?page=0 → 422
-[ERRO]  GET /api/tickets?size=0 → 422
-[ERRO]  GET /api/tickets?size=200 → 422
+[ERRO]  GET /api/tickets?pagina=0 → 422
+[ERRO]  GET /api/tickets?tamanho=0 → 422
+[ERRO]  GET /api/tickets?tamanho=200 → 422
 [ERRO]  GET /api/tickets?data_inicio=31-13-2024 → 422
 [ERRO]  GET /api/tickets?data_inicio=30-12-2024&data_fim=01-01-2024 → 422
 ```
 
 **Contrato**
 ```
-GET /api/tickets?tipo_problema=string&status=string&agente=string&data_inicio=DD-MM-YYYY&data_fim=DD-MM-YYYY&page=1&size=20
+GET /api/tickets?tipo_problema=string&status=string&agente=string&data_inicio=DD-MM-YYYY&data_fim=DD-MM-YYYY&pagina=1&tamanho=20
 ```
 
 Query params
@@ -969,8 +982,8 @@ Query params
 | `agente` | string | não | — | — |
 | `data_inicio` | date | não | — | `DD-MM-YYYY` |
 | `data_fim` | date | não | — | `DD-MM-YYYY`, >= `data_inicio` |
-| `page` | int | não | 1 | >= 1 |
-| `size` | int | não | 20 | >= 1, <= 100 |
+| `pagina` | int | não | 1 | >= 1 |
+| `tamanho` | int | não | 20 | >= 1, <= 100 |
 
 Response 200
 ```json
@@ -991,9 +1004,9 @@ Response 200
     }
   ],
   "total": int,
-  "page": int,
-  "size": int,
-  "pages": int
+  "pagina": int,
+  "tamanho": int,
+  "paginas": int
 }
 ```
 
@@ -1015,7 +1028,7 @@ Response 200
 - Retornar com `Content-Type: text/csv` e `Content-Disposition: attachment; filename="clientes.csv"` incluindo cabeçalho com nomes das colunas
 
 **Frontend**
-- Adicionar botão "Exportar CSV" no organism `ClienteTable.tsx`
+- Adicionar botão "Exportar CSV" no organism `TabelaClientes.tsx`
 - Ao clicar, disparar `GET /api/clientes/export/csv` passando os filtros ativos do momento e iniciar download automático via `Blob` e `URL.createObjectURL`
 
 **Testes**
@@ -1044,7 +1057,7 @@ id,nome_completo,email,cidade,estado,total_gasto,total_pedidos,segmento_rfm
 - Criar `GET /api/pedidos/export/csv` em `router.py` com os mesmos filtros do endpoint de listagem sem paginação e mesma lógica de encoding e headers da exportação de clientes
 
 **Frontend**
-- Adicionar botão "Exportar CSV" no organism `PedidoTable.tsx` com mesma lógica de download da exportação de clientes
+- Adicionar botão "Exportar CSV" no organism `TabelaPedidos.tsx` com mesma lógica de download da exportação de clientes
 
 **Testes**
 ```
@@ -1080,7 +1093,7 @@ id,nome_cliente,nome_produto,categoria,valor,quantidade,data,metodo_pagamento,st
 - Implementar controle de autorização por perfil retornando 403 quando o perfil não tiver permissão para a rota acessada
 
 **Frontend**
-- Criar template `AuthLayout.tsx` com layout centralizado para a tela de login
+- Criar template `LayoutAutenticacao.tsx` com layout centralizado para a tela de login
 - Criar página de login em `/login` com campos de email e senha
 - Armazenar o token JWT e incluí-lo automaticamente em todas as chamadas via interceptor do Axios em `services/api.ts`
 - Redirecionar para `/login` quando qualquer rota protegida retornar 401
@@ -1138,25 +1151,25 @@ Permissões por perfil
 
 | Rota | Página | Componentes principais |
 |---|---|---|
-| `/` | `Dashboard.tsx` | `KpiGrid`, `SalesChart`, `TopProductsChart`, `StatusPieChart`, `RegionTable` |
-| `/clientes` | `Clientes.tsx` | `ClienteTable`, `SearchBar`, `FilterSelect`, `Pagination` |
-| `/clientes/:id` | `ClientePerfil.tsx` | `ClienteHeader`, `ClienteTabs` |
-| `/pedidos` | `Pedidos.tsx` | `PedidoTable`, `FilterSelect`, `DateRangePicker`, `Pagination` |
-| `/produtos` | `Produtos.tsx` | `ProdutoGrid`, `ProdutoModal` |
-| `/tickets` | `Tickets.tsx` | `TicketTable`, `PriorityBadge`, `FilterSelect`, `Pagination` |
-| `/chat` | `Chat.tsx` | `ChatWindow`, `SqlViewer` |
-| `/login` | (DIF) | `AuthLayout`, formulário de login |
+| `/` | `Dashboard.tsx` | `GradeKpi`, `GraficoVendas`, `GraficoTopProdutos`, `GraficoStatusPedidos`, `TabelaRegiao` |
+| `/clientes` | `Clientes.tsx` | `TabelaClientes`, `BarraBusca`, `SeletorFiltro`, `Paginacao` |
+| `/clientes/:id` | `ClientePerfil.tsx` | `CabecalhoCliente`, `AbasCliente` |
+| `/pedidos` | `Pedidos.tsx` | `TabelaPedidos`, `SeletorFiltro`, `SeletorPeriodo`, `Paginacao` |
+| `/produtos` | `Produtos.tsx` | `GradeProdutos`, `ModalProduto` |
+| `/tickets` | `Tickets.tsx` | `TabelaTickets`, `EtiquetaPrioridade`, `SeletorFiltro`, `Paginacao` |
+| `/chat` | `Chat.tsx` | `JanelaChat`, `VisualizadorSql` |
+| `/login` | (DIF) | `LayoutAutenticacao`, formulário de login |
 
 ## Comportamentos obrigatórios por página -> sugestão
 
 | Página | Comportamento |
 |---|---|
 | Todas | Skeleton/spinner durante carregamento; banner de erro em caso de falha na API |
-| Clientes | Debounce de 400ms na busca; `EmptyState` quando lista vazia |
+| Clientes | Debounce de 400ms na busca; `EstadoVazio` quando lista vazia |
 | ClientePerfil | Campos `null` exibidos como `—`; troca de aba sem reload |
-| Pedidos | `data_fim` não pode ser anterior a `data_inicio` (validação no `DateRangePicker`) |
+| Pedidos | `data_fim` não pode ser anterior a `data_inicio` (validação no `SeletorPeriodo`) |
 | Produtos | Modal de confirmação antes de deletar; refresh da listagem após CRUD |
-| Chat | Envio via botão e tecla Enter; `SqlViewer` colapsável por mensagem; tabela de dados quando `data` não vazio |
+| Chat | Envio via botão e tecla Enter; `VisualizadorSql` colapsável por mensagem; tabela de dados quando `data` não vazio |
 
 ## Design System (será desenvolvido pelo pessoal de design)
 
@@ -1165,15 +1178,119 @@ Permissões por perfil
 
 ---
 
+## Testes de Frontend — Cypress (E2E)
+
+Framework: `Cypress` para testes end-to-end do frontend contra o backend real rodando.
+Os testes rodam com o frontend **e** o backend de pé sem mocks de API.
+US só está "done" quando os testes Cypress do happy path passam.
+Cada US cobre **1 happy path** + **1 cenário de erro**.
+
+### Pré-requisitos para rodar
+
+- Backend rodando em `http://localhost:8000`
+- Frontend rodando em `http://localhost:5173`
+- Banco seed aplicado (`python seed.py`)
+
+### Estrutura de Pastas
+
+```
+frontend/
+└── cypress/
+    ├── e2e/
+    │   ├── dashboard.cy.ts
+    │   ├── clientes.cy.ts
+    │   ├── cliente-perfil.cy.ts
+    │   ├── pedidos.cy.ts
+    │   ├── produtos.cy.ts
+    │   ├── tickets.cy.ts
+    │   └── chat.cy.ts
+    └── support/
+        ├── commands.ts           # comandos customizados reutilizáveis
+        └── e2e.ts
+```
+
+### Convenções
+
+| Convenção | Valor |
+|---|---|
+| `data-cy` | Atributos obrigatórios em elementos interativos testados (ex: `data-cy="botao-novo-produto"`) |
+| Asserções | Sempre verificar visibilidade (`be.visible`) e conteúdo (`contain`) |
+| Estado de carregamento | Aguardar skeleton desaparecer antes de asserções de conteúdo |
+| Seleção de elementos | Usar `data-cy` — nunca classes CSS ou texto puro como seletor primário |
+| Dados de teste | Usar dados reais do banco seed — sem hardcode de IDs frágeis |
+
+### Cobertura por Página
+
+| Página | Testes obrigatórios |
+|---|---|
+| `Dashboard` | KPIs renderizados; gráficos visíveis; tabela de regiões com dados |
+| `Clientes` | Listagem carregada; busca com debounce atualiza tabela; paginação funciona; clique em linha navega para perfil |
+| `ClientePerfil` | Dados do cabeçalho visíveis; abas (Pedidos, Avaliações, Tickets) trocam sem reload; campos null exibem `—` |
+| `Pedidos` | Listagem carregada; filtro de status atualiza tabela; validação `data_fim < data_inicio` bloqueia envio |
+| `Produtos` | Grade carregada; modal de criação abre e fecha; confirmação de exclusão exibe antes de deletar |
+| `Tickets` | Listagem carregada; linha de prioridade Alta tem destaque visual; filtro de prioridade funciona |
+| `Chat` | Sugestões visíveis; envio por Enter; `VisualizadorSql` colapsável aparece quando sql_used não é null |
+
+### Scripts do package.json
+
+
+"scripts": {
+  "cy:open": "cypress open",
+  "cy:run": "cypress run"
+}
+
+
+---
+
 # TIME DE GEN AI — Agente Text-to-SQL
-**OBS: time de genAI por favor alterar qualquer coisa que estiver errada**
-## Localização no repositório
+## Localização e Arquitetura Atual
 
 ```
 backend/app/agent/
-├── router.py      # POST /api/agent/chat — integrado ao backend FastAPI
-├── agent.py       # lógica Text-to-SQL, guardrails, execução de query, memória
-└── prompts.py     # system prompt com schema completo do banco
+├── agentes/
+│   ├── agente_base.py      # Classe base abstrata — todos os agentes herdam disso
+│   ├── agente_seletor.py   # Agente 1: filtra esquema do banco de dados (Seletor)
+│   ├── agente_decomposer.py  # Agente 2: gera SQL com raciocínio em cadeia [TODO]
+│   └── agente_refiner.py   # Agente 3: executa SQL, corrige erros em loop [TODO]
+├── prompts/
+│   ├── seletor.j2          # Template de prompt do sistema para Seletor 
+│   ├── decompositor.j2       # Template de prompt do sistema para Decomposer 
+│   └── refinador.j2          # Template de prompt do sistema para Refiner 
+├── db/
+│   ├── leitor_esquema.py   # Lê esquema do banco → retorna string DDL (PT-BR)
+│   ├── descricao_tabelas.json  # Cache de metadados das tabelas
+│   └── executor.py         # Executa SQL → retorna ExecutionResult [TODO]
+├── few_shots/
+│   ├── examples.yaml       # Pares pergunta→SQL curados [TODO]
+│   └── retriever.py        # BuscadorExemplos: busca por similaridade de embedding [TODO]
+├── models/
+│   ├── resultado.py        # ResultadoSeletor, ... dataclasses (PT-BR)
+│   └── esquema.py          # EsquemaBanco, EsquemaTabela, EsquemaColuna [TODO]
+├── tests/
+│   ├── teste_agente_seletor.py
+│   ├── teste_leitor_esquema.py
+│   ├── teste_agente_decomposer.py  [TODO]
+│   ├── teste_agente_refiner.py     [TODO]
+│   └── teste_pipeline_e2e.py       [TODO]
+├── run_selector_local.py   # Executor local para desenvolvimento do Seletor
+├── config.py               # Dataclass Config (lê variáveis de ambiente) — PT-BR
+├── __init__.py
+├── banco.db                # Banco de dados SQLite para desenvolvimento
+├── .env                    # MISTRAL_API_KEY — nunca fazer commit
+└── [FUTURO] orquestrador.py  # Orquestrador — único ponto de entrada público [TODO]
+```
+
+## Fluxo de Dados (Atual → Futuro)
+
+```
+pergunta_do_usuario + caminho_db
+  → leitor_esquema(caminho_db)              → esquema_completo: str
+  → AgenteSeletor.run()                    → ResultadoSeletor.esquema_filtrado
+  → [FUTURO] BuscadorExemplos.recuperar()   → exemplos: List[dict]
+  → [FUTURO] AgenteDecomposer.run()        → ResultadoDecomposer.sql + .raciocinio
+  → [FUTURO] AgenteRefiner.run()           → ResultadoRefiner.sql + .sucesso
+  → [FUTURO] Orquestrador.run() retorna ResultadoPipeline
+
 ```
 
 ## Arquitetura do Agente
@@ -1183,47 +1300,52 @@ Mensagem do usuário
         ↓
 POST /api/agent/chat  (router.py)
         ↓
-Guardrail de escrita  (agent.py)
+Agente extrator de schemas (agente_seletor.py)
+— filtra apenas tabelas relevantes ao contexto
+        ↓
+Buscador de Few-Shots (few_shots/retriever.py)
+— recupera exemplos similares para in-context learning
+        ↓
+Agente Decomposer (agente_decomposer.py)
+— gera SQL com raciocínio em cadeia
+        ↓
+Guardrail de bloqueio de escrita (agent.py)
 — rejeita INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/CREATE → 400
         ↓
-PydanticAI Agent  (agent.py)
-  ├── System Prompt  (prompts.py) → schema completo + regras de negócio
-  ├── Tool: execute_sql(query: str) → list[dict], máx 100 linhas, timeout 30s
-  └── Tool: get_schema() → str
+Agente Refinador (agente_refiner.py)
+— testa a query, executa, e corrige erros se necessário
         ↓
-LLM (Gemini 2.5 Flash ou similar)
-  ├── Gera SQL válido para o SQLite local
-  ├── Detecta se pergunta está fora do escopo
-  └── Formata resposta em português claro
-        ↓
-{ answer, sql_used, data[], out_of_scope }
+{ resposta, sql_usado, dados[], fora_do_escopo }
 ```
 
-## System Prompt (estrutura base — detalhar em `prompts.py`)
+## System Prompt (estrutura base — implementar em `prompts`)
 
 ```
-Você é o assistente de dados da V-Commerce.
-Você tem acesso SOMENTE às seguintes tabelas: [SCHEMA COMPLETO AQUI]
+Você é o assistente de dados conversacional da V-Commerce.
+Você tem acesso APENAS às seguintes tabelas: [SCHEMA COMPLETO AQUI]
 
 Regras obrigatórias:
 1. Gere APENAS queries SELECT — jamais modifique dados
 2. Limite resultados a 100 linhas por padrão (use LIMIT 100)
-3. Se a pergunta estiver fora do escopo, retorne out_of_scope: true
-4. Explique brevemente qual dado foi consultado
+3. Se a pergunta estiver fora do escopo (ex: política, privacidade pessoal), 
+   retorne: "Desculpe, não consigo responder essa pergunta." com fora_do_escopo: true
+4. Explique brevemente qual dado foi consultado e de quais tabelas
 5. Formate valores monetários em R$ com 2 casas decimais
-6. Responda sempre em português brasileiro
+6. Formate datas no padrão DD-MM-YYYY
+7. Responda sempre em português brasileiro (PT-BR)
+8. Se houver ambiguidade, peça esclarecimento antes de gerar SQL
 ```
 
 ## Guardrails
 
-| Guardrail | Implementação |
-|---|---|
-| Bloqueio de escrita | Verificação por token isolado (case-insensitive) antes de chamar o modelo |
-| Palavras bloqueadas | `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `CREATE` |
-| Out-of-scope | Detectado via system prompt; `out_of_scope: true` no response |
-| Timeout SQL | 30 segundos na execução da query |
-| Limite de dados | `LIMIT 100` aplicado em toda query antes de executar |
-| Memória de sessão | Últimas 10 mensagens por `session_id`, em memória, sem persistência (DIF) |
+| Guardrail | Implementação | Comportamento |
+|---|---|---|
+| Bloqueio de escrita | Verificação por token isolado (case-insensitive) na mensagem antes de chamar LLM | Retorna 400 com mensagem "Query bloqueada por razões de segurança" |
+| Palavras bloqueadas | `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `CREATE` | Qualquer uma dessas palavras na query gerada = rejeição |
+| Out-of-scope | Detectado via system prompt; flag `fora_do_escopo: true` na resposta | Resposta amigável sem SQL quando detectado |
+| Timeout SQL | 30 segundos na execução da query (timeout enforced no executor.py) | Retorna erro amigável: "A consulta demorou muito. Tente refinar a pergunta." |
+| Limite de dados | `LIMIT 100` aplicado em toda query SELECT antes de executar | Previne consumo excessivo de memória e timeout |
+| Memória de sessão | Últimas 10 mensagens por `session_id`, armazenadas em memória (sem persistência) | Permite contexto conversacional; limpa automaticamente após 1 hora de inatividade (DIF) |
 
 ---
 
@@ -1244,11 +1366,11 @@ Regras obrigatórias:
 - Criar `router.py` com `POST /api/agent/chat` orquestrando o fluxo completo e retornando `ChatResponse`
 
 **Frontend**
-- Criar molecule `SqlViewer.tsx` como bloco colapsável exibindo o SQL formatado e distinguível do restante da resposta
-- Criar organism `ChatWindow.tsx` com histórico de mensagens, campo de input com envio via botão e via tecla Enter, spinner durante processamento, `SqlViewer` por mensagem quando `sql_used` não for null e tabela de dados quando `data` não estiver vazio
-- Criar hook `useAgent()` em `hooks/useAgent.ts`
-- Adicionar tipagem `ChatRequest` e `ChatResponse` em `types/agent.ts`
-- Compor `ChatWindow` na página `Chat.tsx`
+- Criar molecule `VisualizadorSql.tsx` como bloco colapsável exibindo o SQL formatado e distinguível do restante da resposta
+- Criar organism `JanelaChat.tsx` com histórico de mensagens, campo de input com envio via botão e via tecla Enter, spinner durante processamento, `VisualizadorSql` por mensagem quando `sql_used` não for null e tabela de dados quando `data` não estiver vazio
+- Criar hook `useAgente()` em `hooks/useAgente.ts`
+- Adicionar tipagem `ChatRequest` e `ChatResponse` em `types/agente.ts`
+- Compor `JanelaChat` na página `Chat.tsx`
 
 **Testes**
 ```
@@ -1265,7 +1387,7 @@ Regras obrigatórias:
 ```
 
 **Contrato**
-```
+``` 
 POST /api/agent/chat
 ```
 Request body
@@ -1323,7 +1445,7 @@ Response 422
 - Forçar `LIMIT 100` em toda query antes de executar
 
 **Frontend**
-- Exibir mensagem amigável quando `out_of_scope: true` sem expor detalhes técnicos
+- Exibir mensagem amigável no `JanelaChat` quando `out_of_scope: true` sem expor detalhes técnicos
 - Exibir mensagem de erro clara quando a API retornar 400 ou 408
 
 ---
@@ -1354,7 +1476,7 @@ Response 422
 - Não requer endpoint dedicado; sugestões são estáticas no frontend
 
 **Frontend**
-- Exibir pelo menos 4 sugestões clicáveis no `ChatWindow` quando o histórico estiver vazio
+- Exibir pelo menos 4 sugestões clicáveis no `JanelaChat` quando o histórico estiver vazio
 - Clicar em uma sugestão preenche automaticamente o campo de input sem enviar
 - Sugestões obrigatórias: "Quais foram os 10 produtos mais vendidos esse mês?", "Qual região teve maior crescimento de receita no último trimestre?", "Quais clientes do Nordeste compraram mais de R$ 500 nos últimos 6 meses?", "Qual produto gera mais tickets de suporte?"
 - Ocultar sugestões após o primeiro envio
@@ -1372,7 +1494,7 @@ Response 422
 - Criar `schemas.py` com `ComportamentoResponse` (mock: bool, sessoes: list)
 
 **Frontend**
-- Adicionar aba "Comportamento" no organism `ClienteTabs.tsx`
+- Adicionar aba "Comportamento" no organism `AbasCliente.tsx`
 - Exibir tabela com sessões contendo canal, páginas visitadas, tempo de sessão e data
 - Exibir banner amarelo "Dados ilustrativos — clickstream ainda não disponível" quando `mock: true`
 - Criar hook `useClienteComportamento(id)` em `hooks/useClientes.ts`
