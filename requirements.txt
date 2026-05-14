@@ -16,3 +16,4 @@ mistralai==1.2.6
 typing-extensions>=4.5.0
 PyYAML==6.0.2
 sentence-transformers
+sqlglot==25.34.1

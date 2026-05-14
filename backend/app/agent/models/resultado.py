@@ -37,6 +37,25 @@ class ResultadoRefinadorLLM(BaseModel):
         description="Consulta SQL corrigida, somente leitura, pronta para execução."
     )
 
+
+class ResultadoSugestorLLM(BaseModel):
+    """Saida estruturada retornada pelo PydanticAI no agente sugestor."""
+
+    perguntas: list[str] = Field(
+        min_length=3,
+        max_length=3,
+        description="Lista com exatamente 3 perguntas sugeridas de follow-up.",
+    )
+
+
+class ResultadoInterpretadorLLM(BaseModel):
+    """Saida estruturada retornada pelo PydanticAI no agente interpretador."""
+
+    resposta: str = Field(
+        description="Resposta final em linguagem natural, clara e objetiva para o usuario."
+    )
+
+
 @dataclass
 class ResultadoSeletor:
     """Resultado retornado por `AgenteSeletor`.
@@ -86,4 +105,34 @@ class ResultadoRefinador:
     impossivel: bool
     tentativas: int
     ultimo_erro: str | None
+    tokens_usados: int
+
+
+@dataclass
+class ResultadoSugestor:
+    """Resultado retornado por `AgenteSugestor`.
+
+    Attributes:
+        sugestoes: Lista com exatamente 3 perguntas sugeridas.
+        tabela_principal: Tabela principal inferida da consulta SQL.
+        tabelas_adjacentes: Tabelas relacionadas usadas para guiar follow-ups.
+        tokens_usados: Total de tokens consumidos na chamada ao LLM.
+    """
+
+    sugestoes: list[str]
+    tabela_principal: str
+    tabelas_adjacentes: list[str]
+    tokens_usados: int
+
+
+@dataclass
+class ResultadoInterpretador:
+    """Resultado retornado por `AgenteInterpretador`.
+
+    Attributes:
+        resposta: Texto final em linguagem natural para o usuario.
+        tokens_usados: Total de tokens consumidos na chamada ao LLM.
+    """
+
+    resposta: str
     tokens_usados: int

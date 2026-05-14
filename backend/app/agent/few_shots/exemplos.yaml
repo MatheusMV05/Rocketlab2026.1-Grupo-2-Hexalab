@@ -306,3 +306,42 @@
     GROUP BY t.agente_suporte
     ORDER BY total DESC
     LIMIT 1
+
+- question: Qual foi o total de vendas por produto no último trimestre
+  reasoning: |
+    1. **Identificar o último trimestre**: Primeiro, preciso determinar qual foi o último trimestre disponível nos dados. Para isso, vou usar a tabela `dim_data` para encontrar o maior trimestre presente no campo `trimestre`.
+
+    2. **Filtrar pedidos pelo último trimestre**: Com o trimestre identificado, vou filtrar os registros na tabela `fat_pedidos` que tenham ocorrido nesse período, usando a coluna `sk_data_pedido` para fazer a junção com a tabela `dim_data` e verificar o trimestre correspondente.
+
+    3. **Agrupar por produto e calcular total de vendas**: Após filtrar os pedidos do último trimestre, vou agrupar os dados por produto (usando `sk_produto` ou `id_produto`) e calcular o total de vendas. Isso envolve somar a `quantidade` vendida ou a `receita_liquida_brl` (ou ambas, se necessário).
+
+    4. **Junta as tabelas relevantes**: Vou realizar uma junção entre `fat_pedidos` e `dim_data` usando `sk_data_pedido` como chave estrangeira para acessar o trimestre correto.
+
+    5. **Agregação final**: Usarei `SUM(quantidade)` ou `SUM(receita_liquida_brl)` para calcular o total de vendas por produto, dependendo do que for mais apropriado para a pergunta.
+  sql: |
+    WITH ultimo_trimestre AS (
+        SELECT MAX(trimestre) AS trimestre_max
+        FROM dim_data
+    ),
+
+    pedidos_ultimo_trimestre AS (
+        SELECT
+            fp.sk_produto,
+            fp.id_produto,
+            fp.quantidade,
+            fp.receita_liquida_brl,
+            d.trimestre
+        FROM fat_pedidos fp
+        JOIN dim_data d ON fp.sk_data_pedido = d.sk_data
+        WHERE d.trimestre = (SELECT trimestre_max FROM ultimo_trimestre)
+    )
+
+    SELECT
+        p.id_produto,
+        p.nome_produto,
+        SUM(qt.quantidade) AS total_unidades_vendidas,
+        SUM(qt.receita_liquida_brl) AS total_receita_liquida_brl
+    FROM pedidos_ultimo_trimestre qt
+    JOIN dim_produtos p ON qt.sk_produto = p.sk_produto
+    GROUP BY p.id_produto, p.nome_produto
+    ORDER BY total_unidades_vendidas DESC

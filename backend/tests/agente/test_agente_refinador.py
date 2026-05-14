@@ -44,7 +44,7 @@ def test_sql_correto_na_primeira_tentativa(monkeypatch):
     agente = AgenteRefinador(config=Config(api_key=""))
     agente._agent = _DummyAgent()
 
-    monkeypatch.setattr(agente, "_executar_sql", lambda sql: {"ok": True, "error": None})
+    monkeypatch.setattr(agente, "_executar_sql", lambda sql, db_path=None: {"ok": True, "error": None})
 
     resultado = agente.run(
         candidate_sql="SELECT 1",
@@ -66,7 +66,7 @@ def test_sql_corrigido_na_segunda_tentativa(monkeypatch):
 
     chamadas = {"n": 0}
 
-    def fake_executar(sql):
+    def fake_executar(sql, db_path=None):
         chamadas["n"] += 1
         return {"ok": chamadas["n"] >= 2, "error": "erro simulado" if chamadas["n"] < 2 else None}
 
@@ -86,7 +86,7 @@ def test_esgota_max_retries(monkeypatch):
     agente = AgenteRefinador(config=Config(api_key="", max_retries=3))
     agente._agent = _DummyAgent()
 
-    monkeypatch.setattr(agente, "_executar_sql", lambda sql: {"ok": False, "error": "erro persistente"})
+    monkeypatch.setattr(agente, "_executar_sql", lambda sql, db_path=None: {"ok": False, "error": "erro persistente"})
     monkeypatch.setattr(agente, "_render", lambda *a, **kw: "prompt")
 
     resultado = agente.run("SELECT errado", "teste", "CREATE TABLE t (id INTEGER);")
@@ -107,7 +107,7 @@ def test_llm_retorna_impossivel(monkeypatch):
     agente = AgenteRefinador(config=Config(api_key=""))
     agente._agent = _DummyAgent(sql="IMPOSSIVEL")
 
-    monkeypatch.setattr(agente, "_executar_sql", lambda sql: {"ok": False, "error": "tabela não existe"})
+    monkeypatch.setattr(agente, "_executar_sql", lambda sql, db_path=None: {"ok": False, "error": "tabela não existe"})
     monkeypatch.setattr(agente, "_render", lambda *a, **kw: "prompt")
 
     resultado = agente.run("SELECT errado", "teste", "CREATE TABLE t (id INTEGER);")
@@ -123,7 +123,7 @@ def test_resultado_vazio_sem_erro(monkeypatch):
     agente = AgenteRefinador(config=Config(api_key=""))
     agente._agent = _DummyAgent()
 
-    monkeypatch.setattr(agente, "_executar_sql", lambda sql: {"ok": False, "error": None})
+    monkeypatch.setattr(agente, "_executar_sql", lambda sql, db_path=None: {"ok": False, "error": None})
     monkeypatch.setattr(agente, "_render", lambda *a, **kw: "prompt")
 
     resultado = agente.run("SELECT algo", "teste", "CREATE TABLE t (id INTEGER);")
@@ -139,7 +139,7 @@ def test_tokens_acumulados(monkeypatch):
     agente = AgenteRefinador(config=Config(api_key="", max_retries=3))
     agente._agent = _DummyAgent()
 
-    monkeypatch.setattr(agente, "_executar_sql", lambda sql: {"ok": False, "error": "erro"})
+    monkeypatch.setattr(agente, "_executar_sql", lambda sql, db_path=None: {"ok": False, "error": "erro"})
     monkeypatch.setattr(agente, "_render", lambda *a, **kw: "prompt")
 
     resultado = agente.run("SELECT errado", "teste", "CREATE TABLE t (id INTEGER);")

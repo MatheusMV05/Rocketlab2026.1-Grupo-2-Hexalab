@@ -19,6 +19,19 @@ class FewShotRetriever:
 
     def __init__(self, path: str | Path, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"):
         caminho_yaml = Path(path)
+        
+        # Se o caminho relativo não existir, procura relativo ao diretório do retriever
+        if not caminho_yaml.exists():
+            caminho_alternativo = Path(__file__).resolve().parent / path
+            if caminho_alternativo.exists():
+                caminho_yaml = caminho_alternativo
+            else:
+                # Tenta também procurando em backend/app/agent/few_shots/
+                caminho_alternativo2 = Path(__file__).resolve().parent / Path(path).name
+                if caminho_alternativo2.exists():
+                    caminho_yaml = caminho_alternativo2
+
+        logger.info(f"Carregando exemplos few-shot de: {caminho_yaml}")
 
         with open(caminho_yaml, 'r', encoding='utf-8') as file:
             exemplos_raw = yaml.safe_load(file) or []
