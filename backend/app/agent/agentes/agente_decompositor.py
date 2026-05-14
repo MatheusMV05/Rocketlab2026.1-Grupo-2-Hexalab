@@ -18,6 +18,9 @@ from app.agent.models.resultado import ResultadoDecompositor, ResultadoDecomposi
 from app.agent.config import Config
 from app.agent.hints.generator import generate_examples_from_schema
 
+# Import relacionado a memória 
+from pydantic_ai_summarization import ContextManagerCapability
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,6 +40,7 @@ class AgenteDecompositor(AgenteBase):
 		self,
 		esquema_filtrado: str,
 		pergunta: str,
+		message_history: list[Any] | None = None,
 	) -> ResultadoDecompositor:
 		"""Executa o decomposer e retorna SQL + raciocínio com tipagem forte.
 
@@ -69,6 +73,7 @@ class AgenteDecompositor(AgenteBase):
 		raciocinio = ""
 		sql_limpo = ""
 		tokens_usados = 0
+		novo_historico = []
 
 		if self.config.api_key:
 			try:
@@ -77,7 +82,17 @@ class AgenteDecompositor(AgenteBase):
 				asyncio.set_event_loop(asyncio.new_event_loop())
 
 			model = MistralModel(self.config.model, api_key=self.config.api_key)
-			agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoDecompositorLLM)
+			agent = Agent(
+				model, 
+				deps_type=ContextoAgente, 
+				result_type=ResultadoDecompositorLLM,
+				capabilities=[
+                    ContextManagerCapability(
+                        max_tokens=30_000, # Limite seguro de tokens para o contexto (pode e deve ser modificado conforme a necessidade do projeto)
+                        compress_threshold=0.9  # Sumariza ao bater 90% da capacidade
+                    )
+                ]
+			)
 
 			@agent.system_prompt
 			def get_system_prompt(ctx) -> str:
@@ -85,7 +100,12 @@ class AgenteDecompositor(AgenteBase):
 
 			self._agent = agent
 
-		texto_llm, tokens_usados = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+		texto_llm, tokens_usados, novo_historico = self._call_llm(
+            sistema=prompt_sistema, 
+            usuario=pergunta,
+            message_history=message_history 
+        )
+
 		raciocinio, sql_limpo = self._interpretar_saida_llm(texto_llm)
 
 		if not sql_limpo:
@@ -107,6 +127,7 @@ class AgenteDecompositor(AgenteBase):
 			sql=sql_limpo,
 			raciocinio=raciocinio,
 			tokens_usados=tokens_usados,
+			novo_historico=novo_historico,
 		)
 
 	def _interpretar_saida_llm(self, texto_llm: str) -> tuple[str, str]:

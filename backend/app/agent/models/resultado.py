@@ -6,7 +6,8 @@ Este módulo centraliza as estruturas usadas para transportar a resposta do
 agente seletor e a saída estruturada validada pelo PydanticAI.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -86,6 +87,7 @@ class ResultadoDecompositor:
     sql: str
     raciocinio: str
     tokens_usados: int
+    novo_historico: list[Any] = field(default_factory=list)
 
 @dataclass
 class ResultadoRefinador:
