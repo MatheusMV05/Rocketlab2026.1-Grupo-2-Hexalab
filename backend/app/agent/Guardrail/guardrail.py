@@ -25,13 +25,6 @@ TABELAS_PERMITIDAS = {
     "mart_comportamento_digital"
 }
 
-# Termos que validam se a pergunta do usuário é sobre o negócio
-_TERMOS_DOMINIO = {
-    "cliente", "pedido", "produto", "receita", "faturamento", "venda", "estoque",
-    "ticket", "suporte", "atendimento", "nps", "avaliacao", "conversao", "sessao",
-    "carrinho", "abandono", "ltv", "churn", "engajamento", "vip", "agente", "sac"
-}
-
 # ==============================================================
 # PADRÕES REGEX (SEGURANÇA)
 # ==============================================================
@@ -45,7 +38,7 @@ _PADRAO_PALAVRAS_PROIBIDAS = re.compile(
     re.IGNORECASE,
 )
 
-# Padrões de Injection SQL e Comentários (Removido CASE WHEN para permitir análise)
+# Padrões de Injection SQL e Comentários
 _PADROES_INJECTION_SQL = [
     r"/\*.*?\*/",      # Comentários de bloco
     r"--",             # Comentários de linha
@@ -92,11 +85,8 @@ def validar_pergunta_usuario(pergunta: str) -> str:
             logger.warning(f"Tentativa de Jailbreak detectada: {pergunta}")
             return "Comando inválido. Por favor, faça apenas perguntas sobre os dados de CRM."
 
-    # 2. Verificar se está dentro do domínio de negócio (Tokens)
-    tokens = set(re.findall(r"[a-z0-9_]+", pergunta_clean))
-    if not tokens.intersection(_TERMOS_DOMINIO):
-        return "Desculpe, só posso responder perguntas relacionadas ao CRM V-Commerce (Clientes, Vendas, Produtos e Suporte)."
-
+    # A verificação restritiva de termos de domínio foi removida daqui.
+    # O fluxo agora confia no System Prompt da IA para barrar escopos genéricos.
     return ""
 
 def validar_sql_seguro(sql: str) -> bool:
@@ -126,15 +116,10 @@ def validar_sql_seguro(sql: str) -> bool:
             return False
 
     # 4. VALIDAÇÃO DE WHITELIST (Inclusive em Subqueries)
-    # Este regex captura nomes de tabelas que aparecem após FROM ou JOIN
     tabelas_na_query = re.findall(r"(?:from|join)\s+([a-z0-9_]+)", sql_lower)
-
-    # Ignora CTEs declaradas no próprio WITH, que também aparecem em FROM/JOIN.
     ctes_declaradas = set(re.findall(r"(?:with|,)\s+([a-z0-9_]+)\s+as\s*\(", sql_lower))
     
     if not tabelas_na_query:
-        # Se a query não tem FROM (ex: SELECT 1), podemos avaliar se permitimos ou não.
-        # No contexto de CRM, geralmente deve haver uma tabela.
         logger.warning("Query sem tabelas detectada.")
     
     for tabela in tabelas_na_query:
@@ -147,7 +132,7 @@ def validar_sql_seguro(sql: str) -> bool:
     return True
 
 # ==============================================================
-# EXPLICABILIDADE (Opcional - Para a IA usar na resposta)
+# EXPLICABILIDADE
 # ==============================================================
 
 def normalizar_valor_bruto(valor):

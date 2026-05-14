@@ -87,7 +87,12 @@ class AgenteBase(ABC):
             def get_system_prompt(ctx: RunContext[ContextoAgente]) -> str:
                 return ctx.deps.sistema
  
-    def _call_llm(self, sistema: str, usuario: str) -> tuple[str, int]:
+    def _call_llm(
+        self, 
+        sistema: str, 
+        usuario: str,
+        message_history: list[Any] | None = None
+    ) -> tuple[str, int, list[Any]]:
         """Envia uma mensagem ao LLM e retorna a resposta com o consumo de tokens.
  
         Usa o PydanticAI via `run_sync` injetando o contexto renderizado.
@@ -109,25 +114,31 @@ class AgenteBase(ABC):
               reportado pela API, ou ``0`` se não disponível.
         """
         if self._agent is None:
-            return "", 0
+            return "", 0, []
  
         deps = ContextoAgente(config=self.config, sistema=sistema)
         try:
             if hasattr(self._agent, "run_sync"):
-                resultado = self._agent.run_sync(usuario, deps=deps)
+                # Injeta message_history nativamente
+                resultado = self._agent.run_sync(usuario, deps=deps, message_history=message_history)
             else:
-                resultado = asyncio.run(self._agent.run(usuario, deps=deps))
+                resultado = asyncio.run(self._agent.run(usuario, deps=deps, message_history=message_history))
+            
             texto = str(resultado.data)
             uso = resultado.usage()
             tokens_usados = uso.total_tokens if uso else 0
+            
+            # 3. Captura o histórico de mensagens resultante (já com compressão automática se ativada)
+            novo_historico = resultado.all_messages()
+
             if hasattr(resultado.data, "model_dump"):
                 texto = json.dumps(resultado.data.model_dump(), ensure_ascii=False)
         except Exception:
-            # Fallback seguro caso ocorra falha de conexão / parser no PydanticAI
             texto = ""
             tokens_usados = 0
+            novo_historico = []
 
-        return texto, tokens_usados
+        return texto, tokens_usados, novo_historico
  
     def _render(self, template_name: str, **kwargs: object) -> str:
         """Renderiza um template Jinja2 do diretório ``prompts/``.

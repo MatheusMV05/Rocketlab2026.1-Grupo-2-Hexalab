@@ -68,7 +68,7 @@ class AgenteInterpretador(AgenteBase):
 
             self._agent = agent
 
-        texto_llm, tokens_usados = self._call_llm(
+        texto_llm, tokens_usados, _ = self._call_llm(
             sistema=prompt_sistema,
             usuario="Gere a resposta final para o usuario.",
         )
