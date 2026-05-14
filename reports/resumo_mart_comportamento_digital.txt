@@ -1,0 +1,47 @@
+TABELA: mart_comportamento_digital
+Linhas: 58323 | Colunas: 16
+
+Colunas e tipos:
+sk_cliente                    object
+total_eventos                  int64
+total_sessoes                  int64
+sessoes_com_compra             int64
+produtos_visualizados          int64
+eventos_compra                 int64
+eventos_pagamento              int64
+eventos_carrinho               int64
+eventos_abandono               int64
+eventos_visualizacao           int64
+avg_tempo_pagina_seg         float64
+canais_utilizados             object
+dispositivos_utilizados       object
+taxa_conversao_sessao_pct    float64
+nivel_engajamento             object
+gold_timestamp                object
+
+Amostra das primeiras linhas:
+                                                      sk_cliente  total_eventos  total_sessoes  sessoes_com_compra  produtos_visualizados  eventos_compra  eventos_pagamento  eventos_carrinho  eventos_abandono  eventos_visualizacao  avg_tempo_pagina_seg  canais_utilizados dispositivos_utilizados  taxa_conversao_sessao_pct nivel_engajamento           gold_timestamp
+b9543d8433fa814e0fab9076555bff55d9f46174715a3350bc33c6891e604746              4              4                   0                      3               0                  0                 1                 0                     3                 494.0 mobile_web|web|app                  mobile                       0.00             medio 2026-05-06T23:04:34.158Z
+48934db79ba894c585ecb4e60e5ed808ea82793daa0dc8b6d150811836553ae6              8              8                   0                      6               0                  0                 1                 0                     6                 567.8            web|app   mobile|desktop|tablet                       0.00             medio 2026-05-06T23:04:34.158Z
+a6ccbff23036624d075324b3206385003c737e8f88fa162e43221437c782a046             13             13                   1                      7               1                  0                 1                 0                    10                 186.8 mobile_web|app|web   mobile|desktop|tablet                       7.69              alto 2026-05-06T23:04:34.158Z
+ff9679489a653bc7891345229de0e84ceb647e97d01c9c76e5d245ffa1d3b113              6              6                   0                      4               0                  0                 1                 0                     5                 286.0     web|mobile_web          desktop|mobile                       0.00             medio 2026-05-06T23:04:34.158Z
+9bda755c48c277b4a5941a285d93b288cb98bb039fb25be4ba7b0f61d851209b              6              6                   0                      4               0                  1                 0                 0                     4                 229.0 mobile_web|web|app          mobile|desktop                       0.00             medio 2026-05-06T23:04:34.158Z
+
+Describe completo:
+                             count unique                                                               top   freq        mean         std  min    25%    50%    75%       max
+sk_cliente                   58323  58323  b9543d8433fa814e0fab9076555bff55d9f46174715a3350bc33c6891e604746      1         NaN         NaN  NaN    NaN    NaN    NaN       NaN
+total_eventos              58323.0    NaN                                                               NaN    NaN    8.572947  623.391109  0.0    4.0    6.0    8.0  150553.0
+total_sessoes              58323.0    NaN                                                               NaN    NaN    7.186856  288.728149  0.0    4.0    6.0    8.0   69728.0
+sessoes_com_compra         58323.0    NaN                                                               NaN    NaN    0.093016    6.762235  0.0    0.0    0.0    0.0    1632.0
+produtos_visualizados      58323.0    NaN                                                               NaN    NaN    4.095623    3.461026  0.0    2.0    4.0    6.0     501.0
+eventos_compra             58323.0    NaN                                                               NaN    NaN    0.093222     6.81189  0.0    0.0    0.0    0.0    1644.0
+eventos_pagamento          58323.0    NaN                                                               NaN    NaN    0.020935    1.615109  0.0    0.0    0.0    0.0     389.0
+eventos_carrinho           58323.0    NaN                                                               NaN    NaN     1.12357   81.409823  0.0    0.0    1.0    1.0   19660.0
+eventos_abandono           58323.0    NaN                                                               NaN    NaN    0.061279    4.286468  0.0    0.0    0.0    0.0    1034.0
+eventos_visualizacao       58323.0    NaN                                                               NaN    NaN    6.435883  468.121125  0.0    2.0    5.0    6.0  113054.0
+avg_tempo_pagina_seg       58323.0    NaN                                                               NaN    NaN  279.273189  195.815296  0.0  179.0  283.5  369.5    1800.0
+canais_utilizados            58323     16                                                           app|web  10220         NaN         NaN  NaN    NaN    NaN    NaN       NaN
+dispositivos_utilizados      58323     16                                                    desktop|mobile  10840         NaN         NaN  NaN    NaN    NaN    NaN       NaN
+taxa_conversao_sessao_pct  58323.0    NaN                                                               NaN    NaN    0.899278    3.875599  0.0    0.0    0.0    0.0     100.0
+nivel_engajamento            58323      5                                                             medio  38445         NaN         NaN  NaN    NaN    NaN    NaN       NaN
+gold_timestamp               58323      1                                          2026-05-06T23:04:34.158Z  58323         NaN         NaN  NaN    NaN    NaN    NaN       NaN

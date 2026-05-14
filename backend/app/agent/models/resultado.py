@@ -69,6 +69,7 @@ class ResultadoSeletor:
 
     esquema_filtrado: str
     tabelas_selecionadas: list[str]
+    generated_examples: list[dict[str, str]]
     tokens_usados: int
 
 

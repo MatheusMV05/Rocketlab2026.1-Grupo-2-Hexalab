@@ -30,6 +30,7 @@ Regras Estritas de SQL:
 1. Retorne um SQL válido e pronto para execução.
 2. Use APENAS tabelas e colunas presentes no esquema fornecido. NUNCA invente nomes.
 3. Não use formatação markdown ou crases (backticks) dentro da tag `<sql>`.
+4. PRIORIZE O USO DE TABELAS MARTS NO SQL, elas geram dados importantes  que economizam tokens, prefira eles a qualquer outra tabela
 
 Formato de Saída Exigido:
 Retorne uma resposta estruturada compatível com o modelo PydanticAI do agente.
@@ -51,6 +52,21 @@ PERGUNTA: {{ ex.question }}
 </sql>
 {% endfor %}
 </examples>
+{% endif %}
+
+{% if generated_examples %}
+<generated_examples>
+Exemplos SQL gerados automaticamente a partir do esquema (úteis para entender tipos/valores de variáveis):
+
+{% for ge in generated_examples %}
+TABELA: {{ ge.table }}
+-- {{ ge.description }}
+<sql>
+{{ ge.example_sql }}
+</sql>
+
+{% endfor %}
+</generated_examples>
 {% endif %}
 
 <schema>

@@ -65,6 +65,6 @@ class Config:
 
     api_key: str = field(default_factory=_ler_chave_api_mistral)
     model: str = field(default_factory=_ler_modelo_mistral)
-    max_tokens: int = 1024
+    max_tokens: int = 99999
     max_retries: int = 3
     few_shot_path: str = "few_shots/exemplos.yaml"

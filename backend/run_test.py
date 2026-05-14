@@ -1,3 +1,12 @@
+"""
+ESSE CODIGO É EXPLICITAMENTE DE TESTE, NÃO DEVE MANTER AQUI E DEVE SER DELETADO APOS O FRONT ESTAR FUNCIONANDO INTEGRADO AO BACKEND
+APENAS SERVE DE GUIA PARA SILVIO ENTENDER O FLUXO DAS CHAMADAS DOS ROUTERS
+"""
+
+
+
+
+
 import os
 import sys
 from pathlib import Path
@@ -42,7 +51,7 @@ def run_com_debug():
 
     # Inicializa as configurações
     config = Config()
-    pergunta = "Qual foi o top 5 melhor produto no último trimestre"
+    pergunta = "Liste os 10 clientes VIP com receita lifetime > 1000 que estão há mais de 90 dias sem comprar."
 
     print("\n" + "="*70)
     print(f"❓ PERGUNTA: {pergunta}")
@@ -248,7 +257,7 @@ def run():
     print("🤖 Instanciando Orquestrador...")
     orquestrador = Orquestrador(db_path=db_path, config=config)
 
-    pergunta = "Qual foi o total de vendas por produto no último trimestre"
+    pergunta = "Quais os 5 produtos com maior receita no último trimestre?"
 
     print("\n" + "="*70)
     print(f"❓ PERGUNTA: {pergunta}")

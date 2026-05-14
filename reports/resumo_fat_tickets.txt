@@ -1,0 +1,45 @@
+TABELA: fat_tickets
+Linhas: 34697 | Colunas: 15
+
+Colunas e tipos:
+sk_ticket                 object
+sk_cliente                object
+sk_pedido                 object
+sk_data_abertura           int64
+sk_data_resolucao          int64
+id_ticket                 object
+id_cliente                object
+id_pedido                 object
+tipo_problema             object
+agente_suporte            object
+sla_status                object
+fl_resolvido               int64
+tempo_resolucao_horas    float64
+nota_avaliacao           float64
+gold_timestamp            object
+
+Amostra das primeiras linhas:
+                                                       sk_ticket                                                       sk_cliente                                                        sk_pedido  sk_data_abertura  sk_data_resolucao                            id_ticket                           id_cliente                            id_pedido tipo_problema  agente_suporte   sla_status  fl_resolvido  tempo_resolucao_horas  nota_avaliacao           gold_timestamp
+22e58ecc7f68fab98a250339a88281554453813a85770e0327d14aa3abf85ecd afd549396cc0f368d354eed864f55d391de3318ce419c2ecb8a60d7dbb7e6c00 c736e9deb8bfaf344f4221ac8b924f94dcb35a15269231dc2b7340e46e6413f5          20230425           20230428 000186e5-158b-5d7b-ad0f-7bd30c19ec02 0e97703c-4037-4a95-ab75-067291f74dfc b3ec2b0e-1e31-4330-a013-ab9a4ab145a7     pagamento Bruno Rodrigues       alerta             1                   45.9             4.0 2026-05-06T23:03:34.532Z
+44e74919a0a2368824288404fe9e750d80ef360abba5840cfd09ba38cd64477e 358da88f96935543ed6eb9acc6e5c80eaad1a37e852cb52dfb9ae767797ba57d a55618338a1b33c6d99aef30ebc17236df3af16c70c63511afc1d1b017df6e8e          20250321           20250321 00024eaf-92d7-5639-80c4-46a76d30056a 93a51e8c-6429-468b-8984-1398fe2e451d f8ff164e-4f8e-45b0-b6b9-842b2043a897     pagamento Eduardo Cardoso violacao_sla             1                   78.0             5.0 2026-05-06T23:03:34.532Z
+23757d81f18233640503e0fb3e0cd7bb66f3a39f98ff5e6564a2d71b0dabdd8f 1d16266f62955ce99dffef85b0a3432040b65282a249fc9c0a3afc3ea494a6ca 1b07a8072cebc11b8c1e3a09e2b70dd33532937473b0c90a2e08d803e06e067e          20230823           20230824 00064821-22c1-5353-8377-59768e234140 ac596039-123b-43ca-84a8-591d55a3917b 56f8c8ae-7c46-4f86-8c1f-e46c1c0ec55f     pagamento Eduardo Cardoso       alerta             1                   49.2             2.0 2026-05-06T23:03:34.532Z
+0b3aebb80b0bd8f07ecfb0022c9c6583686ea0da1f2d9d7f83940286fdbbccd5 26d77c37aea89b7cd03dd297709cec1b7591cae793008496c6e2d44ec58135fd 85c28a0a041c22782b8e003576fc6ece245159990b11b392554594657e692e74          20260217           20260226 0006aded-d18d-5f61-84c0-bbef9a8d5218 96fe3698-7589-4e72-88be-37f142fc2814 6b3e9b63-968c-5639-95c9-92376d44c239       entrega   Mariana Costa       alerta             1                   32.0             3.0 2026-05-06T23:03:34.532Z
+7d3f926173fc48fd31de1680d8e77329bca484c13c12476bda75efdc0b058daa 2cd36d77e6c038af7225770be09e616686afcdb43fb83dfac5fc86ae51d3d72c fea3828c4c739afdaf9b09b9b6e29b37d583fa6c6ac2f9de34975fedf00c9124          20240905           20240905 0007e20a-e14a-58c4-be87-a515095bc9ba 6080acef-c731-495a-a114-da1c32e5df58 a57bfc37-1687-423a-b360-eb86c7f2578f     reembolso Bruno Rodrigues       alerta             1                   65.5             2.0 2026-05-06T23:03:34.532Z
+
+Describe completo:
+                         count unique                                                               top   freq             mean            std         min         25%         50%         75%         max
+sk_ticket                34697  34697  22e58ecc7f68fab98a250339a88281554453813a85770e0327d14aa3abf85ecd      1              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+sk_cliente               34697  22806  cc759b309ab60adc866a4d78a7ece207c88154a83706eee05b4e5d4b1b4cf3ce      8              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+sk_pedido                34697  30508  76260c26d08d9a0083bf73a8940e1b67f5198fbcc491f382fcf609466f981007      5              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+sk_data_abertura       34697.0    NaN                                                               NaN    NaN  20247795.767242     9665.84249  20230101.0  20240707.0  20250628.0  20251210.0  20260331.0
+sk_data_resolucao      34697.0    NaN                                                               NaN    NaN  19038748.841802  4798053.96258        -1.0  20240506.0  20250517.0  20251127.0  20260410.0
+id_ticket                34697  34697                              000186e5-158b-5d7b-ad0f-7bd30c19ec02      1              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+id_cliente               34697  22806                              983f2991-dad5-4ef7-84ad-c0b44a90ba96      8              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+id_pedido                34697  30508                              5923e659-de2a-4abe-a450-89f911e36219      5              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+tipo_problema            34697      6                                                           entrega   9542              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+agente_suporte           34697     20                                              Carlos Eduardo Silva   6143              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+sla_status               34697      4                                                            alerta  15554              NaN            NaN         NaN         NaN         NaN         NaN         NaN
+fl_resolvido           34697.0    NaN                                                               NaN    NaN         0.940283       0.236965         0.0         1.0         1.0         1.0         1.0
+tempo_resolucao_horas  32625.0    NaN                                                               NaN    NaN        65.435746      52.713382         1.6        28.0        49.6        86.0       240.0
+nota_avaliacao         32625.0    NaN                                                               NaN    NaN         3.489165       1.246334         1.0         3.0         4.0         4.0         5.0
+gold_timestamp           34697      1                                          2026-05-06T23:03:34.532Z  34697              NaN            NaN         NaN         NaN         NaN         NaN         NaN

@@ -1,0 +1,63 @@
+TABELA: fat_clickstream
+Linhas: 500000 | Colunas: 24
+
+Colunas e tipos:
+sk_evento                object
+sk_sessao                object
+sk_cliente               object
+sk_dispositivo           object
+sk_produto               object
+sk_data_evento            int64
+id_evento                object
+id_sessao                object
+id_cliente               object
+id_produto               object
+id_dispositivo           object
+tipo_evento              object
+etapa_funil              object
+canal                    object
+dispositivo              object
+origem_sessao            object
+status_tempo_pagina      object
+fl_engajamento_alto       int64
+fl_adicao_carrinho        int64
+fl_compra                 int64
+fl_abandono_carrinho      int64
+data_evento              object
+tempo_pagina_seg        float64
+gold_timestamp           object
+
+Amostra das primeiras linhas:
+                                                       sk_evento                                                        sk_sessao                                                       sk_cliente                                                   sk_dispositivo                                                       sk_produto  sk_data_evento                            id_evento   id_sessao                           id_cliente id_produto                       id_dispositivo tipo_evento    etapa_funil      canal dispositivo origem_sessao status_tempo_pagina  fl_engajamento_alto  fl_adicao_carrinho  fl_compra  fl_abandono_carrinho              data_evento  tempo_pagina_seg           gold_timestamp
+01b5fc1397a0643da55207640959595aa74f8b353dc36f9fac9ea1d6a8315c22 23c25c3ff29f313a9cb7c50a88c94815dde3821966de22146aca566822d6bb54 f0a6df4529abe67bc4bdd19ddcf11d74c5b3e019ec971ccfb65f4a76394b9aa1 e783453600184a410db95ba254240abf2139688fbb56d77cd9e1e146a4a623dc                                                               -1        20230114 000018f7-e26f-4a90-b68b-59e21f598917 sess-023070 7d7e8650-175e-4ef3-a5ee-368412f7ba71       None de2ab406-cd40-4599-8e4a-9add47a8bf72       login        0_login        web     desktop        social      leitura_valida                    1                   0          0                     0 2023-01-14T22:33:46.000Z             563.0 2026-05-06T23:03:44.834Z
+ca83c9612594faf454533ceac983a9100a4fb24216ec52d53e0f56fa8cc09ec3 2ad83c2dd726fdb1fa19712ff7b57eb644041f395b6a5fcfc203bf96c92fa866 47e5dac2704de40b0d315bad1959382875d1354d88367caed18d89ef2a2cbc7d 40613c2ddc53d3a1ba4dec7bbbfab0b888792cdda445cc4bfbde6b4e47a75de9 4c955c119fb8a47cd2ff84dd3608d030d4a167b944810d5d89b99c69be596ea1        20230125 00004368-6ff8-466d-9678-9976f889be30 sess-050675 40ba0e24-6c8c-4022-8fef-0fd68d4ca9fd  PROD-0325 2d9eaafa-e976-4a4f-81db-5e50f51fa8e8   page_view 1_visualizacao        app      mobile        social      leitura_valida                    1                   0          0                     0 2023-01-25T18:24:31.000Z             225.0 2026-05-06T23:03:44.834Z
+2e84c0911d54ee80d14b56fb58719412877302d7f4c0858c179b829e7fe4fcee 3331cf638ccf759e6dd8b9df8b63b8dbf527e9db04698fbcdbc130b1f0b0a957                                                               -1 b92aa1c94ad5685b35ebde2e77e0fa461588ba3e3e66a4ff39969af030b3da01 568f0dc5bd650befde047a2118440dbc4aa6308ed184a27cde699974328fdd0d        20230105 000060d5-b132-4d9c-b65e-501f34176b05 sess-047676                                 None  PROD-0254 bf316ded-8150-4aaa-ae99-703a3b7592a4 add_to_cart     2_carrinho        web      tablet       organic       ocioso_capped                    0                   1          0                     0 2023-01-05T09:37:14.000Z            1800.0 2026-05-06T23:03:44.834Z
+d8da4d03272468a97f0fa8660f440da772a45aebda3b4bc76909fba675848f10 c9f440e98a4e0fedf93ead68d839217c72c74f5c278c5dd6f2f842d852b603f6                                                               -1 ced7b928c9d3dace9c68869fc63173ecf52463f4d99122b838ab3bee89bc6ff9 cfc2ca3f7de4f5372e7d2508e9366789f8dab6298d3031c7b3455b09c0331e39        20230127 0000ae30-981a-44aa-aa94-1a4efe48056e sess-022677                                 None  PROD-0094 665d4fdc-66a6-4d9f-a655-cf30b8143196   page_view 1_visualizacao        app      mobile   paid_search      leitura_valida                    1                   0          0                     0 2023-01-27T14:12:03.000Z              20.0 2026-05-06T23:03:44.834Z
+771def3e3c014b1a8c283971d6f5e3f9fbf3fc143b6a6e511e8e2dec1fa45da8 bb01cca4c5d2ed5c79d61ac7e0efd35fce899a0e0ddb2a5296a826f246f24b4d 1f53243fa0a5cd9e7f12f9e4769780a881e54150fbc41a956481a5a82e085b40 43665d031dca88cf17822393f7ff2a30ca7a4bc8c44ce7011559f5a4fb086b6d                                                               -1        20230125 0000bdd5-5c40-4a37-af6c-9a84538dfbc1 sess-001362 c9266dee-0b59-4152-9a26-39bade87d5d2       None d3fd32b1-0384-4396-bf8d-1006a82d7782      search 1_visualizacao mobile_web      mobile        direct      leitura_valida                    1                   0          0                     0 2023-01-25T08:47:10.000Z             109.0 2026-05-06T23:03:44.834Z
+
+Describe completo:
+                         count  unique                                                               top    freq            mean          std         min         25%         50%         75%         max
+sk_evento               500000  500000  01b5fc1397a0643da55207640959595aa74f8b353dc36f9fac9ea1d6a8315c22       1             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+sk_sessao               500000   83096  639e84d8a4d6dd0afd84a065a0c3967275f944cef7c034d639ce023d4d19e2e5      20             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+sk_cliente              500000   48160                                                                -1  150553             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+sk_dispositivo          500000  498949  ff82fa183bec2899af7473368411449bababfac5bcf6a3e4be02acdf16c6e134       5             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+sk_produto              500000     501                                                                -1  131058             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+sk_data_evento        500000.0     NaN                                                               NaN     NaN  20242074.72711  8709.755987  20230101.0  20231210.0  20240909.0  20250415.0  20260328.0
+id_evento               500000  500000                              000018f7-e26f-4a90-b68b-59e21f598917       1             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+id_sessao               500000   83096                                                       sess-037592      20             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+id_cliente              349447   48159                              408883bb-81ff-408b-9c22-5a33e7114f3a      31             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+id_produto              368942     500                                                         PROD-0266     817             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+id_dispositivo          500000  498949                                                invalid-device-682       5             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+tipo_evento             500000      10                                                         page_view  240608             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+etapa_funil             500000       7                                                    1_visualizacao  375360             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+canal                   500000       3                                                               web  309645             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+dispositivo             500000       3                                                           desktop  238079             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+origem_sessao           500000       5                                                           organic  199812             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+status_tempo_pagina     500000       5                                                    leitura_valida  440042             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+fl_engajamento_alto   500000.0     NaN                                                               NaN     NaN        0.880084     0.324864         0.0         1.0         1.0         1.0         1.0
+fl_adicao_carrinho    500000.0     NaN                                                               NaN     NaN         0.13106     0.337466         0.0         0.0         0.0         0.0         1.0
+fl_compra             500000.0     NaN                                                               NaN     NaN        0.010874      0.10371         0.0         0.0         0.0         0.0         1.0
+fl_abandono_carrinho  500000.0     NaN                                                               NaN     NaN        0.007148     0.084243         0.0         0.0         0.0         0.0         1.0
+data_evento             500000  498568                                          2024-11-10T13:33:48.000Z       3             NaN          NaN         NaN         NaN         NaN         NaN         NaN
+tempo_pagina_seg      469994.0     NaN                                                               NaN     NaN      340.200949    317.17639         0.0       143.0       303.0       461.0      1800.0
+gold_timestamp          500000       1                                          2026-05-06T23:03:44.834Z  500000             NaN          NaN         NaN         NaN         NaN         NaN         NaN

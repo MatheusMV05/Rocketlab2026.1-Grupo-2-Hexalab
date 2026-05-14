@@ -16,6 +16,7 @@ from app.agent.few_shots.fewshot_retriever import FewShotRetriever
 from app.agent.few_shots.modelos import ExemploFewShot
 from app.agent.models.resultado import ResultadoDecompositor, ResultadoDecompositorLLM
 from app.agent.config import Config
+from app.agent.hints.generator import generate_examples_from_schema
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,18 @@ class AgenteDecompositor(AgenteBase):
 		exemplos_brutos = self._buscar_exemplos_few_shot(pergunta)
 		exemplos_normalizados = self._normalizar_exemplos(exemplos_brutos)
 
+		# Gerar exemplos SQL automaticamente a partir do DDL filtrado
+		try:
+			generated_examples = generate_examples_from_schema(esquema_filtrado)
+		except Exception:
+			generated_examples = []
+
 		prompt_sistema = self._render(
 			"decompositor",
 			schema=esquema_filtrado,
 			question=pergunta,
 			examples=exemplos_normalizados,
+			generated_examples=generated_examples,
 		)
 
 		deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
