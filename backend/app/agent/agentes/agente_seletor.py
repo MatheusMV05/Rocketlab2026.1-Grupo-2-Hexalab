@@ -10,6 +10,7 @@ from pydantic_ai import Agent
 
 from app.agent.agentes.agente_base import AgenteBase
 from app.agent.contexto import ContextoAgente
+from app.agent.hints.generator import generate_examples_from_schema
 from app.agent.models.resultado import ResultadoSeletor, ResultadoSeletorLLM
 from app.agent.config import Config
 
@@ -145,16 +146,20 @@ class AgenteSeletor(AgenteBase):
         
         if not esquema_filtrado:
             logger.info("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
-            return ResultadoSeletor(
-                esquema_filtrado=esquema_completo,
-                tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
-                tokens_usados=tokens_usados,
-            )
+            esquema_filtrado = esquema_completo
+            tabelas_selecionadas = self._extrair_tabelas(esquema_completo)
+
+        # Gera exemplos apenas para as tabelas que foram selecionadas
+        try:
+            generated_examples = generate_examples_from_schema(esquema_filtrado)
+        except Exception:
+            generated_examples = []
 
         logger.info("AgenteSeletor: retornando esquema filtrado validado com tabelas=%s", tabelas_selecionadas)
         return ResultadoSeletor(
             esquema_filtrado=esquema_filtrado,
             tabelas_selecionadas=tabelas_selecionadas,
+            generated_examples=generated_examples,
             tokens_usados=tokens_usados,
         )
 

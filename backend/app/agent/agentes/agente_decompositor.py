@@ -37,6 +37,7 @@ class AgenteDecompositor(AgenteBase):
 		self,
 		esquema_filtrado: str,
 		pergunta: str,
+		generated_examples: list[dict[str, str]] | None = None,
 	) -> ResultadoDecompositor:
 		"""Executa o decomposer e retorna SQL + raciocínio com tipagem forte.
 
@@ -51,11 +52,12 @@ class AgenteDecompositor(AgenteBase):
 		exemplos_brutos = self._buscar_exemplos_few_shot(pergunta)
 		exemplos_normalizados = self._normalizar_exemplos(exemplos_brutos)
 
-		# Gerar exemplos SQL automaticamente a partir do DDL filtrado
-		try:
-			generated_examples = generate_examples_from_schema(esquema_filtrado)
-		except Exception:
-			generated_examples = []
+		 # Usa exemplos vindos do seletor; gera internamente só como fallback
+		if generated_examples is None:
+			try:
+				generated_examples = generate_examples_from_schema(esquema_filtrado)
+			except Exception:
+				generated_examples = []
 
 		prompt_sistema = self._render(
 			"decompositor",
@@ -85,15 +87,28 @@ class AgenteDecompositor(AgenteBase):
 
 			self._agent = agent
 
-		texto_llm, tokens_usados = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
-		raciocinio, sql_limpo = self._interpretar_saida_llm(texto_llm)
+			try:
+				texto_llm, tokens_usados = self._call_llm(
+					sistema=prompt_sistema,
+					usuario=pergunta,
+				)
+				raciocinio, sql_limpo = self._interpretar_saida_llm(texto_llm)
 
-		if not sql_limpo:
-			return ResultadoDecompositor(
-				sql="",
-				raciocinio="Raciocínio não informado pelo modelo.",
-				tokens_usados=tokens_usados,
-			)
+				if not sql_limpo:
+					return ResultadoDecompositor(
+						sql="",
+						raciocinio=raciocinio,
+						tokens_usados=tokens_usados,
+					)
+			except Exception as erro:
+				logger.warning(
+					"AgenteDecompositor.run: falha na saída do LLM (%s).", erro
+				)
+				return ResultadoDecompositor(
+					sql="",
+					raciocinio="Raciocínio não informado pelo modelo.",
+					tokens_usados=0,
+				)
 
 		if not validar_sql_seguro(sql_limpo):
 			logger.warning("AgenteDecompositor: SQL inválido ou inseguro detectado.")
@@ -103,6 +118,9 @@ class AgenteDecompositor(AgenteBase):
 				tokens_usados=0,
 			)
 
+		if not raciocinio:
+			raciocinio = "Raciocínio não informado pelo modelo."
+	
 		return ResultadoDecompositor(
 			sql=sql_limpo,
 			raciocinio=raciocinio,

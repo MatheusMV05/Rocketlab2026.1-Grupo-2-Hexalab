@@ -151,6 +151,7 @@ class Orquestrador:
         resultado_decompositor = self.decompositor.run(
             esquema_filtrado=resultado_seletor.esquema_filtrado,
             pergunta=pergunta,
+            generated_examples=resultado_seletor.generated_examples,
         )
         tokens_totais += resultado_decompositor.tokens_usados
 
