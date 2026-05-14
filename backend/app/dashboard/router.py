@@ -77,10 +77,22 @@ async def get_taxa_satisfacao(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/matriz-produtos", response_model=MatrizProdutosResponse)
-# Dados de volume vs satisfação por produto para o gráfico de dispersão
-async def get_matriz_produtos(db: AsyncSession = Depends(get_db)):
+# Seleção por cotas: retorna os N melhores de cada quadrante conforme critérios de ordenação
+async def get_matriz_produtos(
+    ano: str = "",
+    mes: str = "",
+    localidade: str = "",
+    limite_estrelas: int = 4,
+    limite_oportunidades: int = 4,
+    limite_alerta_vermelho: int = 4,
+    limite_ofensores: int = 4,
+    db: AsyncSession = Depends(get_db),
+):
     try:
-        return await service.get_matriz_produtos(db)
+        return await service.get_matriz_produtos(
+            db, ano, mes, localidade,
+            limite_estrelas, limite_oportunidades, limite_alerta_vermelho, limite_ofensores,
+        )
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao buscar matriz de produtos.")
 

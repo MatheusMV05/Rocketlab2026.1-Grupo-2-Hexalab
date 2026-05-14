@@ -45,8 +45,20 @@ async def get_taxa_satisfacao(db: AsyncSession) -> dict:
 
 
 # TODO: substituir pela query real —> depende dos módulos produtos e avaliações
-async def get_matriz_produtos(db: AsyncSession) -> list[dict]:
-    return mock_matriz_produtos()
+async def get_matriz_produtos(
+    db: AsyncSession,
+    ano: str = "",
+    mes: str = "",
+    localidade: str = "",
+    limite_estrelas: int = 4,
+    limite_oportunidades: int = 4,
+    limite_alerta_vermelho: int = 4,
+    limite_ofensores: int = 4,
+) -> dict:
+    return mock_matriz_produtos(
+        ano, mes, localidade,
+        limite_estrelas, limite_oportunidades, limite_alerta_vermelho, limite_ofensores,
+    )
 
 
 # TODO: substituir pela query real —> depende do módulo pedidos

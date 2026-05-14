@@ -53,13 +53,24 @@ export interface TaxaSatisfacaoDados {
 
 export interface MatrizProdutoItem {
   nome: string
+  categoria: string
   volume: number
   satisfacao: number
-  status: string
+  status: string      // "bom" | "neutro" | "ruim"
+  quadrante: string   // "estrelas" | "oportunidades" | "alerta_vermelho" | "ofensores"
+  bloco_anterior: string
 }
 
 export interface MatrizProdutosDados {
   items: MatrizProdutoItem[]
+  mediana_volume: number
+}
+
+export interface LimitesBloco {
+  limite_estrelas: number
+  limite_oportunidades: number
+  limite_alerta_vermelho: number
+  limite_ofensores: number
 }
 
 export interface EntregaItem {

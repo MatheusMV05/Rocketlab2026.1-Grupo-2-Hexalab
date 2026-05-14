@@ -9,6 +9,7 @@ import type {
   MatrizProdutosDados,
   EntregasDados,
   ReceitaGraficoDados,
+  LimitesBloco,
 } from '../types/dashboard'
 
 const api = axios.create({
@@ -34,8 +35,14 @@ export const dashboardService = {
   buscarTaxaSatisfacao: () =>
     api.get<TaxaSatisfacaoDados>('/dashboard/taxa-satisfacao').then((r) => r.data),
 
-  buscarMatrizProdutos: () =>
-    api.get<MatrizProdutosDados>('/dashboard/matriz-produtos').then((r) => r.data),
+  buscarMatrizProdutos: (params: {
+    ano?: string
+    mes?: string
+    localidade?: string
+  } & Partial<LimitesBloco> = {}) =>
+    api
+      .get<MatrizProdutosDados>('/dashboard/matriz-produtos', { params })
+      .then((r) => r.data),
 
   buscarReceitaGrafico: (params: { ano?: string; mes?: string; localidade?: string }) =>
     api

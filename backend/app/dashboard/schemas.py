@@ -56,13 +56,17 @@ class TaxaSatisfacaoResponse(BaseModel):
 
 class MatrizProdutoItem(BaseModel):
     nome: str
+    categoria: str
     volume: int
     satisfacao: float
-    status: str
+    status: str       # "bom" | "neutro" | "ruim"
+    quadrante: str    # "estrelas" | "oportunidades" | "alerta_vermelho" | "ofensores"
+    bloco_anterior: str  # quadrante no período anterior (mockado)
 
 
 class MatrizProdutosResponse(BaseModel):
     items: list[MatrizProdutoItem]
+    mediana_volume: float
 
 
 class ReceitaGraficoItem(BaseModel):

@@ -1,6 +1,5 @@
-// TODO: remover os mocks e conectar a matriz ao backend
-
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { Settings } from 'lucide-react'
 import {
   ScatterChart,
   Scatter,
@@ -14,7 +13,9 @@ import {
 } from 'recharts'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
 import { TooltipMatriz } from '../../molecules/dashboard/TooltipMatriz'
+import { PainelLimitesBloco } from '../../molecules/dashboard/PainelLimitesBloco'
 import { useMatrizProdutos } from '../../../hooks/useDashboard'
+import type { LimitesBloco, MatrizProdutoItem } from '../../../types/dashboard'
 
 const COR_PONTO: Record<string, string> = {
   bom: '#1a9a45',
@@ -22,16 +23,37 @@ const COR_PONTO: Record<string, string> = {
   ruim: '#c20000',
 }
 
-const CORTE_X = 1750
 const CORTE_Y = 3.0
-const DOM_X: [number, number] = [0, 3800]
 const DOM_Y: [number, number] = [1, 5]
+const LIMITES_PADRAO: LimitesBloco = {
+  limite_estrelas: 4,
+  limite_oportunidades: 4,
+  limite_alerta_vermelho: 4,
+  limite_ofensores: 4,
+}
 
-// TODO: remover mock de teste após validar agrupamento
-const MOCKS_TESTE: ProdutoBase[] = [
-  { nome: 'Arroz Integral Premium', volume: 600, satisfacao: 4.2, status: 'bom' },
-  { nome: 'Azeite Extra Virgem', volume: 600, satisfacao: 4.2, status: 'bom' },
-]
+const DOT_R = 5
+const PILL_H = 25
+const PILL_DOT_R = 5
+const PILL_DOT_CX = 10
+const PILL_PAD_LEFT = 22
+const PILL_PAD_RIGHT = 8
+const PILL_CHEVRON_W = 14
+const LABEL_FONT = 11
+const CHART_MARGIN = { top: 16, right: 24, left: 36, bottom: 20 }
+const LABEL_H = PILL_H
+const CHART_H = 400
+
+type ProdutoBase = MatrizProdutoItem
+
+interface ProdutoAgrupado extends ProdutoBase {
+  membros: ProdutoBase[]
+}
+
+interface ProdutoComLabel extends ProdutoAgrupado {
+  labelDx: number
+  labelDy: number
+}
 
 function BadgeQuadrante({
   viewBox,
@@ -57,9 +79,9 @@ function BadgeQuadrante({
   const boxHeight = FONT + PAD_Y * 2
   let bx = x
   let by = y
-  if (ancoragem === 'top-left')     { bx = x + 6;               by = y + 6 }
+  if (ancoragem === 'top-left')     { bx = x + 6;                    by = y + 6 }
   if (ancoragem === 'top-right')    { bx = x + width - boxWidth - 6; by = y + 6 }
-  if (ancoragem === 'bottom-left')  { bx = x + 6;               by = y + height - boxHeight - 6 }
+  if (ancoragem === 'bottom-left')  { bx = x + 6;                    by = y + height - boxHeight - 6 }
   if (ancoragem === 'bottom-right') { bx = x + width - boxWidth - 6; by = y + height - boxHeight - 6 }
   return (
     <g>
@@ -71,62 +93,53 @@ function BadgeQuadrante({
   )
 }
 
-// Constantes da pílula
-const DOT_R = 5
-const PILL_H = 25
-const PILL_DOT_R = 5
-const PILL_DOT_CX = 10
-const PILL_PAD_LEFT = 22
-const PILL_PAD_RIGHT = 8
-const PILL_CHEVRON_W = 14
-const LABEL_FONT = 11
-const CHART_MARGIN = { top: 16, right: 24, left: 36, bottom: 20 }
-const LABEL_H = PILL_H
-const CHART_H = 400
-
-type ProdutoBase = { nome: string; volume: number; satisfacao: number; status: string }
-
-interface ProdutoAgrupado extends ProdutoBase {
-  membros: ProdutoBase[]
-}
-
-interface ProdutoComLabel extends ProdutoAgrupado {
-  labelDx: number
-  labelDy: number
-}
-
-// Agrupa produtos com mesma posição (volume + satisfacao), exibindo o 1º alfabeticamente
 function agruparPorPosicao(items: ProdutoBase[]): ProdutoAgrupado[] {
   const map = new Map<string, ProdutoBase[]>()
   for (const item of items) {
-    const key = `${item.volume}|${item.satisfacao}`
+    const key = `${item.satisfacao}`
     if (!map.has(key)) map.set(key, [])
     map.get(key)!.push(item)
   }
-  return Array.from(map.values()).map(grupo => {
+  return Array.from(map.values()).map((grupo) => {
     const sorted = [...grupo].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
     return { ...sorted[0], membros: sorted }
   })
 }
 
-function calcLabelPositions(items: ProdutoAgrupado[], containerWidth: number): ProdutoComLabel[] {
+function calcLabelPositions(
+  items: ProdutoAgrupado[],
+  containerWidth: number,
+  domX: [number, number],
+): ProdutoComLabel[] {
   const plotW = containerWidth - CHART_MARGIN.left - CHART_MARGIN.right
   const plotH = CHART_H - CHART_MARGIN.top - CHART_MARGIN.bottom
-  const toPixX = (v: number) => CHART_MARGIN.left + ((v - DOM_X[0]) / (DOM_X[1] - DOM_X[0])) * plotW
-  const toPixY = (v: number) => CHART_MARGIN.top + ((DOM_Y[1] - v) / (DOM_Y[1] - DOM_Y[0])) * plotH
+  const toPixX = (v: number) =>
+    CHART_MARGIN.left + ((v - domX[0]) / (domX[1] - domX[0])) * plotW
+  const toPixY = (v: number) =>
+    CHART_MARGIN.top + ((DOM_Y[1] - v) / (DOM_Y[1] - DOM_Y[0])) * plotH
 
   type Box = { x: number; y: number; w: number; h: number }
   const placed: Box[] = []
   const gap = DOT_R + 5
 
   const overlaps = (b: Box) =>
-    placed.some(p => b.x < p.x + p.w + 2 && b.x + b.w + 2 > p.x && b.y < p.y + p.h + 2 && b.y + b.h + 2 > p.y)
+    placed.some(
+      (p) =>
+        b.x < p.x + p.w + 2 &&
+        b.x + b.w + 2 > p.x &&
+        b.y < p.y + p.h + 2 &&
+        b.y + b.h + 2 > p.y,
+    )
 
-  return items.map(item => {
+  return items.map((item) => {
     const px = toPixX(item.volume)
     const py = toPixY(item.satisfacao)
     const isGrupo = item.membros.length > 1
-    const lw = item.nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT + (isGrupo ? PILL_CHEVRON_W : 0)
+    const lw =
+      item.nome.length * 6.5 +
+      PILL_PAD_LEFT +
+      PILL_PAD_RIGHT +
+      (isGrupo ? PILL_CHEVRON_W : 0)
 
     const BASE_DX = -PILL_DOT_CX
     const BASE_DY = -PILL_H / 2
@@ -143,13 +156,16 @@ function calcLabelPositions(items: ProdutoAgrupado[], containerWidth: number): P
 
     let dx = candidates[0][0]
     let dy = candidates[0][1]
-
     for (const [cdx, cdy] of candidates) {
       const box: Box = { x: px + cdx, y: py + cdy, w: lw, h: LABEL_H }
-      if (!overlaps(box)) { dx = cdx; dy = cdy; placed.push(box); break }
+      if (!overlaps(box)) {
+        dx = cdx
+        dy = cdy
+        placed.push(box)
+        break
+      }
     }
-
-    if (!placed.some(p => p.x === px + dx && p.y === py + dy)) {
+    if (!placed.some((p) => p.x === px + dx && p.y === py + dy)) {
       placed.push({ x: px + dx, y: py + dy, w: lw, h: LABEL_H })
     }
 
@@ -177,12 +193,15 @@ interface TooltipDrop {
 
 export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
   const [filtros, setFiltros] = useState(filtrosGlobais)
+  const [limites, setLimites] = useState<LimitesBloco>(LIMITES_PADRAO)
+  const [painelAberto, setPainelAberto] = useState(false)
   const [chartWidth, setChartWidth] = useState(1000)
   const [tooltipPill, setTooltipPill] = useState<TooltipPill | null>(null)
   const [grupoAberto, setGrupoAberto] = useState<GrupoAberto | null>(null)
   const [tooltipDrop, setTooltipDrop] = useState<TooltipDrop | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const chartAreaRef = useRef<HTMLDivElement>(null)
+  const painelRef = useRef<HTMLDivElement>(null)
 
   const clearPillHover = useCallback(() => setTooltipPill(null), [])
 
@@ -196,22 +215,56 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
     return () => obs.disconnect()
   }, [])
 
-  const { data, isLoading, isError } = useMatrizProdutos()
+  useEffect(() => {
+    if (!painelAberto) return
+    const handler = (e: MouseEvent) => {
+      if (painelRef.current && !painelRef.current.contains(e.target as Node)) {
+        setPainelAberto(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [painelAberto])
 
-  const top10 = useMemo(() => {
+  const { data, isLoading, isError } = useMatrizProdutos(filtros, limites)
+
+  const corteX = data?.mediana_volume ?? 1750
+
+  const domX = useMemo<[number, number]>(() => {
     const items = data?.items ?? []
-    const base = [...items].sort((a, b) => b.volume - a.volume).slice(0, 10)
-    return [...base, ...MOCKS_TESTE]
+    const maxVol = items.length > 0 ? Math.max(...items.map((i) => i.volume)) : 3800
+    return [0, Math.ceil(maxVol * 1.3)]
   }, [data])
 
   const produtos = useMemo(
-    () => calcLabelPositions(agruparPorPosicao(top10), chartWidth),
-    [top10, chartWidth]
+    () => calcLabelPositions(agruparPorPosicao(data?.items ?? []), chartWidth, domX),
+    [data, chartWidth, domX],
   )
 
   return (
     <div ref={containerRef} className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 flex flex-col">
-      <div className="absolute top-[7px] right-[75px]">
+      <div className="absolute top-[7px] right-[75px] flex items-center gap-2">
+        <div ref={painelRef} className="relative">
+          <button
+            onClick={() => setPainelAberto((v) => !v)}
+            className={`flex items-center justify-center w-[30px] h-[30px] rounded border transition-colors ${
+              painelAberto
+                ? 'border-[#1d5358] text-[#1d5358] bg-[#f0f7f7]'
+                : 'border-[#e0e0e0] text-[#666] hover:border-[#1d5358] hover:text-[#1d5358]'
+            }`}
+            title="Configurar produtos por quadrante"
+          >
+            <Settings size={14} />
+          </button>
+          {painelAberto && (
+            <div className="absolute right-0 top-full mt-1 z-50">
+              <PainelLimitesBloco
+                limites={limites}
+                onAplicar={(novos) => { setLimites(novos); setPainelAberto(false) }}
+              />
+            </div>
+          )}
+        </div>
         <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
       </div>
 
@@ -219,10 +272,6 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
         <h3 className="text-[18px] font-bold text-[#1d5358]">
           Matriz de Satisfação vs. Performance
         </h3>
-        <div className="hidden flex items-center gap-2 mt-1 bg-[#e0e0e0] rounded-[5px] px-2 py-1 text-[10px] text-[#343434] font-medium max-w-xl">
-          <span className="text-[10px]">✦</span>
-          <span />
-        </div>
       </div>
 
       <div ref={chartAreaRef} className="relative" style={{ height: 400 }}>
@@ -238,7 +287,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
             <ScatterChart margin={{ top: 16, right: 24, left: 0, bottom: 20 }} onMouseLeave={clearPillHover}>
               <CartesianGrid strokeDasharray="4 4" stroke="#e8e8e8" />
 
-              <XAxis type="number" dataKey="volume" name="Volume" domain={DOM_X}
+              <XAxis type="number" dataKey="volume" name="Volume" domain={domX}
                 tick={{ fontSize: 9, fill: '#343434' }} axisLine={false} tickLine={false}>
                 <Label value="Volume de vendas" position="insideBottom" offset={-14} fontSize={11} fill="#343434" />
               </XAxis>
@@ -248,24 +297,24 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
                 <Label value="Satisfação ★" angle={-90} position="insideLeft" offset={10} fontSize={11} fill="#343434" />
               </YAxis>
 
-              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={CORTE_Y} y2={DOM_Y[1]}
+              <ReferenceArea x1={domX[0]} x2={corteX} y1={CORTE_Y} y2={DOM_Y[1]}
                 fill="#FFF9C9" fillOpacity={0.6} stroke="none"
                 label={(props) => <BadgeQuadrante {...props} texto="OPORTUNIDADES" corTexto="#D97706" corFundo="#FFF9C9" ancoragem="top-left" />}
               />
-              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={CORTE_Y} y2={DOM_Y[1]}
+              <ReferenceArea x1={corteX} x2={domX[1]} y1={CORTE_Y} y2={DOM_Y[1]}
                 fill="#DCFCE7" fillOpacity={0.6} stroke="none"
                 label={(props) => <BadgeQuadrante {...props} texto="ESTRELAS" corTexto="#15803D" corFundo="#DCFCE7" ancoragem="top-right" />}
               />
-              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={DOM_Y[0]} y2={CORTE_Y}
+              <ReferenceArea x1={domX[0]} x2={corteX} y1={DOM_Y[0]} y2={CORTE_Y}
                 fill="#F3F4F6" fillOpacity={0.6} stroke="none"
                 label={(props) => <BadgeQuadrante {...props} texto="OFENSORES" corTexto="#4B5563" corFundo="#F3F4F6" ancoragem="bottom-left" />}
               />
-              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={DOM_Y[0]} y2={CORTE_Y}
+              <ReferenceArea x1={corteX} x2={domX[1]} y1={DOM_Y[0]} y2={CORTE_Y}
                 fill="#FEE2E2" fillOpacity={0.6} stroke="none"
                 label={(props) => <BadgeQuadrante {...props} texto="ALERTA VERMELHO" corTexto="#B91C1C" corFundo="#FEE2E2" ancoragem="bottom-right" />}
               />
 
-              <ReferenceLine x={CORTE_X} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
+              <ReferenceLine x={corteX} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
               <ReferenceLine y={CORTE_Y} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
 
               <Scatter
@@ -287,8 +336,10 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
                       onClick={() => {
                         if (!isGrupo) return
                         setTooltipPill(null)
-                        setGrupoAberto(prev =>
-                          prev?.key === grupoKey ? null : { key: grupoKey, cx, cy, ldx, ldy, lw, membros: payload.membros }
+                        setGrupoAberto((prev) =>
+                          prev?.key === grupoKey
+                            ? null
+                            : { key: grupoKey, cx, cy, ldx, ldy, lw, membros: payload.membros },
                         )
                       }}
                       onMouseEnter={() => {
@@ -297,16 +348,13 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
                       onMouseLeave={clearPillHover}
                       style={{ cursor: isGrupo ? 'pointer' : 'default' }}
                     >
-                      {/* pílula */}
                       <rect
                         x={cx + ldx} y={cy + ldy} width={lw} height={PILL_H}
                         fill={isAberto ? '#f0f0f0' : 'white'}
                         stroke={isAberto ? '#aaa' : '#d0d0d0'}
                         strokeWidth={1} rx={PILL_H / 2} ry={PILL_H / 2}
                       />
-                      {/* dot colorido */}
                       <circle cx={cx + ldx + PILL_DOT_CX} cy={cy + ldy + PILL_H / 2} r={PILL_DOT_R} fill={cor} />
-                      {/* nome */}
                       <text
                         x={cx + ldx + PILL_PAD_LEFT}
                         y={cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1}
@@ -315,7 +363,6 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
                       >
                         {nome}
                       </text>
-                      {/* chevron ▾ para grupos — posicionado logo após o nome */}
                       {isGrupo && (
                         <text
                           x={cx + ldx + PILL_PAD_LEFT + nome.length * 6.5 + 3}
@@ -334,7 +381,6 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
           </ResponsiveContainer>
         )}
 
-        {/* Tooltip da pílula simples */}
         {tooltipPill && (
           <div
             className="absolute pointer-events-none z-50"
@@ -346,13 +392,14 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
           >
             <TooltipMatriz
               nome={tooltipPill.produto.nome}
+              categoria={tooltipPill.produto.categoria}
               volume={tooltipPill.produto.volume}
               satisfacao={tooltipPill.produto.satisfacao}
+              bloco_anterior={tooltipPill.produto.bloco_anterior}
             />
           </div>
         )}
 
-        {/* Overlay para fechar dropdown ao clicar fora */}
         {grupoAberto && (
           <div
             className="fixed inset-0 z-40"
@@ -360,7 +407,6 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
           />
         )}
 
-        {/* Dropdown do grupo */}
         {grupoAberto && (
           <div
             className="absolute z-50 bg-white border border-[#e0e0e0] rounded-[5px] shadow-md py-1 min-w-[140px]"
@@ -368,13 +414,13 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
               left: grupoAberto.cx + grupoAberto.ldx,
               top: grupoAberto.cy + grupoAberto.ldy + PILL_H + 4,
             }}
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
-            {grupoAberto.membros.map(membro => (
+            {grupoAberto.membros.map((membro) => (
               <div
                 key={membro.nome}
                 className="px-3 py-1.5 text-[11px] text-[#343434] hover:bg-[#f5f5f5] cursor-default"
-                onMouseEnter={e => {
+                onMouseEnter={(e) => {
                   const itemRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                   const chartRect = chartAreaRef.current?.getBoundingClientRect()
                   if (!chartRect) return
@@ -392,7 +438,6 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
           </div>
         )}
 
-        {/* Tooltip do item do dropdown */}
         {tooltipDrop && (
           <div
             className="absolute pointer-events-none z-[60]"
@@ -404,8 +449,10 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
           >
             <TooltipMatriz
               nome={tooltipDrop.produto.nome}
+              categoria={tooltipDrop.produto.categoria}
               volume={tooltipDrop.produto.volume}
               satisfacao={tooltipDrop.produto.satisfacao}
+              bloco_anterior={tooltipDrop.produto.bloco_anterior}
             />
           </div>
         )}

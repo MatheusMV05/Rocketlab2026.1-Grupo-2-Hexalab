@@ -128,19 +128,134 @@ def mock_taxa_satisfacao() -> dict:
     }
 
 
+# ── Dados e lógica para mock_matriz_produtos ──────────────────────────────────
+
+_ESTADO_ABREV: dict[str, str] = {
+    "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM",
+    "Bahia": "BA", "Ceará": "CE", "Distrito Federal": "DF",
+    "Espírito Santo": "ES", "Goiás": "GO", "Maranhão": "MA",
+    "Mato Grosso": "MT", "Mato Grosso do Sul": "MS", "Minas Gerais": "MG",
+    "Pará": "PA", "Paraíba": "PB", "Paraná": "PR", "Pernambuco": "PE",
+    "Piauí": "PI", "Rio de Janeiro": "RJ", "Rio Grande do Norte": "RN",
+    "Rio Grande do Sul": "RS", "Rondônia": "RO", "Roraima": "RR",
+    "Santa Catarina": "SC", "São Paulo": "SP", "Sergipe": "SE",
+    "Tocantins": "TO",
+}
+
+_PERIODO_FATOR: dict[str, float] = {
+    "Janeiro": 0.80, "Fevereiro": 0.82, "Março": 0.90,
+    "Abril": 0.95, "Maio": 0.85, "Junho": 0.92,
+    "Julho": 0.96, "Agosto": 0.98, "Setembro": 1.00,
+    "Outubro": 1.05, "Novembro": 1.20, "Dezembro": 1.50,
+}
+
+_ANO_FATOR: dict[str, float] = {
+    "2022": 0.70, "2023": 0.82, "2024": 0.93, "2025": 1.00, "2026": 1.05,
+}
+
+_POOL_MATRIZ: list[dict] = [
+    # Estrelas — alto volume, alta satisfação
+    {"nome": "Perfume Premium", "categoria": "Beleza", "volume": 3400, "satisfacao": 4.3, "status": "bom", "bloco_anterior": "estrelas"},
+    {"nome": "Notebook UltraSlim Pro", "categoria": "Informática", "volume": 3100, "satisfacao": 4.5, "status": "bom", "bloco_anterior": "oportunidades"},
+    {"nome": "Smartphone Galaxy X20", "categoria": "Celulares", "volume": 2900, "satisfacao": 4.2, "status": "bom", "bloco_anterior": "estrelas"},
+    {"nome": "Tênis Runner Elite 360", "categoria": "Calçados", "volume": 2750, "satisfacao": 4.4, "status": "bom", "bloco_anterior": "alerta_vermelho"},
+    {"nome": "Cafeteira Expresso Deluxe", "categoria": "Eletrodomésticos", "volume": 2600, "satisfacao": 4.1, "status": "bom", "bloco_anterior": "estrelas"},
+    {"nome": "Fone Bluetooth ANC Pro", "categoria": "Áudio", "volume": 2450, "satisfacao": 4.6, "status": "bom", "bloco_anterior": "oportunidades"},
+    {"nome": 'Monitor Gamer 27" QHD', "categoria": "Informática", "volume": 2300, "satisfacao": 4.0, "status": "bom", "bloco_anterior": "estrelas"},
+    # Oportunidades — baixo volume, alta satisfação
+    {"nome": "Cadeira Gamer ErgoMax", "categoria": "Móveis", "volume": 650, "satisfacao": 4.8, "status": "bom", "bloco_anterior": "oportunidades"},
+    {"nome": "Aspirador Robô SmartClean", "categoria": "Eletrodomésticos", "volume": 600, "satisfacao": 4.8, "status": "bom", "bloco_anterior": "estrelas"},
+    {"nome": "Sofá Retrátil Premium", "categoria": "Móveis", "volume": 580, "satisfacao": 4.7, "status": "bom", "bloco_anterior": "estrelas"},
+    {"nome": "Kit Skincare Orgânico", "categoria": "Beleza", "volume": 720, "satisfacao": 4.6, "status": "bom", "bloco_anterior": "oportunidades"},
+    {"nome": "Bicicleta Aro 29 Pro", "categoria": "Esportes", "volume": 490, "satisfacao": 4.5, "status": "bom", "bloco_anterior": "ofensores"},
+    {"nome": "Mochila Executiva Carbon", "categoria": "Acessórios", "volume": 810, "satisfacao": 4.4, "status": "bom", "bloco_anterior": "oportunidades"},
+    {"nome": "Livro Gestão Avançada", "categoria": "Livros", "volume": 430, "satisfacao": 4.3, "status": "bom", "bloco_anterior": "oportunidades"},
+    {"nome": "Tapete Yoga Antiderrapante", "categoria": "Esportes", "volume": 560, "satisfacao": 4.2, "status": "bom", "bloco_anterior": "alerta_vermelho"},
+    # Alerta Vermelho — alto volume, baixa satisfação
+    {"nome": "Teclado Mecânico RGB", "categoria": "Informática", "volume": 2700, "satisfacao": 1.5, "status": "ruim", "bloco_anterior": "alerta_vermelho"},
+    {"nome": "Impressora Matricial Antiga", "categoria": "Informática", "volume": 2650, "satisfacao": 1.5, "status": "ruim", "bloco_anterior": "ofensores"},
+    {"nome": "Máquina Lavar Ultra", "categoria": "Eletrodomésticos", "volume": 2500, "satisfacao": 2.6, "status": "ruim", "bloco_anterior": "estrelas"},
+    {"nome": 'Smart TV 55" 4K', "categoria": "Eletrônicos", "volume": 2200, "satisfacao": 2.4, "status": "ruim", "bloco_anterior": "alerta_vermelho"},
+    {"nome": "Geladeira Frost Free 380L", "categoria": "Eletrodomésticos", "volume": 2050, "satisfacao": 2.8, "status": "ruim", "bloco_anterior": "alerta_vermelho"},
+    {"nome": "Celular Básico Entry", "categoria": "Celulares", "volume": 1950, "satisfacao": 2.2, "status": "ruim", "bloco_anterior": "ofensores"},
+    {"nome": 'Monitor 24" Básico', "categoria": "Informática", "volume": 1850, "satisfacao": 2.9, "status": "ruim", "bloco_anterior": "alerta_vermelho"},
+    # Ofensores — baixo volume, baixa satisfação
+    {"nome": "Capa Celular Genérica", "categoria": "Acessórios", "volume": 420, "satisfacao": 1.2, "status": "ruim", "bloco_anterior": "ofensores"},
+    {"nome": "Carregador Paralelo USB", "categoria": "Eletrônicos", "volume": 380, "satisfacao": 1.4, "status": "ruim", "bloco_anterior": "alerta_vermelho"},
+    {"nome": "Roteador Wi-Fi Antigo", "categoria": "Eletrônicos", "volume": 400, "satisfacao": 1.6, "status": "ruim", "bloco_anterior": "ofensores"},
+    {"nome": "Cabo HDMI Sem Marca", "categoria": "Eletrônicos", "volume": 350, "satisfacao": 1.8, "status": "ruim", "bloco_anterior": "ofensores"},
+    {"nome": "Mouse Sem Fio Básico", "categoria": "Informática", "volume": 520, "satisfacao": 2.0, "status": "ruim", "bloco_anterior": "oportunidades"},
+    {"nome": "Régua de Tomadas Frágil", "categoria": "Eletrônicos", "volume": 310, "satisfacao": 1.1, "status": "ruim", "bloco_anterior": "ofensores"},
+]
+
+
+def _calcular_mediana(valores: list[float]) -> float:
+    if not valores:
+        return 0.0
+    sorted_vals = sorted(valores)
+    n = len(sorted_vals)
+    mid = n // 2
+    if n % 2 == 0:
+        return (sorted_vals[mid - 1] + sorted_vals[mid]) / 2.0
+    return float(sorted_vals[mid])
+
+
 # TODO: substituir pela query real —> depende dos módulos produtos e avaliações
-def mock_matriz_produtos() -> list[dict]:
-    return [
-        {"nome": "Sofá Retrátil", "volume": 850, "satisfacao": 4.5, "status": "bom"},
-        {"nome": "Fone Bluetooth XYZ", "volume": 1050, "satisfacao": 4.4, "status": "bom"},
-        {"nome": "Bicicleta Aro 29", "volume": 1250, "satisfacao": 4.2, "status": "bom"},
-        {"nome": 'Monitor 24" Básico', "volume": 1100, "satisfacao": 3.0, "status": "neutro"},
-        {"nome": "Máquina Lavar Ultra", "volume": 1200, "satisfacao": 2.6, "status": "ruim"},
-        {"nome": "Roteador Wi-Fi Antigo", "volume": 400, "satisfacao": 2.3, "status": "ruim"},
-        {"nome": "Capa Celular Genérica", "volume": 420, "satisfacao": 2.0, "status": "ruim"},
-        {"nome": "Teclado Mecânico", "volume": 2700, "satisfacao": 1.5, "status": "ruim"},
-        {"nome": "Perfume Premium", "volume": 3400, "satisfacao": 4.3, "status": "bom"},
+def mock_matriz_produtos(
+    ano: str = "",
+    mes: str = "",
+    localidade: str = "",
+    limite_estrelas: int = 4,
+    limite_oportunidades: int = 4,
+    limite_alerta_vermelho: int = 4,
+    limite_ofensores: int = 4,
+) -> dict:
+    fator_ano = _ANO_FATOR.get(ano, 1.0) if ano else 1.0
+    fator_periodo = _PERIODO_FATOR.get(mes, 1.0) if mes else 1.0
+    estado_abrev = _ESTADO_ABREV.get(localidade, "") if localidade else ""
+    fator_localidade = _LOCALIDADE_FATOR.get(estado_abrev, 1.0) if estado_abrev else 1.0
+    fator_total = fator_ano * fator_periodo * fator_localidade
+
+    contexto = [
+        {**p, "volume": round(p["volume"] * fator_total)}
+        for p in _POOL_MATRIZ
     ]
+
+    volumes = [p["volume"] for p in contexto]
+    mediana = _calcular_mediana(volumes)
+
+    CORTE_Y = 3.0
+    blocos: dict[str, list[dict]] = {
+        "estrelas": [], "oportunidades": [], "alerta_vermelho": [], "ofensores": []
+    }
+    for p in contexto:
+        alto_volume = p["volume"] >= mediana
+        alta_sat = p["satisfacao"] > CORTE_Y
+        if alto_volume and alta_sat:
+            blocos["estrelas"].append(p)
+        elif not alto_volume and alta_sat:
+            blocos["oportunidades"].append(p)
+        elif alto_volume and not alta_sat:
+            blocos["alerta_vermelho"].append(p)
+        else:
+            blocos["ofensores"].append(p)
+
+    estrelas = sorted(blocos["estrelas"], key=lambda p: p["volume"], reverse=True)[:limite_estrelas]
+    oportunidades = sorted(blocos["oportunidades"], key=lambda p: (-p["satisfacao"], -p["volume"]))[:limite_oportunidades]
+    alerta_vermelho = sorted(blocos["alerta_vermelho"], key=lambda p: p["volume"], reverse=True)[:limite_alerta_vermelho]
+    ofensores = sorted(blocos["ofensores"], key=lambda p: (p["satisfacao"], p["volume"]))[:limite_ofensores]
+
+    result = []
+    for quadrante, produtos in [
+        ("estrelas", estrelas),
+        ("oportunidades", oportunidades),
+        ("alerta_vermelho", alerta_vermelho),
+        ("ofensores", ofensores),
+    ]:
+        for p in produtos:
+            result.append({**p, "quadrante": quadrante})
+
+    return {"items": result, "mediana_volume": mediana}
 
 
 # TODO: substituir pela query real —> depende do módulo pedidos

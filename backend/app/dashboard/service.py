@@ -87,10 +87,22 @@ async def get_taxa_satisfacao(db: AsyncSession) -> TaxaSatisfacaoResponse:
     return TaxaSatisfacaoResponse(**data)
 
 
-async def get_matriz_produtos(db: AsyncSession) -> MatrizProdutosResponse:
-    data = await repository.get_matriz_produtos(db)
-    items = [MatrizProdutoItem(**item) for item in data]
-    return MatrizProdutosResponse(items=items)
+async def get_matriz_produtos(
+    db: AsyncSession,
+    ano: str = "",
+    mes: str = "",
+    localidade: str = "",
+    limite_estrelas: int = 4,
+    limite_oportunidades: int = 4,
+    limite_alerta_vermelho: int = 4,
+    limite_ofensores: int = 4,
+) -> MatrizProdutosResponse:
+    data = await repository.get_matriz_produtos(
+        db, ano, mes, localidade,
+        limite_estrelas, limite_oportunidades, limite_alerta_vermelho, limite_ofensores,
+    )
+    items = [MatrizProdutoItem(**item) for item in data["items"]]
+    return MatrizProdutosResponse(items=items, mediana_volume=data["mediana_volume"])
 
 
 async def get_receita_grafico(

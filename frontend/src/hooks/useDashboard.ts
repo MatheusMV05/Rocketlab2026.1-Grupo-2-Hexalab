@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { dashboardService } from '../services/dashboardService'
 import type { FiltrosPeriodo } from '../components/molecules/FiltroPeriodo'
+import type { LimitesBloco } from '../types/dashboard'
 
 interface FiltrosEntregas {
   status?: string[]
@@ -50,10 +51,21 @@ export function useTaxaSatisfacao() {
   })
 }
 
-export function useMatrizProdutos() {
+export function useMatrizProdutos(filtros: FiltrosPeriodo, limites: LimitesBloco) {
   return useQuery({
-    queryKey: ['dashboard', 'matriz-produtos'],
-    queryFn: dashboardService.buscarMatrizProdutos,
+    queryKey: [
+      'dashboard', 'matriz-produtos',
+      filtros.ano, filtros.mes, filtros.localidade,
+      limites.limite_estrelas, limites.limite_oportunidades,
+      limites.limite_alerta_vermelho, limites.limite_ofensores,
+    ],
+    queryFn: () =>
+      dashboardService.buscarMatrizProdutos({
+        ano: filtros.ano || undefined,
+        mes: filtros.mes || undefined,
+        localidade: filtros.localidade || undefined,
+        ...limites,
+      }),
   })
 }
 
