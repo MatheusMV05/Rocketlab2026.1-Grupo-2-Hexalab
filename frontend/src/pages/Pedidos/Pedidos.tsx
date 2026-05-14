@@ -8,11 +8,19 @@ import { TabelaPedidosPremium } from '../../components/organisms/pedidos/TabelaP
 import { PainelFiltroAvancado } from '../../components/molecules/pedidos/PainelFiltroAvancado'
 import { FiltroTag } from '../../components/atoms/compartilhados/FiltroTag'
 import { Paginacao } from '../../components/molecules/compartilhados/Paginacao'
+import { SecaoAnaliseFluxo } from '../../components/organisms/pedidos/SecaoAnaliseFluxo'
+import { GavetaPedido } from '../../components/molecules/pedidos/GavetaPedido'
+import { ModalEdicaoLote } from '../../components/molecules/pedidos/ModalEdicaoLote'
 import { MESES_FILTRO } from '../../constants/opcoesFiltro'
+import type { PedidoItem } from '../../types/pedidos'
 
 export default function Pedidos() {
   const [pagina, setPagina] = useState(1)
   const [painelAberto, setPainelAberto] = useState(false)
+  const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoItem | null>(null)
+  const [gavetaAberta, setGavetaAberta] = useState(false)
+  const [selecionados, setSelecionados] = useState<string[]>([])
+  const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false)
   const [filtros, setFiltros] = useState({
     query: '',
     status: '',
@@ -114,7 +122,16 @@ export default function Pedidos() {
             />
             
             <div className="flex items-center gap-2">
-              <button className="p-2.5 bg-white border border-[#e0e0e0] rounded-[10px] text-[#898989] hover:text-[#1d5358] hover:border-[#1d5358] transition-colors shadow-sm">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => selecionados.length > 0 && setModalEdicaoAberto(true)}
+                disabled={selecionados.length === 0}
+                className={`p-2.5 rounded-[10px] transition-all shadow-sm border ${
+                  selecionados.length > 0
+                  ? 'bg-white border-[#1d5358] text-[#1d5358] hover:bg-[#f6fbfb]'
+                  : 'bg-gray-50 border-[#e0e0e0] text-gray-300 cursor-not-allowed'
+                }`}
+              >
                 <FileEdit size={18} />
               </button>
               <button 
@@ -175,6 +192,12 @@ export default function Pedidos() {
           pedidos={pedidos} 
           isLoading={isLoading} 
           isError={isError} 
+          selecionados={selecionados}
+          onSelecionadosChange={setSelecionados}
+          onRowClick={(p) => {
+            setPedidoSelecionado(p)
+            setGavetaAberta(true)
+          }}
         />
 
         {/* Pagination */}
@@ -184,39 +207,34 @@ export default function Pedidos() {
           onPaginaChange={setPagina} 
         />
 
-        {/* Analysis Sections (Simplified) */}
-        <div className="mt-8 p-6 bg-white border border-[#e0e0e0] rounded-[24px] shadow-sm">
-           <h3 className="text-[16px] font-bold text-[#1d5358] mb-1">Análise de Fluxo das etapas dos Pedidos</h3>
-           <span className="text-[12px] text-[#898989] mb-6 block">{totalResultados} pedidos no total</span>
-           
-           <div className="flex gap-4 overflow-x-auto pb-4">
-              {[
-                { step: 'Recebimento do pedido', status: 'Atraso', color: '#c20000' },
-                { step: 'Pagamento do pedido', status: 'Risco de atraso', color: '#e37405' },
-                { step: 'Preparo do pedido', status: 'Dentro do SLA', color: '#1a9a45' },
-                { step: 'Transporte de pedido', status: 'Dentro do SLA', color: '#1a9a45' },
-                { step: 'Entrega do pedido', status: 'Risco de atraso', color: '#e37405' },
-              ].map((flow, i) => (
-                <div key={i} className="min-w-[200px] flex-1 bg-white border border-[#f0f0f0] rounded-[16px] p-4 relative">
-                  <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase border`} style={{ color: flow.color, borderColor: flow.color, backgroundColor: `${flow.color}10` }}>
-                    {flow.status}
-                  </div>
-                  <div className="mt-4 flex flex-col gap-1">
-                    <span className="text-[11px] text-[#898989] uppercase font-bold">Etapa</span>
-                    <span className="text-[14px] font-bold text-[#343434] leading-tight">{flow.step}</span>
-                  </div>
-                  <div className="mt-4 flex flex-col gap-1">
-                    <span className="text-[20px] font-bold text-[#343434]">125 pedidos</span>
-                    <div className="flex items-center gap-1 text-[11px] text-[#898989]">
-                      <Clock size={12} />
-                      <span>22 Horas</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 h-6 w-full rounded-[4px]" style={{ backgroundColor: flow.color }}></div>
-                </div>
-              ))}
-           </div>
-        </div>
+        {/* Workflow Analysis Section */}
+        <SecaoAnaliseFluxo />
+
+        {/* Side Drawer for Editing */}
+        <GavetaPedido 
+          pedido={pedidoSelecionado}
+          isOpen={gavetaAberta}
+          onClose={() => setGavetaAberta(false)}
+          onUpdateStatus={(id, status) => {
+            // Aqui chamariamos o service de update
+            console.log('Update status:', id, status)
+            if (pedidoSelecionado) {
+              setPedidoSelecionado({ ...pedidoSelecionado, status })
+            }
+          }}
+        />
+
+        {/* Bulk Edit Modal */}
+        <ModalEdicaoLote 
+          isOpen={modalEdicaoAberto}
+          onClose={() => setModalEdicaoAberto(false)}
+          selectedCount={selecionados.length}
+          onConfirm={(data) => {
+            console.log('Bulk update data:', data, 'IDs:', selecionados)
+            // Aqui chamariamos o service de bulk update
+            setSelecionados([]) // Limpa seleção após sucesso
+          }}
+        />
       </div>
     </LayoutPrincipal>
   )

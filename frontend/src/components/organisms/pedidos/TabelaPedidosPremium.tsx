@@ -8,24 +8,33 @@ interface Props {
   pedidos: PedidoItem[]
   isLoading: boolean
   isError: boolean
+  onRowClick?: (pedido: PedidoItem) => void
+  selecionados: string[]
+  onSelecionadosChange: (ids: string[]) => void
 }
 
-export function TabelaPedidosPremium({ pedidos, isLoading, isError }: Props) {
-  const [selecionados, setSelecionados] = useState<string[]>([])
+export function TabelaPedidosPremium({ 
+  pedidos, 
+  isLoading, 
+  isError, 
+  onRowClick,
+  selecionados,
+  onSelecionadosChange
+}: Props) {
 
   const toggleTodos = () => {
     if (selecionados.length === pedidos.length) {
-      setSelecionados([])
+      onSelecionadosChange([])
     } else {
-      setSelecionados(pedidos.map(p => p.id))
+      onSelecionadosChange(pedidos.map(p => p.id))
     }
   }
 
   const toggleUm = (id: string) => {
     if (selecionados.includes(id)) {
-      setSelecionados(selecionados.filter(s => s !== id))
+      onSelecionadosChange(selecionados.filter(s => s !== id))
     } else {
-      setSelecionados([...selecionados, id])
+      onSelecionadosChange([...selecionados, id])
     }
   }
 
@@ -67,7 +76,11 @@ export function TabelaPedidosPremium({ pedidos, isLoading, isError }: Props) {
             </tr>
           )}
           {!isLoading && !isError && pedidos.map((pedido) => (
-            <tr key={pedido.id} className="hover:bg-[#fcfcfc] transition-colors group">
+            <tr 
+              key={pedido.id} 
+              className="hover:bg-[#fcfcfc] transition-colors group cursor-pointer"
+              onClick={() => onRowClick?.(pedido)}
+            >
               <td className="pl-6 py-4">
                 <Checkbox 
                   checked={selecionados.includes(pedido.id)}
