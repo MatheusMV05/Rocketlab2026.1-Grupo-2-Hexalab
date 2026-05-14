@@ -35,6 +35,7 @@ app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"]
 app.include_router(clientes_router)
 app.include_router(produtos_router)
 app.include_router(pedidos_router)
+app.include_router(tickets_router, prefix="/api")
 
 @app.get("/health", tags=["health"])
 async def health():
