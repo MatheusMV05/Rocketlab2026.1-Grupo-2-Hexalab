@@ -148,8 +148,8 @@ export default function ClientePerfil() {
             <div className="flex flex-col gap-1.5 items-center lg:items-start text-center lg:text-left mt-4 lg:mt-0">
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
                 <h1 className="text-[20px] font-bold text-[#111111] leading-none">{cliente.nome_completo}</h1>
-                <span className="px-2.5 py-1 bg-white text-[#1a9a45] rounded-full text-[11px] font-bold border border-[#1a9a45] rounded-full text-[11px] font-bold border border-[#1a9a45] leading-none whitespace-nowrap">
-                  {cliente.segmento_rfm}
+                <span className="text-[14px] text-[#343434] font-medium leading-none">
+                  {cliente.segmento_rfm?.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
                 </span>
                 {cliente.tickets_abertos > 0 && (
                   <span className="px-2.5 py-1 bg-white text-[#e67a00] rounded-full text-[11px] font-bold border border-[#e67a00] leading-none whitespace-nowrap">

@@ -483,10 +483,10 @@ export function TabelaClientes() {
                   <span className="text-[14px] text-[#343434] font-medium flex-[1.5] min-w-[150px]">{cliente.cidade} - {cliente.estado}</span>
                   <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[100px]">{cliente.data_cadastro}</span>
                   <span className="text-[14px] text-[#111111] font-semibold flex-1 min-w-[100px] uppercase">{cliente.origem}</span>
-                  <span className="text-[13px] font-bold flex-1 min-w-[100px]">
-                    <span className="px-2 py-1 bg-[#f6f7f9] rounded-[4px] text-[#1c5258]">
-                      {cliente.segmento_rfm}
-                    </span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[100px]">
+                    {cliente.segmento_rfm 
+                      ? cliente.segmento_rfm.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+                      : '-'}
                   </span>
                 </div>
                 {idx < clientes.length - 1 && <div className="border-t border-[#f0f0f0] mx-4" />}
