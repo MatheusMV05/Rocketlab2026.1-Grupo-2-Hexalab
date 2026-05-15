@@ -2,10 +2,41 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.clientes.schemas import ListaClientePaginada, ClientePerfil, PedidoAba, AvaliacaoAba, TicketAba, KpisClientes
+from app.clientes.schemas import (
+    ListaClientePaginada, ClientePerfil, PedidoAba, 
+    AvaliacaoAba, TicketAba, KpisClientes,
+    ClienteCreate, ClienteUpdate
+)
 from app.clientes.service import ClienteService
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
+
+@router.post("/", response_model=ClientePerfil, status_code=201, summary="Criar Novo Cliente")
+async def criar_cliente(dados: ClienteCreate, db: AsyncSession = Depends(get_db)):
+    """
+    Cria um novo cliente no banco de dados.
+    """
+    return await ClienteService.criar_cliente(db, dados)
+
+@router.patch("/{cliente_id}", response_model=ClientePerfil, summary="Atualizar Cliente")
+async def atualizar_cliente(cliente_id: str, dados: ClienteUpdate, db: AsyncSession = Depends(get_db)):
+    """
+    Atualiza os dados de um cliente existente.
+    """
+    cliente = await ClienteService.atualizar_cliente(db, cliente_id, dados)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    return cliente
+
+@router.delete("/{cliente_id}", summary="Deletar Cliente")
+async def deletar_cliente(cliente_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Remove um cliente do banco de dados.
+    """
+    sucesso = await ClienteService.deletar_cliente(db, cliente_id)
+    if not sucesso:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    return {"message": "Cliente deletado com sucesso"}
 
 @router.get("/", response_model=ListaClientePaginada, summary="Listagem e Busca de Clientes")
 async def listar_clientes(

@@ -67,3 +67,25 @@ class KpisClientes(BaseModel):
     media_receita: float
     taxa_satisfacao: float
     media_compra: float
+
+class ClienteCreate(BaseModel):
+    id_cliente: str
+    nome: str
+    sobrenome: str
+    email: Optional[str] = None
+    telefone: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    genero: Optional[str] = None
+    idade: Optional[int] = None
+    origem: Optional[str] = "Direto"
+
+class ClienteUpdate(BaseModel):
+    nome: Optional[str] = None
+    sobrenome: Optional[str] = None
+    email: Optional[str] = None
+    telefone: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    genero: Optional[str] = None
+    idade: Optional[int] = None

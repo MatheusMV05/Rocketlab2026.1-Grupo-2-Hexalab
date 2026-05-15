@@ -2,7 +2,8 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.clientes.schemas import (
     ClienteListagem, ClientePerfil, ListaClientePaginada, 
-    PedidoAba, AvaliacaoAba, TicketAba, KpisClientes
+    PedidoAba, AvaliacaoAba, TicketAba, KpisClientes,
+    ClienteCreate, ClienteUpdate
 )
 from app.clientes.repository import ClienteRepository
 
@@ -121,3 +122,19 @@ class ClienteService:
     @staticmethod
     async def obter_sugestoes_localizacao(db: AsyncSession, termo: str) -> List[str]:
         return await ClienteRepository.obter_sugestoes_localizacao(db, termo)
+
+    @staticmethod
+    async def criar_cliente(db: AsyncSession, dados: ClienteCreate) -> ClientePerfil:
+        cliente_mart = await ClienteRepository.criar_cliente(db, dados.model_dump())
+        return await ClienteService.obter_perfil_cliente(db, cliente_mart.id_cliente)
+
+    @staticmethod
+    async def atualizar_cliente(db: AsyncSession, cliente_id: str, dados: ClienteUpdate) -> Optional[ClientePerfil]:
+        cliente_mart = await ClienteRepository.atualizar_cliente(db, cliente_id, dados.model_dump(exclude_unset=True))
+        if cliente_mart:
+            return await ClienteService.obter_perfil_cliente(db, cliente_id)
+        return None
+
+    @staticmethod
+    async def deletar_cliente(db: AsyncSession, cliente_id: str) -> bool:
+        return await ClienteRepository.deletar_cliente(db, cliente_id)

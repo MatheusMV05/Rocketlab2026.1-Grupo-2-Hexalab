@@ -200,3 +200,99 @@ class ClienteRepository:
         result = await db.execute(stmt)
         rows = result.all()
         return [f"{row[0]} - {row[1]}" for row in rows if row[0] and row[1]]
+
+    @staticmethod
+    async def criar_cliente(db: AsyncSession, dados: Dict[str, Any]) -> ClienteMart:
+        import hashlib
+        from datetime import datetime
+        
+        id_cliente = dados["id_cliente"]
+        
+        # Verificar se já existe
+        check_stmt = select(ClienteMart).where(ClienteMart.id_cliente == id_cliente)
+        check_res = await db.execute(check_stmt)
+        if check_res.scalar_one_or_none():
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Cliente com este ID já existe.")
+
+        sk_cliente = hashlib.sha256(id_cliente.encode()).hexdigest()
+        
+        # Criar registro na Mart
+        novo_cliente_mart = ClienteMart(
+            id_cliente=id_cliente,
+            nome=dados["nome"],
+            sobrenome=dados["sobrenome"],
+            idade=dados.get("idade"),
+            genero=dados.get("genero"),
+            cidade=dados.get("cidade"),
+            estado=dados.get("estado"),
+            total_pedidos=0,
+            receita_lifetime_brl=0.0,
+            gold_timestamp=datetime.now().isoformat()
+        )
+        
+        # Criar registro na Dim
+        novo_cliente_dim = ClienteDim(
+            sk_cliente=sk_cliente,
+            id_cliente=id_cliente,
+            nome=dados["nome"],
+            sobrenome=dados["sobrenome"],
+            genero=dados.get("genero"),
+            idade=dados.get("idade"),
+            cidade=dados.get("cidade"),
+            estado=dados.get("estado"),
+            origem=dados.get("origem", "Direto"),
+            telefone=dados.get("telefone"),
+            data_cadastro=datetime.now().strftime("%Y-%m-%d"),
+            gold_timestamp=datetime.now().isoformat()
+        )
+        
+        db.add(novo_cliente_mart)
+        db.add(novo_cliente_dim)
+        await db.commit()
+        await db.refresh(novo_cliente_mart)
+        return novo_cliente_mart
+
+    @staticmethod
+    async def atualizar_cliente(db: AsyncSession, cliente_id: str, dados: Dict[str, Any]) -> Optional[ClienteMart]:
+        stmt_mart = select(ClienteMart).where(ClienteMart.id_cliente == cliente_id)
+        result_mart = await db.execute(stmt_mart)
+        cliente_mart = result_mart.scalar_one_or_none()
+        
+        stmt_dim = select(ClienteDim).where(ClienteDim.id_cliente == cliente_id)
+        result_dim = await db.execute(stmt_dim)
+        cliente_dim = result_dim.scalar_one_or_none()
+        
+        if not cliente_mart:
+            return None
+            
+        for key, value in dados.items():
+            if value is not None:
+                if hasattr(cliente_mart, key):
+                    setattr(cliente_mart, key, value)
+                if cliente_dim and hasattr(cliente_dim, key):
+                    setattr(cliente_dim, key, value)
+        
+        await db.commit()
+        await db.refresh(cliente_mart)
+        return cliente_mart
+
+    @staticmethod
+    async def deletar_cliente(db: AsyncSession, cliente_id: str) -> bool:
+        stmt_mart = select(ClienteMart).where(ClienteMart.id_cliente == cliente_id)
+        result_mart = await db.execute(stmt_mart)
+        cliente_mart = result_mart.scalar_one_or_none()
+        
+        stmt_dim = select(ClienteDim).where(ClienteDim.id_cliente == cliente_id)
+        result_dim = await db.execute(stmt_dim)
+        cliente_dim = result_dim.scalar_one_or_none()
+        
+        if not cliente_mart:
+            return False
+            
+        await db.delete(cliente_mart)
+        if cliente_dim:
+            await db.delete(cliente_dim)
+            
+        await db.commit()
+        return True
