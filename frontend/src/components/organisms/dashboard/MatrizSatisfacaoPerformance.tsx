@@ -62,25 +62,30 @@ interface ProdutoComLabel extends ProdutoAgrupado {
 
 function agruparPorProximidade(items: ProdutoBase[], limiar = NOTE_TOLERANCE): ProdutoAgrupado[] {
   if (items.length === 0) return []
-  // items já chegam ordenados pelo backend — o primeiro de cada grupo é o produto principal
-  const grupos: ProdutoBase[][] = []
-  let grupo: ProdutoBase[] = [items[0]]
-  let ancora = items[0].satisfacao
-  for (let i = 1; i < items.length; i++) {
-    if (Math.abs(items[i].satisfacao - ancora) <= limiar) {
-      grupo.push(items[i])
+  // Sort by satisfacao for proximity detection; track original index to restore backend-ordered principal
+  const comIdx = items.map((item, i) => ({ item, i }))
+  comIdx.sort((a, b) => a.item.satisfacao - b.item.satisfacao)
+
+  const grupos: { item: ProdutoBase; i: number }[][] = []
+  let grupo = [comIdx[0]]
+  let ancora = comIdx[0].item.satisfacao
+  for (let i = 1; i < comIdx.length; i++) {
+    if (Math.abs(comIdx[i].item.satisfacao - ancora) <= limiar) {
+      grupo.push(comIdx[i])
     } else {
       grupos.push(grupo)
-      grupo = [items[i]]
-      ancora = items[i].satisfacao
+      grupo = [comIdx[i]]
+      ancora = comIdx[i].item.satisfacao
     }
   }
   grupos.push(grupo)
+
   return grupos.map((g) => {
-    const principal = g[0]
-    const avgSat = g.reduce((s, p) => s + p.satisfacao, 0) / g.length
-    const avgVol = Math.round(g.reduce((s, p) => s + p.volume, 0) / g.length)
-    return { ...principal, satisfacao: avgSat, volume: avgVol, membros: g }
+    const members = g.map((x) => x.item)
+    const principal = [...g].sort((a, b) => a.i - b.i)[0].item
+    const avgSat = members.reduce((s, p) => s + p.satisfacao, 0) / members.length
+    const avgVol = Math.round(members.reduce((s, p) => s + p.volume, 0) / members.length)
+    return { ...principal, satisfacao: avgSat, volume: avgVol, membros: members }
   })
 }
 
@@ -92,6 +97,10 @@ function agruparTodos(items: ProdutoBase[]): ProdutoAgrupado[] {
     porQuadrante[item.quadrante]?.push(item)
   }
   return Object.values(porQuadrante).flatMap((grupo) => agruparPorProximidade(grupo))
+}
+
+function calcPillWidth(nome: string, isGrupo: boolean): number {
+  return nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT + (isGrupo ? PILL_CHEVRON_W : 0)
 }
 
 // ─── Posicionamento de labels ─────────────────────────────────────────────────
@@ -122,8 +131,7 @@ function calcLabelPositions(
     const px = toPixX(item.volume)
     const py = toPixY(item.satisfacao)
     const isGrupo = item.membros.length > 1
-    const lw =
-      item.nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT + (isGrupo ? PILL_CHEVRON_W : 0)
+    const lw = calcPillWidth(item.nome, isGrupo)
 
     const BASE_DX = -PILL_DOT_CX
     const BASE_DY = -PILL_H / 2
@@ -398,7 +406,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
                   const cor = COR_PONTO[payload.status] ?? '#b0b0b0'
                   const { nome, labelDx: ldx, labelDy: ldy } = payload
                   const isGrupo = payload.membros.length > 1
-                  const lw = nome.length * 6.5 + PILL_PAD_LEFT + PILL_PAD_RIGHT + (isGrupo ? PILL_CHEVRON_W : 0)
+                  const lw = calcPillWidth(nome, isGrupo)
                   const grupoKey = `${payload.volume}|${payload.satisfacao}|${payload.quadrante}`
                   const isAberto = grupoAberto?.key === grupoKey
 
