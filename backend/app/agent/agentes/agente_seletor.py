@@ -118,7 +118,7 @@ class AgenteSeletor(AgenteBase):
             self._garantir_event_loop()
 
             model = self._criar_modelo_mistral()
-            agent = Agent(model, deps_type=ContextoAgente, output_type=ResultadoSeletorLLM)
+            agent = Agent(model, deps_type=ContextoAgente)
 
             @agent.system_prompt
             def get_system_prompt(ctx) -> str:
@@ -126,13 +126,14 @@ class AgenteSeletor(AgenteBase):
 
             self._agent = agent
 
-        # Chama LLM (será mockado em testes ou executará agente real se houver api_key)
+        historico_curto = self._resumir_historico_para_selecao(message_history)
         chamada_llm = self._call_llm(
             sistema=prompt_sistema,
             usuario=pergunta,
-            message_history=message_history,
+            message_history=historico_curto,
         )
         texto_llm, tokens_usados, _ = self._desempacotar_call_llm(chamada_llm)
+        logger.info("AgenteSeletor: resposta bruta LLM preview=%r", texto_llm[:500])
         
         esquema_filtrado, tabelas_selecionadas = self._interpretar_saida_llm(
             texto_llm=texto_llm,
@@ -140,7 +141,7 @@ class AgenteSeletor(AgenteBase):
         )
 
         if not esquema_filtrado:
-            logger.info("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
+            logger.warning("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
             return ResultadoSeletor(
                 esquema_filtrado=esquema_completo,
                 tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
@@ -162,7 +163,13 @@ class AgenteSeletor(AgenteBase):
         texto_llm: str,
         blocos_originais: dict[str, str],
     ) -> tuple[str, list[str]]:
-        """Interpreta saída do seletor em JSON estruturado ou DDL puro."""
+        """Interpreta saída do seletor em JSON, DDL puro ou SQL útil.
+
+        O contrato ideal do seletor é retornar blocos `CREATE TABLE`. Se o LLM
+        responder por engano com um `SELECT`, aproveitamos as tabelas citadas no
+        SQL para retornar o DDL original correspondente, em vez de cair direto no
+        schema completo.
+        """
         texto_llm = (texto_llm or "").strip()
         if not texto_llm:
             return "", []
@@ -194,7 +201,33 @@ class AgenteSeletor(AgenteBase):
                     tabelas_selecionadas.append(tabela)
                     blocos_validados.append(blocos_originais[tabela])
 
+        if not blocos_validados:
+            for tabela in cls._extrair_tabelas_referenciadas_sql(texto_llm):
+                if tabela in blocos_originais and tabela not in tabelas_selecionadas:
+                    tabelas_selecionadas.append(tabela)
+                    blocos_validados.append(blocos_originais[tabela])
+
         return "\n\n".join(blocos_validados), tabelas_selecionadas
+
+    @staticmethod
+    def _extrair_tabelas_referenciadas_sql(texto: str) -> list[str]:
+        """Extrai tabelas citadas em `FROM`/`JOIN` de uma resposta SQL.
+
+        Usado apenas como recuperação quando o seletor gera uma consulta
+        `SELECT` válida no lugar do DDL esperado. A função não valida nem executa
+        SQL; ela só coleta identificadores para mapear de volta ao schema
+        original conhecido.
+        """
+        tabelas: list[str] = []
+        for match in re.finditer(
+            r"\b(?:FROM|JOIN)\s+[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)",
+            texto or "",
+            flags=re.IGNORECASE,
+        ):
+            tabela = match.group(1)
+            if tabela not in tabelas:
+                tabelas.append(tabela)
+        return tabelas
 
     @staticmethod
     def _extrair_nomes_colunas(bloco_tabela: str) -> list[str]:
@@ -238,6 +271,51 @@ class AgenteSeletor(AgenteBase):
             nome_tabela = correspondencia.group(2)
             blocos[nome_tabela] = bloco
         return blocos
+
+    @staticmethod
+    def _resumir_historico_para_selecao(
+        message_history: list[Any] | None,
+        max_messages: int = 10,
+        max_chars_por_mensagem: int = 500,
+    ) -> list[dict[str, str]] | None:
+        """Gera um histórico curto para o agente seletor.
+
+        O seletor precisa de contexto para perguntas de continuidade, como
+        "e no último mês?", mas receber o histórico completo pode contaminar a
+        escolha de tabelas. Esta função preserva apenas as últimas mensagens,
+        normaliza espaços e trunca cada conteúdo para manter a seleção focada no
+        schema e na pergunta atual.
+        """
+        if not message_history:
+            return None
+
+        mensagens = []
+        for item in message_history[-max_messages:]:
+            role, content = AgenteBase._extrair_content_message_history(item)
+            content = " ".join(content.split())
+            if not content:
+                continue
+            mensagens.append(
+                {
+                    "role": role,
+                    "content": content[:max_chars_por_mensagem],
+                }
+            )
+
+        if not mensagens:
+            return None
+
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "Resumo curto para continuidade: use apenas para resolver "
+                    "referencias como 'tambem', 'agora', 'ultimo mes', 'mesma regra'. "
+                    "A selecao de tabelas deve continuar obedecendo ao schema atual."
+                ),
+            },
+            *mensagens,
+        ]
 
     @staticmethod
     def _extrair_tabelas(esquema_ddl: str) -> list[str]:

@@ -39,7 +39,12 @@ class AgenteInterpretador(AgenteBase):
             self._garantir_event_loop()
 
             model = self._criar_modelo_mistral()
-            agent = Agent(model, deps_type=ContextoAgente, output_type=ResultadoInterpretadorLLM)
+            agent = Agent(
+                model,
+                deps_type=ContextoAgente,
+                output_type=ResultadoInterpretadorLLM,
+                capabilities=self._criar_capabilities_memoria(),
+            )
 
             @agent.system_prompt
             def get_system_prompt(ctx) -> str:
@@ -50,13 +55,13 @@ class AgenteInterpretador(AgenteBase):
         chamada_llm = (
             self._call_llm(
                 sistema=prompt_sistema,
-                usuario="Gere a resposta final para o usuario.",
+                usuario="Gere a resposta final para o usuario se baseando no system prompt.",
                 message_history=message_history,
             )
             if message_history
             else self._call_llm(
                 sistema=prompt_sistema,
-                usuario="Gere a resposta final para o usuario.",
+                usuario="Gere a resposta final para o usuario se baseando no system prompt.",
             )
         )
         texto_llm, tokens_usados, novo_historico = self._desempacotar_call_llm(chamada_llm)

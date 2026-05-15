@@ -11,7 +11,7 @@ from pydantic_ai import Agent
 from app.agent.Guardrail.guardrail import validar_sql_seguro
 from app.agent.agentes.agente_base import AgenteBase
 from app.agent.contexto import ContextoAgente
-from app.agent.few_shots.fewshot_retriever import FewShotRetriever
+from app.agent.few_shots.fewshot_retriever import get_cached_fewshot_retriever
 from app.agent.few_shots.modelos import ExemploFewShot
 from app.agent.models.resultado import ResultadoDecompositor, ResultadoDecompositorLLM
 from app.agent.config import Config
@@ -55,7 +55,7 @@ class AgenteDecompositor(AgenteBase):
 		exemplos_brutos = self._buscar_exemplos_few_shot(pergunta)
 		exemplos_normalizados = self._normalizar_exemplos(exemplos_brutos)
 
-		# Gera hints do schema e extrai valores reais apenas para colunas categoricas permitidas.
+		# Gera exemplos do schema e extrai valores reais apenas para colunas categoricas permitidas.
 		try:
 			generated_examples = generate_examples_from_schema(esquema_filtrado, db_path=db_path)
 		except Exception:
@@ -83,12 +83,7 @@ class AgenteDecompositor(AgenteBase):
 				model, 
 				deps_type=ContextoAgente, 
 				output_type=ResultadoDecompositorLLM,
-				# capabilities=[
-                #     ContextManagerCapability(
-                #         max_tokens=30_000, # Limite seguro de tokens para o contexto (pode e deve ser modificado conforme a necessidade do projeto)
-                #         compress_threshold=0.9  # Sumariza ao bater 90% da capacidade
-                #     )
-                # ]
+				capabilities=self._criar_capabilities_memoria(),
 			)
 
 			@agent.system_prompt
@@ -97,14 +92,10 @@ class AgenteDecompositor(AgenteBase):
 
 			self._agent = agent
 
-		chamada_llm = (
-			self._call_llm(
-				sistema=prompt_sistema,
-				usuario=pergunta,
-				message_history=message_history,
-			)
-			if message_history
-			else self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+		chamada_llm = self._call_llm(
+			sistema=prompt_sistema,
+			usuario=pergunta,
+			message_history=message_history,
 		)
 		texto_llm, tokens_usados, novo_historico = self._desempacotar_call_llm(chamada_llm)
 
@@ -119,11 +110,19 @@ class AgenteDecompositor(AgenteBase):
 			)
 
 		if not validar_sql_seguro(sql_limpo):
-			logger.warning("AgenteDecompositor: SQL inválido ou inseguro detectado.")
+			logger.warning(
+				"AgenteDecompositor: SQL inválido ou inseguro detectado e bloqueado: %s",
+				sql_limpo,
+			)
 			return ResultadoDecompositor(
-				sql=sql_limpo,
-				raciocinio="SQL gerado foi considerado inseguro ou inválido. Por favor, reformule a pergunta.",
-				tokens_usados=0,
+				sql="",
+				raciocinio=(
+					"SQL gerado foi considerado inseguro ou inválido e foi bloqueado "
+					"antes de seguir para refinamento."
+				),
+				tokens_usados=tokens_usados,
+				novo_historico=novo_historico,
+				sql_bloqueado=sql_limpo,
 			)
 
 		if not raciocinio:
@@ -217,7 +216,7 @@ class AgenteDecompositor(AgenteBase):
 			disponíveis ou houver erro na recuperação.
 		"""
 		try:
-			retriever = FewShotRetriever(path=self.config.few_shot_path)
+			retriever = get_cached_fewshot_retriever(path=self.config.few_shot_path)
 			exemplos = retriever.retrieve(pergunta, k=3)
 			if isinstance(exemplos, list):
 				return exemplos

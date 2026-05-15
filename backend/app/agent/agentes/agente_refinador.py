@@ -115,11 +115,12 @@ class AgenteRefinador(AgenteBase):
 
             try:
                 try:
+                    historico_limitado = self._limitar_message_history(message_history)
                     resultado = agent.run_sync(
                         "Corrija o SQL.",
                         deps=deps,
                         message_history=self._normalizar_message_history(
-                            message_history,
+                            historico_limitado,
                             sistema=prompt_sistema,
                         ),
                     )
@@ -131,7 +132,7 @@ class AgenteRefinador(AgenteBase):
                 total_tokens += self._extrair_tokens(resultado)
                 resposta_serializada = self._serializar_output(dados)
                 novo_historico = self._historico_serializavel(
-                    message_history,
+                    historico_limitado,
                     "Corrija o SQL.",
                     resposta_serializada,
                 )

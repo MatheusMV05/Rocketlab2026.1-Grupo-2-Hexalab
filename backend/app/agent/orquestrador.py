@@ -162,12 +162,14 @@ class Orquestrador:
             except Exception:
                 logger.exception("Erro ao carregar histórico da sessão %s", session_id)
 
+        historico_corrente = message_history
+
         # Seletor filtra as tabelas relevantes
         logger.info("Orquestrador: iniciando AgenteSeletor")
         resultado_seletor = self.seletor.run(
             esquema_completo=esquema_completo,
             pergunta=pergunta,
-            message_history=message_history,
+            message_history=historico_corrente,
         )
         tokens_totais += resultado_seletor.tokens_usados
 
@@ -177,12 +179,14 @@ class Orquestrador:
             esquema_filtrado=resultado_seletor.esquema_filtrado,
             pergunta=pergunta,
             db_path=self.db_path,
-            message_history=message_history,
+            message_history=historico_corrente,
         )
         tokens_totais += resultado_decompositor.tokens_usados
 
         # Captura o histórico processado pela capability de sumarização
         historico_atualizado = resultado_decompositor.novo_historico
+        if historico_atualizado:
+            historico_corrente = historico_atualizado
 
         # Persist the updated history back to the store (if present)
         if session_store is not None and session_id and historico_atualizado:
@@ -210,11 +214,12 @@ class Orquestrador:
             question=pergunta,
             filtered_schema=resultado_seletor.esquema_filtrado,
             db_path=self.db_path,
-            message_history=message_history,
+            message_history=historico_corrente,
         )
         tokens_totais += resultado_refinador.tokens_usados
         if resultado_refinador.novo_historico:
             historico_atualizado = resultado_refinador.novo_historico
+            historico_corrente = historico_atualizado
 
         if resultado_refinador.impossivel:
             salvar_historico(historico_atualizado)
@@ -257,12 +262,13 @@ class Orquestrador:
             colunas=colunas,
             dados=dados,
             erro=erro_execucao,
-            message_history=message_history,
+            message_history=historico_corrente,
         )
         tokens_totais += resultado_interpretador.tokens_usados
 
         if resultado_interpretador.novo_historico:
             historico_atualizado = resultado_interpretador.novo_historico
+            historico_corrente = historico_atualizado
 
         salvar_historico(historico_atualizado)
 
