@@ -16,7 +16,8 @@ class ClienteRepository:
         stmt = select(
             ClienteMart, 
             ClienteDim.origem, 
-            ClienteDim.data_cadastro
+            ClienteDim.data_cadastro,
+            ClienteDim.telefone
         ).join(
             ClienteDim, ClienteMart.id_cliente == ClienteDim.id_cliente
         )
@@ -26,6 +27,7 @@ class ClienteRepository:
             stmt = stmt.where(or_(
                 ClienteMart.nome.ilike(q),
                 ClienteMart.sobrenome.ilike(q),
+                (ClienteMart.nome + " " + ClienteMart.sobrenome).ilike(q),
                 ClienteMart.id_cliente.ilike(q)
             ))
 
@@ -54,6 +56,7 @@ class ClienteRepository:
             cliente_dict = row[0].__dict__.copy()
             cliente_dict["origem"] = row[1]
             cliente_dict["data_cadastro"] = row[2]
+            cliente_dict["telefone"] = row[3]
             # Limpa metadados do SQLAlchemy
             cliente_dict.pop('_sa_instance_state', None)
             clientes.append(cliente_dict)
@@ -68,7 +71,9 @@ class ClienteRepository:
             q = f"%{query}%"
             stmt = stmt.where(or_(
                 ClienteMart.nome.ilike(q),
-                ClienteMart.sobrenome.ilike(q)
+                ClienteMart.sobrenome.ilike(q),
+                (ClienteMart.nome + " " + ClienteMart.sobrenome).ilike(q),
+                ClienteMart.id_cliente.ilike(q)
             ))
             
         if estado:
@@ -93,7 +98,8 @@ class ClienteRepository:
         stmt = select(
             ClienteMart, 
             ClienteDim.origem, 
-            ClienteDim.data_cadastro
+            ClienteDim.data_cadastro,
+            ClienteDim.telefone
         ).join(
             ClienteDim, ClienteMart.id_cliente == ClienteDim.id_cliente
         ).where(ClienteMart.id_cliente == cliente_id)
@@ -105,6 +111,7 @@ class ClienteRepository:
             cliente_dict = row[0].__dict__.copy()
             cliente_dict["origem"] = row[1]
             cliente_dict["data_cadastro"] = row[2]
+            cliente_dict["telefone"] = row[3]
             cliente_dict.pop('_sa_instance_state', None)
             return cliente_dict
         return None

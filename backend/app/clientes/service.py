@@ -27,6 +27,7 @@ class ClienteService:
             itens.append(ClienteListagem(
                 id=c["id_cliente"],
                 nome_completo=f"{c.get('nome', '')} {c.get('sobrenome', '')}".strip(),
+                telefone=c.get("telefone") or "—",
                 cidade=c.get("cidade", "—"),
                 estado=c.get("estado", "—"),
                 total_gasto=c.get("receita_lifetime_brl", 0.0),
@@ -53,6 +54,8 @@ class ClienteService:
             return ClientePerfil(
                 id=cliente["id_cliente"],
                 nome_completo=f"{cliente.get('nome', '')} {cliente.get('sobrenome', '')}".strip(),
+                email=cliente.get("email", "—"),
+                telefone=cliente.get("telefone") or "—",
                 cidade=cliente.get("cidade", "—"),
                 estado=cliente.get("estado", "—"),
                 genero=cliente.get("genero", "—"),

@@ -4,6 +4,7 @@ from typing import List, Optional
 class ClienteListagem(BaseModel):
     id: str
     nome_completo: str
+    telefone: Optional[str] = "—"
     cidade: str
     estado: str
     total_gasto: float

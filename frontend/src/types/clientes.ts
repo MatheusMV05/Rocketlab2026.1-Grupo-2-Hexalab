@@ -1,6 +1,7 @@
 export interface ClienteListagem {
   id: string
   nome_completo: string
+  telefone: string
   cidade: string
   estado: string
   total_gasto: number

@@ -426,7 +426,7 @@ export function TabelaClientes() {
           </div>
         )}
         
-        <div className="bg-[#f6f7f9] rounded-[8px] flex items-center px-4 py-3 mx-1 shrink-0 sticky top-0 z-10 min-w-[1000px]">
+        <div className="bg-[#f6f7f9] rounded-[8px] flex items-center px-4 py-3 mx-1 shrink-0 sticky top-0 z-10 min-w-[1100px]">
           <div
             className="w-8 shrink-0 flex items-center justify-center cursor-pointer"
             onClick={toggleTodos}
@@ -439,15 +439,16 @@ export function TabelaClientes() {
               <Square size={18} strokeWidth={2} className="text-[#898989]" />
             )}
           </div>
-          <span className="text-[13px] font-semibold text-[#1c5258] w-[150px] shrink-0">ID</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">Nome</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">Localização</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] w-[120px] shrink-0">ID</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.2] min-w-[140px]">Nome</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[130px]">Telefone</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.2] min-w-[140px]">Localização</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Cadastro</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Origem</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Situação</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Source</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[120px]">Segmento</span>
         </div>
 
-        <div className="mt-2 flex flex-col pb-2 min-w-[1000px]">
+        <div className="mt-2 flex flex-col pb-2 min-w-[1100px]">
           {!isLoading && clientes.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-[#898989]">
               <Search size={48} strokeWidth={1} className="mb-4" />
@@ -478,12 +479,13 @@ export function TabelaClientes() {
                       <Square size={18} strokeWidth={2} className="text-[#4d4d4d]" />
                     )}
                   </div>
-                  <span className="text-[12px] text-[#898989] font-medium w-[150px] shrink-0 truncate pr-4" title={cliente.id}>{cliente.id}</span>
-                  <span className="text-[14px] text-[#111111] font-semibold flex-[1.5] min-w-[150px]">{cliente.nome_completo}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-[1.5] min-w-[150px]">{cliente.cidade} - {cliente.estado}</span>
+                  <span className="text-[12px] text-[#898989] font-medium w-[120px] shrink-0 truncate pr-4" title={cliente.id}>{cliente.id}</span>
+                  <span className="text-[14px] text-[#111111] font-semibold flex-[1.2] min-w-[140px]">{cliente.nome_completo}</span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[130px] whitespace-nowrap">{cliente.telefone}</span>
+                  <span className="text-[14px] text-[#343434] font-medium flex-[1.2] min-w-[140px]">{cliente.cidade} - {cliente.estado}</span>
                   <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[100px]">{cliente.data_cadastro}</span>
                   <span className="text-[14px] text-[#111111] font-semibold flex-1 min-w-[100px] uppercase">{cliente.origem}</span>
-                  <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[100px]">
+                  <span className="text-[14px] text-[#343434] font-medium flex-1 min-w-[120px]">
                     {cliente.segmento_rfm 
                       ? cliente.segmento_rfm.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
                       : '-'}

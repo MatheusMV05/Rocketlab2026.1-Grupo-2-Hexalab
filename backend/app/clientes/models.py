@@ -51,6 +51,7 @@ class ClienteDim(Base):
     dispositivos: Mapped[Optional[str]] = mapped_column(Text)
     qtd_dispositivos: Mapped[Optional[int]] = mapped_column(Integer)
     origem: Mapped[Optional[str]] = mapped_column(String)
+    telefone: Mapped[Optional[str]] = mapped_column(String)
     gold_timestamp: Mapped[Optional[str]] = mapped_column(String)
 
 class PedidoFato(Base):
