@@ -31,7 +31,13 @@ Regras Estritas de SQL:
 1. Retorne um SQL válido e pronto para execução.
 2. Use APENAS tabelas e colunas presentes no esquema fornecido. NUNCA invente nomes.
 3. Não use formatação markdown ou crases (backticks) dentro da tag `<sql>`.
-4. PRIORIZE O USO DE TABELAS MARTS NO SQL, elas geram dados importantes  que economizam tokens, prefira eles a qualquer outra tabela
+4. PRIORIZE O USO DE TABELAS MARTS, FATOS E DIMENSÕES NO SQL, elas geram dados importantes  que economizam tokens, prefira eles a qualquer outra tabela
+
+Estratégia de Tabelas (Híbrida):
+- **Marts (`mart_`):** Use como fonte primária para métricas e indicadores prontos (LTV, Scores, Totais acumulados).
+- **Dimensões (`dim_`):** Use obrigatoriamente para FILTROS (datas, categorias, regiões). Não tente extrair mês/ano de strings se a `dim_data` estiver disponível; faça o JOIN.
+- **Fatos (`fat_`):** Use quando a pergunta exigir o grão mais fino da transação (ex: "ver o comentário da avaliação X" ou "listar pedidos específicos") que não esteja na Mart.
+- **JOINs:** É encorajado cruzar Marts com Dimensões para obter filtros de negócio precisos.
 
 Formato de Saída Exigido:
 Retorne uma resposta estruturada compatível com o modelo PydanticAI do agente.
