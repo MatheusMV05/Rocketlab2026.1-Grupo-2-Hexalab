@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = Path(__file__).resolve().parents[1] / ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

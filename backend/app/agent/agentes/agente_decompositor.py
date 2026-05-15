@@ -1,19 +1,24 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from typing import Any
+
 from pydantic_ai.models.mistral import MistralModel
 from pydantic_ai import Agent
 
-from app.agent.Guardrail.guardrail import validar_sql_somente_leitura
+from app.agent.Guardrail.guardrail import validar_sql_seguro
 from app.agent.agentes.agente_base import AgenteBase
 from app.agent.contexto import ContextoAgente
 from app.agent.few_shots.fewshot_retriever import FewShotRetriever
 from app.agent.few_shots.modelos import ExemploFewShot
 from app.agent.models.resultado import ResultadoDecompositor, ResultadoDecompositorLLM
 from app.agent.config import Config
+
+# Import relacionado a memória 
+from pydantic_ai_summarization import ContextManagerCapability
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +39,7 @@ class AgenteDecompositor(AgenteBase):
 		self,
 		esquema_filtrado: str,
 		pergunta: str,
+		message_history: list[Any] | None = None,
 	) -> ResultadoDecompositor:
 		"""Executa o decomposer e retorna SQL + raciocínio com tipagem forte.
 
@@ -55,59 +61,86 @@ class AgenteDecompositor(AgenteBase):
 			examples=exemplos_normalizados,
 		)
 
-		if not self.config.api_key:
-			return ResultadoDecompositor(
-				sql="",
-				raciocinio="Raciocínio não informado pelo modelo.",
-				tokens_usados=0,
-			)
-
 		deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
+		raciocinio = ""
+		sql_limpo = ""
+		tokens_usados = 0
+		novo_historico = []
 
-		try:
-			asyncio.get_event_loop()
-		except RuntimeError:
-			asyncio.set_event_loop(asyncio.new_event_loop())
+		if self.config.api_key:
+			try:
+				asyncio.get_event_loop()
+			except RuntimeError:
+				asyncio.set_event_loop(asyncio.new_event_loop())
 
-		model = MistralModel(self.config.model, api_key=self.config.api_key)
-		agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoDecompositorLLM)
-		
-		@agent.system_prompt
-		def get_system_prompt(ctx) -> str:
-			return ctx.deps.sistema
-
-		try:
-			resultado = agent.run_sync(pergunta, deps=deps)
-			dados = resultado.data
-			uso = resultado.usage()
-			tokens_usados = uso.total_tokens if uso else 0
-			raciocinio = str(dados.reasoning).strip()
-			sql_limpo = self._sanitizar_sql(str(dados.sql))
-		except Exception as erro:
-			logger.warning(
-				"AgenteDecompositor.run: falha na saída estruturada do PydanticAI (%s).",
-				erro,
+			model = MistralModel(self.config.model, api_key=self.config.api_key)
+			agent = Agent(
+				model, 
+				deps_type=ContextoAgente, 
+				result_type=ResultadoDecompositorLLM,
+				capabilities=[
+                    ContextManagerCapability(
+                        max_tokens=30_000, # Limite seguro de tokens para o contexto (pode e deve ser modificado conforme a necessidade do projeto)
+                        compress_threshold=0.9  # Sumariza ao bater 90% da capacidade
+                    )
+                ]
 			)
+
+			@agent.system_prompt
+			def get_system_prompt(ctx) -> str:
+				return ctx.deps.sistema
+
+			self._agent = agent
+
+		texto_llm, tokens_usados, novo_historico = self._call_llm(
+            sistema=prompt_sistema, 
+            usuario=pergunta,
+            message_history=message_history 
+        )
+
+		raciocinio, sql_limpo = self._interpretar_saida_llm(texto_llm)
+
+		if not sql_limpo:
 			return ResultadoDecompositor(
 				sql="",
 				raciocinio="Raciocínio não informado pelo modelo.",
+				tokens_usados=tokens_usados,
+			)
+
+		if not validar_sql_seguro(sql_limpo):
+			logger.warning("AgenteDecompositor: SQL inválido ou inseguro detectado.")
+			return ResultadoDecompositor(
+				sql=sql_limpo,
+				raciocinio="SQL gerado foi considerado inseguro ou inválido. Por favor, reformule a pergunta.",
 				tokens_usados=0,
 			)
-
-		if not validar_sql_somente_leitura(sql_limpo):
-			logger.warning(
-				"AgenteDecompositor: SQL inválido ou inseguro detectado; retornando SQL vazio."
-			)
-			sql_limpo = ""
-
-		if not raciocinio:
-			raciocinio = "Raciocínio não informado pelo modelo."
 
 		return ResultadoDecompositor(
 			sql=sql_limpo,
 			raciocinio=raciocinio,
 			tokens_usados=tokens_usados,
+			novo_historico=novo_historico,
 		)
+
+	def _interpretar_saida_llm(self, texto_llm: str) -> tuple[str, str]:
+		texto_llm = (texto_llm or "").strip()
+		if not texto_llm:
+			return "", ""
+
+		try:
+			dados = ResultadoDecompositorLLM.model_validate_json(texto_llm)
+			return str(dados.reasoning).strip(), self._sanitizar_sql(str(dados.sql))
+		except Exception:
+			pass
+
+		if "sql" in texto_llm.lower():
+			try:
+				dados_dict = json.loads(texto_llm)
+				return str(dados_dict.get("reasoning", "")).strip(), self._sanitizar_sql(str(dados_dict.get("sql", "")))
+			except Exception:
+				pass
+
+		return "", self._sanitizar_sql(texto_llm)
 
 	@staticmethod
 	def _normalizar_exemplos(
@@ -153,7 +186,7 @@ class AgenteDecompositor(AgenteBase):
 			)
 		return normalizados
 
-	def _buscar_exemplos_few_shot(self, pergunta: str) -> list[dict[str, Any]]:
+	def _buscar_exemplos_few_shot(self, pergunta: str) -> list[ExemploFewShot]:
 		"""Recupera exemplos few-shot ranqueados por similaridade sintática.
 
 		Instancia um retriever para carregar exemplos do arquivo YAML configurado
@@ -170,7 +203,7 @@ class AgenteDecompositor(AgenteBase):
 			disponíveis ou houver erro na recuperação.
 		"""
 		try:
-			retriever = FewShotRetriever(caminho_exemplos=self.config.few_shot_path)
+			retriever = FewShotRetriever(path=self.config.few_shot_path)
 			exemplos = retriever.retrieve(pergunta, k=3)
 			if isinstance(exemplos, list):
 				return exemplos
@@ -201,4 +234,5 @@ class AgenteDecompositor(AgenteBase):
 		sql_limpo = re.sub(r"^```(?:sql)?\s*", "", sql_limpo, flags=re.IGNORECASE)
 		sql_limpo = re.sub(r"\s*```$", "", sql_limpo)
 		sql_limpo = re.sub(r"</?sql>", "", sql_limpo, flags=re.IGNORECASE)
+		sql_limpo = re.sub(r";\s*$", "", sql_limpo)
 		return sql_limpo.strip()

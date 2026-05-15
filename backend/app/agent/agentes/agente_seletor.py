@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 
 from pydantic_ai.models.mistral import MistralModel
-import asyncio
 from pydantic_ai import Agent
 
 from app.agent.agentes.agente_base import AgenteBase
@@ -110,76 +110,48 @@ class AgenteSeletor(AgenteBase):
         logger.debug("AgenteSeletor.run: prévia do prompt de sistema:\n%s", (prompt_sistema or "")[:2000])
 
         deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
+        
+        # Configura agent real apenas se houver API key
+        if self.config.api_key:
+            try:
+                asyncio.get_event_loop()
+            except RuntimeError:
+                asyncio.set_event_loop(asyncio.new_event_loop())
 
-        if not self.config.api_key:
-            logger.info("AgenteSeletor: cliente PydanticAI indisponível, usando fallback com esquema completo")
+            model = MistralModel(self.config.model, api_key=self.config.api_key)
+            agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoSeletorLLM)
+
+            @agent.system_prompt
+            def get_system_prompt(ctx) -> str:
+                return ctx.deps.sistema
+
+            self._agent = agent
+
+        # Chama LLM (será mockado em testes ou executará agente real se houver api_key)
+        texto_llm, tokens_usados, _ = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+        
+        esquema_filtrado = ""
+        tabelas_selecionadas: list[str] = []
+        
+        if texto_llm and _PADRAO_CREATE_TABLE.search(texto_llm):
+            tabelas_candidatas = self._extrair_tabelas(texto_llm)
+            blocos_validados: list[str] = []
+            for tabela in tabelas_candidatas:
+                if tabela in blocos_originais:
+                    blocos_validados.append(blocos_originais[tabela])
+                    tabelas_selecionadas.append(tabela)
+            if blocos_validados:
+                esquema_filtrado = "\n\n".join(blocos_validados)
+        
+        if not esquema_filtrado:
+            logger.info("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
             return ResultadoSeletor(
                 esquema_filtrado=esquema_completo,
                 tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
-                tokens_usados=0,
-            )
-        try:
-            asyncio.get_event_loop()
-        except RuntimeError:
-            asyncio.set_event_loop(asyncio.new_event_loop())
-
-        model = MistralModel(self.config.model, api_key=self.config.api_key)
-        agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoSeletorLLM)
-        
-        @agent.system_prompt
-        def get_system_prompt(ctx) -> str:
-            return ctx.deps.sistema
-
-        try:
-            resultado = agent.run_sync(pergunta, deps=deps)
-            dados = resultado.data  # Será do tipo ResultadoSeletorLLM
-            uso = resultado.usage()
-            tokens_usados = uso.total_tokens if uso else 0
-            
-            esquema_filtrado = "\n\n".join(dados.blocos_ddl)
-            logger.debug(
-                "AgenteSeletor.run: tokens_usados=%s; tabelas extraidas via Pydantic=%d",
-                tokens_usados,
-                len(dados.blocos_ddl),
-            )
-        except Exception as e:
-            logger.warning("AgenteSeletor.run: falha na extração estruturada do PydanticAI (%s). Fallback ativado.", e)
-            esquema_filtrado = esquema_completo
-            tokens_usados = 0
-
-        logger.debug("AgenteSeletor.run: prévia da saída concatenada:\n%s", (esquema_filtrado or "")[:2000])
-
-        if not _PADRAO_CREATE_TABLE.search(esquema_filtrado or ""):
-            logger.info("AgenteSeletor: saída do LLM não contém CREATE TABLE; usando fallback com esquema completo")
-            esquema_filtrado = esquema_completo
-            tabelas_selecionadas = self._extrair_tabelas(esquema_filtrado)
-            return ResultadoSeletor(
-                esquema_filtrado=esquema_filtrado,
-                tabelas_selecionadas=tabelas_selecionadas,
                 tokens_usados=tokens_usados,
             )
 
-        tabelas_candidatas = self._extrair_tabelas(esquema_filtrado)
-        logger.debug("AgenteSeletor: tabelas candidatas vindas do LLM=%s", tabelas_candidatas)
-
-        blocos_validados: list[str] = []
-        tabelas_validadas: list[str] = []
-        for tabela in tabelas_candidatas:
-            if tabela in blocos_originais:
-                blocos_validados.append(blocos_originais[tabela])
-                tabelas_validadas.append(tabela)
-
-        logger.debug("AgenteSeletor: tabelas validadas após conferência=%s", tabelas_validadas)
-
-        if not blocos_validados:
-            logger.info("AgenteSeletor: nenhum bloco CREATE TABLE validado; usando fallback com esquema completo")
-            esquema_filtrado = esquema_completo
-            tabelas_selecionadas = self._extrair_tabelas(esquema_completo)
-        else:
-            esquema_filtrado = "\n\n".join(blocos_validados)
-            tabelas_selecionadas = tabelas_validadas
-            logger.info("AgenteSeletor: retornando esquema filtrado validado com tabelas=%s", tabelas_selecionadas)
-
+        logger.info("AgenteSeletor: retornando esquema filtrado validado com tabelas=%s", tabelas_selecionadas)
         return ResultadoSeletor(
             esquema_filtrado=esquema_filtrado,
             tabelas_selecionadas=tabelas_selecionadas,
