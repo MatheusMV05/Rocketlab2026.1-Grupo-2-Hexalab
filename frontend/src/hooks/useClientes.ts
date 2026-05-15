@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientesService } from '../services/clientesService'
 
 export function useListaClientes(params: { query?: string; estado?: string; pagina?: number; tamanho?: number }) {
@@ -53,5 +53,17 @@ export function useLocalizacoes(termo: string) {
     queryFn: () => clientesService.buscarLocalizacoes(termo),
     enabled: termo.length >= 2,
     staleTime: 1000 * 60 * 5, // Cache de 5 minutos
+  })
+}
+
+export function useUpdateCliente() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dados }: { id: string; dados: any }) => 
+      clientesService.atualizar(id, dados),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['clientes', 'perfil', id] })
+      queryClient.invalidateQueries({ queryKey: ['clientes', 'lista'] })
+    },
   })
 }

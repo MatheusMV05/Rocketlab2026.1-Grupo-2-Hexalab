@@ -22,10 +22,11 @@ import {
   User,
   Loader2
 } from 'lucide-react'
-import { CIDADES_MOCK, ESTADOS_MAP } from '../../constants/cidades'
 import { DropdownOrganizarLista } from '../../components/molecules/clientes/DropdownOrganizarLista'
 import { ModalSucesso } from '../../components/molecules/compartilhados/ModalSucesso'
-import { usePerfilCliente, usePedidosCliente } from '../../hooks/useClientes'
+import { usePerfilCliente, usePedidosCliente, useLocalizacoes, useUpdateCliente } from '../../hooks/useClientes'
+
+const SOURCES = ['WEB', 'APP', 'REFERRAL']
 
 export default function ClientePerfil() {
   const { id } = useParams<{ id: string }>()
@@ -34,8 +35,9 @@ export default function ClientePerfil() {
   // Hooks de Dados Reais
   const { data: cliente, isLoading: loadingPerfil } = usePerfilCliente(id || '')
   const { data: pedidos = [], isLoading: loadingPedidos } = usePedidosCliente(id || '')
+  const updateCliente = useUpdateCliente()
 
-  // Modais (Mantidos para UI, mas agora sem lógica de persistência mock)
+  // Modais
   const [modalEditar, setModalEditar] = useState(false)
   const [edicao, setEdicao] = useState<any>(null)
   const [modalConfirmar, setModalConfirmar] = useState(false)
@@ -47,9 +49,23 @@ export default function ClientePerfil() {
   const [buscaEndereco, setBuscaEndereco] = useState('')
   const [selecionados, setSelecionados] = useState<string[]>([])
 
+  // Hook de Sugestões de Localização (Autocomplete Dinâmico)
+  const { data: sugestoesLocalizacao = [] } = useLocalizacoes(buscaEndereco)
+
   // Sincroniza estado de edição quando o cliente carrega
   useEffect(() => {
-    if (cliente) setEdicao({ ...cliente })
+    if (cliente) {
+      setEdicao({ 
+        nome: cliente.nome_completo.split(' ')[0],
+        sobrenome: cliente.nome_completo.split(' ').slice(1).join(' '),
+        email: cliente.email === '—' ? '' : cliente.email,
+        telefone: cliente.telefone === '—' ? '' : cliente.telefone,
+        localizacao: `${cliente.cidade} - ${cliente.estado}`,
+        origem: cliente.origem,
+        genero: cliente.genero,
+        idade: cliente.idade
+      })
+    }
   }, [cliente])
 
   if (loadingPerfil || !cliente) {
@@ -74,35 +90,43 @@ export default function ClientePerfil() {
     else setSelecionados(pedidos.map(p => p.id))
   }
 
-  function obterSugestoesLocalizacao(busca: string) {
-    if (!busca || busca.trim().length < 2) return []
-    const termo = busca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    let ufBuscada = ''
-    for (const [estado, sigla] of Object.entries(ESTADOS_MAP)) {
-      const estadoNorm = estado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      if (estadoNorm.includes(termo) || sigla.toLowerCase() === termo) {
-        ufBuscada = sigla
-        break
-      }
-    }
-    return CIDADES_MOCK.filter(cidade => {
-      const cidadeNorm = cidade.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      if (ufBuscada) return cidade.endsWith(ufBuscada)
-      return cidadeNorm.includes(termo)
-    }).slice(0, 5)
-  }
-
-  const sugestoesLocalizacao = obterSugestoesLocalizacao(buscaEndereco)
-
   function abrirConfirmacao() {
     setModalEditar(false)
     setModalConfirmar(true)
   }
 
-  function confirmarEdicao() {
-    setModalConfirmar(false)
-    setModalSucesso(true)
-    setTimeout(() => setModalSucesso(false), 3000)
+  async function confirmarEdicao() {
+    if (!id || !edicao) return
+
+    let cidade = cliente.cidade
+    let estado = cliente.estado
+
+    if (edicao.localizacao.includes(' - ')) {
+      const [c, s] = edicao.localizacao.split(' - ')
+      cidade = c.strip ? c.strip() : c.trim()
+      estado = s.strip ? s.strip() : s.trim()
+    }
+
+    const payload = {
+      nome: edicao.nome,
+      sobrenome: edicao.sobrenome,
+      email: edicao.email || null,
+      telefone: edicao.telefone || null,
+      cidade: cidade,
+      estado: estado,
+      genero: edicao.genero,
+      idade: parseInt(edicao.idade)
+    }
+
+    try {
+      await updateCliente.mutateAsync({ id, dados: payload })
+      setModalConfirmar(false)
+      setModalSucesso(true)
+      setTimeout(() => setModalSucesso(false), 3000)
+    } catch (error) {
+      console.error("Erro ao atualizar cliente:", error)
+      alert("Erro ao salvar alterações.")
+    }
   }
 
   function confirmarExportacao() {
@@ -127,7 +151,7 @@ export default function ClientePerfil() {
         <div className="bg-white rounded-[16px] shadow-[0px_8px_30px_0px_rgba(0,0,0,0.05)] p-6 md:p-8 flex flex-col lg:flex-row items-center gap-6 md:gap-8 relative">
           <div className="absolute top-4 right-4 md:top-6 md:right-6 flex gap-2">
             <button 
-              onClick={() => { setEdicao({...cliente}); setModalEditar(true) }}
+              onClick={() => setModalEditar(true)}
               className="w-[36px] h-[36px] rounded-[8px] flex items-center justify-center text-[#343434] hover:bg-[#f6f7f9] transition-colors"
             >
               <Edit2 size={18} strokeWidth={2} />
@@ -312,8 +336,194 @@ export default function ClientePerfil() {
           </div>
         </div>
 
+        {/* Modal de Edição */}
+        {modalEditar && edicao && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+            <div className="bg-[#fcfdfd] rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.15)] border border-[#e0e0e0] w-[640px] p-6 flex flex-col gap-5 relative max-h-[90vh] overflow-y-auto">
+              <button
+                onClick={() => setModalEditar(false)}
+                className="absolute top-5 right-5 text-[#898989] hover:text-[#111111] transition-colors"
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
+              
+              <h2 className="text-[15px] font-bold text-[#111111] text-center w-full pb-2">
+                Edição de Perfil do Cliente
+              </h2>
+
+              <div className="grid grid-cols-2 gap-4 px-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Nome</label>
+                  <input
+                    type="text"
+                    value={edicao.nome}
+                    onChange={(e) => setEdicao({ ...edicao, nome: e.target.value })}
+                    className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Sobrenome</label>
+                  <input
+                    type="text"
+                    value={edicao.sobrenome}
+                    onChange={(e) => setEdicao({ ...edicao, sobrenome: e.target.value })}
+                    className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-semibold text-[#b3b3b3]">E-mail</label>
+                  <input
+                    type="email"
+                    value={edicao.email}
+                    onChange={(e) => setEdicao({ ...edicao, email: e.target.value })}
+                    className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Telefone</label>
+                  <input
+                    type="text"
+                    value={edicao.telefone}
+                    onChange={(e) => setEdicao({ ...edicao, telefone: e.target.value })}
+                    className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Idade</label>
+                  <input
+                    type="number"
+                    value={edicao.idade}
+                    onChange={(e) => setEdicao({ ...edicao, idade: e.target.value })}
+                    className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Gênero</label>
+                  <select
+                    value={edicao.genero}
+                    onChange={(e) => setEdicao({ ...edicao, genero: e.target.value })}
+                    className="w-full h-[40px] px-3 border border-[#343434] rounded-[8px] text-[13px] text-[#111] font-medium bg-white focus:outline-none"
+                  >
+                    <option value="M">Masculino</option>
+                    <option value="F">Feminino</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+                <div className="col-span-2 flex flex-col gap-1.5">
+                  <label className="text-[12px] font-semibold text-[#b3b3b3]">Localização</label>
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#898989]" strokeWidth={1.5} />
+                    <input
+                      type="text"
+                      value={buscaEndereco}
+                      onChange={(e) => setBuscaEndereco(e.target.value)}
+                      placeholder="Buscar (ex: Recife ou Pernambuco)..."
+                      className="w-full h-[40px] pl-9 pr-3 border border-[#b3b3b3] rounded-[8px] text-[13px] text-[#343434] placeholder-[#898989] bg-white focus:outline-none"
+                    />
+                    {buscaEndereco.length >= 2 && sugestoesLocalizacao.length > 0 && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-[#fcfdfd] border border-[#e0e0e0] rounded-[8px] flex flex-col py-2 shadow-sm z-50">
+                        {sugestoesLocalizacao.map((sugestao: string) => (
+                          <button
+                            key={sugestao}
+                            onClick={() => {
+                              setEdicao({ ...edicao, localizacao: sugestao })
+                              setBuscaEndereco('')
+                            }}
+                            className="text-[13px] text-[#111] hover:bg-[#f6f7f9] px-4 py-2 text-left transition-colors"
+                          >
+                            {sugestao}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {edicao.localizacao && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 border border-[#343434] rounded-[8px] text-[12px] font-semibold text-[#111] bg-white">
+                        {edicao.localizacao}
+                        <button onClick={() => setEdicao({ ...edicao, localizacao: '' })} className="hover:text-red-500 transition-colors"><X size={14} /></button>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 mt-4 pr-2">
+                <button
+                  onClick={abrirConfirmacao}
+                  disabled={updateCliente.isPending}
+                  className="h-[36px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors flex items-center gap-2"
+                >
+                  {updateCliente.isPending && <Loader2 size={16} className="animate-spin" />}
+                  Aplicar
+                </button>
+                <button
+                  onClick={() => setModalEditar(false)}
+                  className="h-[36px] px-6 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Confirmar Alterações */}
+        {modalConfirmar && edicao && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f6f7f9]/80 backdrop-blur-[2px]">
+            <div className="bg-[#fcfdfd] rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-[#e0e0e0] w-[400px] p-8 flex flex-col items-center gap-6 relative">
+              <h2 className="text-[16px] font-semibold text-[#111111] text-center px-4 leading-relaxed">
+                Deseja confirmar as alterações no perfil de {cliente.nome_completo}?
+              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={confirmarEdicao}
+                  disabled={updateCliente.isPending}
+                  className="h-[38px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors flex items-center gap-2"
+                >
+                  {updateCliente.isPending && <Loader2 size={16} className="animate-spin" />}
+                  Confirmar
+                </button>
+                <button
+                  onClick={() => setModalConfirmar(false)}
+                  className="h-[38px] px-6 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal Sucesso */}
-        {modalSucesso && <ModalSucesso mensagem="Ação realizada com sucesso!" />}
+        {(modalSucesso || modalExportarSucesso) && (
+          <ModalSucesso mensagem={modalSucesso ? "Perfil atualizado com sucesso!" : "Lista exportada com sucesso!"} />
+        )}
+
+        {/* Modal Exportar */}
+        {modalExportar && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f6f7f9]/80 backdrop-blur-[2px]">
+            <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-[#e0e0e0] w-[320px] p-6 flex flex-col items-center gap-6 relative">
+              <h2 className="text-[16px] font-semibold text-[#111111] text-center px-4 leading-tight">
+                Deseja exportar as linhas selecionadas?
+              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={confirmarExportacao}
+                  className="h-[38px] px-5 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors"
+                >
+                  Confirmar
+                </button>
+                <button
+                  onClick={() => setModalExportar(false)}
+                  className="h-[38px] px-5 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </LayoutPrincipal>
   )

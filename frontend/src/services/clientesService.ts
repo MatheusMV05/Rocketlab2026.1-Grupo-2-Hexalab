@@ -33,4 +33,7 @@ export const clientesService = {
 
   buscarLocalizacoes: (q: string) =>
     api.get<string[]>('/clientes/localizacoes', { params: { q } }).then((r) => r.data),
+
+  atualizar: (id: string, dados: any) =>
+    api.patch<ClientePerfil>(`/clientes/${id}`, dados).then((r) => r.data),
 }
