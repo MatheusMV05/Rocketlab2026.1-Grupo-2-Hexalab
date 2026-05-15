@@ -2,6 +2,7 @@ from __future__ import annotations
  
 import asyncio
 import json
+import logging
 import os
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from abc import ABC, abstractmethod
@@ -17,6 +18,8 @@ from pydantic_ai.providers.mistral import MistralProvider
 
 from app.agent.config import Config
 from app.agent.contexto import ContextoAgente
+
+logger = logging.getLogger(__name__)
 
 
 class AgenteBase(ABC):
@@ -134,7 +137,7 @@ class AgenteBase(ABC):
  
         deps = ContextoAgente(config=self.config, sistema=sistema)
         try:
-            historico_pydantic = self._normalizar_message_history(message_history)
+            historico_pydantic = self._normalizar_message_history(message_history, sistema=sistema)
             if hasattr(self._agent, "run_sync"):
                 # Injeta message_history nativamente
                 try:
@@ -158,6 +161,7 @@ class AgenteBase(ABC):
             # 3. Captura o histórico de mensagens resultante (já com compressão automática se ativada)
             novo_historico = self._historico_serializavel(message_history, usuario, texto)
         except Exception as e:
+            logger.exception("Erro em _call_llm")
             if os.getenv("AGENT_DEBUG_TRACEBACK") == "1":
                 import traceback
                 traceback.print_exc()
@@ -169,7 +173,10 @@ class AgenteBase(ABC):
         return texto, tokens_usados, novo_historico
 
     @staticmethod
-    def _normalizar_message_history(message_history: list[Any] | None) -> list[Any] | None:
+    def _normalizar_message_history(
+        message_history: list[Any] | None,
+        sistema: str | None = None,
+    ) -> list[Any] | None:
         """Converte historico simples role/content para ModelMessage do PydanticAI."""
         if not message_history:
             return None
@@ -207,6 +214,20 @@ class AgenteBase(ABC):
                         parts=[pai_messages.UserPromptPart(content=content)]
                     )
                 )
+
+        if mensagens and (sistema or "").strip():
+            tem_prompt_sistema = any(
+                isinstance(parte, pai_messages.SystemPromptPart)
+                for mensagem in mensagens
+                for parte in getattr(mensagem, "parts", [])
+            )
+            if not tem_prompt_sistema:
+                parte_sistema = pai_messages.SystemPromptPart(content=str(sistema))
+                primeira = mensagens[0]
+                if isinstance(primeira, pai_messages.ModelRequest):
+                    primeira.parts.insert(0, parte_sistema)
+                else:
+                    mensagens.insert(0, pai_messages.ModelRequest(parts=[parte_sistema]))
 
         return mensagens or None
 

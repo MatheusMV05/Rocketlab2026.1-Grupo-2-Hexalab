@@ -109,33 +109,11 @@ def run_com_debug():
     print(f"Esquema filtrado completo:\n{resultado_seletor.esquema_filtrado}\n")
 
     # === DEBUG: HINTS GERADOS DO ESQUEMA ===
-    print("\n🔍 [DEBUG EXEMPLOS SQL GERADOS]")
-    print("-" * 70)
 
-    try:
-        exemplos_gerados = generate_examples_from_schema(
-            resultado_seletor.esquema_filtrado,
-            db_path=db_path,
-        )
-
-        print("✅ Gerador de hints ativado")
-        print(f"📊 Hints gerados: {len(exemplos_gerados)}")
-
-        if exemplos_gerados:
-            for i, exemplo in enumerate(exemplos_gerados, 1):
-                print(f"\n  [{i}] Tabela: {exemplo.get('table', 'N/A')}")
-                print(f"      Descrição: {exemplo.get('description', 'N/A')}")
-                print(f"      Coluna: {exemplo.get('column', 'N/A')}")
-                print(f"      Tipo: {exemplo.get('type', 'N/A')}")
-                print(f"      Lista valores: {exemplo.get('list_values', False)}")
-                print(f"      Valores: {exemplo.get('values', [])}")
-                if exemplo.get("error"):
-                    print(f"      Erro: {exemplo.get('error')}")
-        else:
-            print("  ⚠️ Nenhum exemplo foi gerado a partir do esquema filtrado")
-        print()
-    except Exception as e:
-        print(f"⚠️ Erro ao gerar hints do esquema: {e}\n")
+    exemplos_gerados = generate_examples_from_schema(
+        resultado_seletor.esquema_filtrado,
+        db_path=db_path,
+    )
 
     # === DEBUG: FEW-SHOT RETRIEVER ===
     print("\n🔍 [DEBUG FEW-SHOT RETRIEVER]")

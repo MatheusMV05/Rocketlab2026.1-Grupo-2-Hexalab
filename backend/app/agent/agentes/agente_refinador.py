@@ -118,7 +118,10 @@ class AgenteRefinador(AgenteBase):
                     resultado = agent.run_sync(
                         "Corrija o SQL.",
                         deps=deps,
-                        message_history=self._normalizar_message_history(message_history),
+                        message_history=self._normalizar_message_history(
+                            message_history,
+                            sistema=prompt_sistema,
+                        ),
                     )
                 except TypeError as erro:
                     if "message_history" not in str(erro):

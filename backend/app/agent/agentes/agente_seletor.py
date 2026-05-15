@@ -147,13 +147,6 @@ class AgenteSeletor(AgenteBase):
         )
 
         if not esquema_filtrado:
-            esquema_filtrado, tabelas_selecionadas = self._selecionar_por_heuristica(
-                pergunta=pergunta,
-                blocos_originais=blocos_originais,
-                resumo_esquema=resumo_esquema,
-            )
-        
-        if not esquema_filtrado:
             logger.info("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
             return ResultadoSeletor(
                 esquema_filtrado=esquema_completo,
@@ -209,64 +202,6 @@ class AgenteSeletor(AgenteBase):
                     blocos_validados.append(blocos_originais[tabela])
 
         return "\n\n".join(blocos_validados), tabelas_selecionadas
-
-    @classmethod
-    def _selecionar_por_heuristica(
-        cls,
-        pergunta: str,
-        blocos_originais: dict[str, str],
-        resumo_esquema: dict[str, dict[str, object]],
-    ) -> tuple[str, list[str]]:
-        """Fallback local quando o seletor LLM não devolve DDL utilizável."""
-        if not blocos_originais:
-            return "", []
-
-        texto_pergunta = (pergunta or "").lower()
-        tokens_pergunta = cls._tokens_busca(texto_pergunta)
-        preferencias: list[str] = []
-
-        if any(t in texto_pergunta for t in ["cliente", "clientes", "vip", "lifetime", "sem comprar", "recencia", "recência"]):
-            preferencias.append("mart_cliente_360")
-        if any(t in texto_pergunta for t in ["produto", "produtos", "categoria", "receita", "venda", "vendas"]):
-            preferencias.append("mart_desempenho_produtos")
-        if any(t in texto_pergunta for t in ["sessao", "sessão", "click", "funil", "carrinho"]):
-            preferencias.append("mart_comportamento_digital")
-
-        pergunta_de_cliente = any(t in texto_pergunta for t in ["cliente", "clientes", "vip"])
-        pergunta_de_produto = any(t in texto_pergunta for t in ["produto", "produtos"])
-        if pergunta_de_cliente and not pergunta_de_produto and "mart_cliente_360" in blocos_originais:
-            return blocos_originais["mart_cliente_360"], ["mart_cliente_360"]
-
-        pontuados: list[tuple[int, str]] = []
-        for tabela, ddl in blocos_originais.items():
-            resumo = resumo_esquema.get(tabela, {})
-            descricao = str(resumo.get("descricao", ""))
-            colunas = " ".join(str(c) for c in resumo.get("colunas", []))
-            score = len(tokens_pergunta & cls._tokens_busca(f"{tabela} {ddl} {descricao} {colunas}"))
-            if tabela in preferencias:
-                score += 20
-            if score > 0:
-                pontuados.append((score, tabela))
-
-        pontuados.sort(key=lambda item: item[0], reverse=True)
-        tabelas: list[str] = []
-        for _, tabela in pontuados[:3]:
-            if tabela not in tabelas:
-                tabelas.append(tabela)
-
-        if not tabelas and "mart_cliente_360" in blocos_originais:
-            tabelas = ["mart_cliente_360"]
-
-        return "\n\n".join(blocos_originais[t] for t in tabelas), tabelas
-
-    @staticmethod
-    def _tokens_busca(texto: str) -> set[str]:
-        tokens: set[str] = set()
-        for token in re.findall(r"[A-Za-zÀ-ÿ0-9_]+", (texto or "").lower()):
-            for parte in token.split("_"):
-                if len(parte) > 2:
-                    tokens.add(parte)
-        return tokens
 
     @staticmethod
     def _extrair_nomes_colunas(bloco_tabela: str) -> list[str]:
