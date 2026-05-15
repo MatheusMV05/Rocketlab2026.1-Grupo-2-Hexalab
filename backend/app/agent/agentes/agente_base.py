@@ -8,9 +8,6 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
- 
-from app.agent.config import Config
- 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai import messages as pai_messages
 from pydantic_ai.models.mistral import MistralModel
@@ -20,6 +17,30 @@ from app.agent.config import Config
 from app.agent.contexto import ContextoAgente
 
 logger = logging.getLogger(__name__)
+
+
+def _configurar_event_loop_windows() -> None:
+    """Evita cancelamentos ruidosos do ProactorEventLoop no Windows.
+
+    O cliente HTTP usado pelo PydanticAI pode deixar leituras pendentes durante
+    o encerramento do loop. Em Windows, o loop Proactor emite erros como
+    "Cancelling an overlapped future failed" ao cancelar essas leituras. O loop
+    Selector não usa overlapped I/O e é suficiente para este backend.
+    """
+    if os.name != "nt":
+        return
+
+    policy_cls = getattr(asyncio, "WindowsSelectorEventLoopPolicy", None)
+    if policy_cls is None:
+        return
+
+    current_policy = asyncio.get_event_loop_policy()
+    if not isinstance(current_policy, policy_cls):
+        asyncio.set_event_loop_policy(policy_cls())
+
+
+_configurar_event_loop_windows()
+
 
 
 class AgenteBase(ABC):
@@ -64,8 +85,6 @@ class AgenteBase(ABC):
         """
         self.config = config or Config()
 
-        self._garantir_event_loop()
-
         diretorio_prompts = Path(__file__).resolve().parents[1] / "prompts"
         self._jinja = Environment(
             loader=FileSystemLoader(str(diretorio_prompts)),
@@ -101,10 +120,12 @@ class AgenteBase(ABC):
 
     @staticmethod
     def _garantir_event_loop() -> None:
+        """Compatibilidade para chamadas antigas que esperavam preparar o loop."""
+        _configurar_event_loop_windows()
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            asyncio.set_event_loop(asyncio.new_event_loop())
+            return
  
     def _call_llm(
         self, 

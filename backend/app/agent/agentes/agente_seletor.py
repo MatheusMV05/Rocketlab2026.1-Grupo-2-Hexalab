@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from typing import Any
-
+from pathlib import Path
 from pydantic_ai import Agent
 
 from app.agent.agentes.agente_base import AgenteBase
@@ -87,9 +87,6 @@ class AgenteSeletor(AgenteBase):
         
         resumo_esquema: dict[str, dict[str, object]] = {}
         try:
-            from pathlib import Path
-            import json
-
             caminho_descricoes = Path(__file__).resolve().parents[1] / "db" / "descricao_tabelas.json"
             if caminho_descricoes.exists():
                 with open(caminho_descricoes, "r", encoding="utf8") as arquivo:
@@ -130,14 +127,10 @@ class AgenteSeletor(AgenteBase):
             self._agent = agent
 
         # Chama LLM (será mockado em testes ou executará agente real se houver api_key)
-        chamada_llm = (
-            self._call_llm(
-                sistema=prompt_sistema,
-                usuario=pergunta,
-                message_history=message_history,
-            )
-            if message_history
-            else self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+        chamada_llm = self._call_llm(
+            sistema=prompt_sistema,
+            usuario=pergunta,
+            message_history=message_history,
         )
         texto_llm, tokens_usados, _ = self._desempacotar_call_llm(chamada_llm)
         

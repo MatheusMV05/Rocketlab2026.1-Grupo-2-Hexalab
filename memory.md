@@ -1,530 +1,63 @@
-# Conversational Memory with Compression in PydanticAI
+O seu ficheiro MD (Markdown) está pronto. Podes descarregá-lo no link abaixo ou copiar diretamente o texto estruturado que partilho aqui.
 
-## Overview
+[file-tag: code-generated-file-0-1778863430774884370]
 
-This architecture implements conversational memory for AI agents using:
+Aqui tens o conteúdo completo para copiares facilmente:
 
-- Rolling conversation summaries
-- Sliding window memory
-- Context compression
-- Token-aware truncation
-- Persistent memory
-- Semantic memory support
+***
 
-The objective is to maintain long conversations without exceeding the model context window.
+# Arquitetura de Memória e Compressão (MAC-SQL)
 
----
+Esta documentação detalha a implementação da memória de compressão automatizada para a pipeline MAC-SQL, utilizando a extensão `ContextManagerCapability` do PydanticAI.
 
-# High-Level Architecture
+## 1. Visão Geral
+A pipeline MAC-SQL coordena múltiplos agentes para transformar perguntas em linguagem natural em consultas SQL e respostas interpretadas. Para manter a eficiência em conversas longas, implementamos uma estratégia de **Compressão Seletiva**.
 
-```text
-User Input
-    ↓
-Memory Manager
-    ├── Rolling Summary
-    ├── Recent Messages
-    ├── Semantic Memory
-    └── Tool State
-    ↓
-Context Builder
-    ↓
-PydanticAI Agent
-    ↓
-LLM Response
-    ↓
-Memory Update
-```
+## 2. Estratégia de Compressão
+Em vez de todos os agentes tentarem gerir o histórico, delegamos a função de "limpeza" aos agentes que possuem maior carga conversacional.
 
----
+| Agente | Função na Memória | Descrição |
+| :--- | :--- | :--- |
+| **Seletor** | Consumidor | Lê o histórico para identificar tabelas relevantes, mas não altera o histórico. |
+| **Decompositor** | **Editor/Compressor** | Gera o SQL e comprime o histórico se exceder os limites de tokens. |
+| **Refinador** | Técnico | Foca apenas na correção do SQL; o histórico é mantido para contexto mínimo. |
+| **Interpretador** | **Editor/Compressor** | Finaliza a resposta ao usuário e garante que o histórico salvo está otimizado. |
 
-# Memory Strategy
+## 3. Implementação Técnica
 
-The system stores:
+### Requisito: `pydantic-ai-summarization`
 
-| Memory Type | Purpose |
-|---|---|
-| Rolling Summary | Compressed old conversations |
-| Recent Messages | Latest interactions |
-| Semantic Memory | Important long-term facts |
-| Tool State | Agent/tool execution state |
-
----
-
-# Core Idea
-
-Instead of sending the full conversation history:
-
-```text
-Full Conversation History ❌
-```
-
-We send:
-
-```text
-Compressed Summary
-+
-Recent Messages
-+
-Current Input
-```
-
-This dramatically reduces token usage.
-
----
-
-# Example Workflow
-
-## Initial Conversation
-
-```text
-User: Analyze sales data
-Assistant: Sure
-User: Filter only 2024
-Assistant: Done
-User: Group by month
-Assistant: Done
-```
-
----
-
-# After Compression
-
-```text
-Summary:
-"User is analyzing 2024 sales grouped monthly"
-
-Recent Messages:
-User: Show top products
-```
-
----
-
-# Basic Memory Structure
+A compressão é configurada através do parâmetro `capabilities` na inicialização do Agente:
 
 ```python
-from dataclasses import dataclass, field
+from pydantic_ai_summarization import ContextManagerCapability
 
-@dataclass
-class AgentMemory:
-
-    rolling_summary: str = ""
-
-    recent_messages: list = field(default_factory=list)
-
-    semantic_facts: list = field(default_factory=list)
-
-    tool_state: dict = field(default_factory=dict)
-```
-
----
-
-# Adding Messages
-
-```python
-def add_message(memory, role, content):
-
-    memory.recent_messages.append({
-        "role": role,
-        "content": content
-    })
-```
-
----
-
-# Context Builder
-
-```python
-def build_context(memory):
-
-    recent = "\n".join(
-        f"{m['role']}: {m['content']}"
-        for m in memory.recent_messages
-    )
-
-    semantic = "\n".join(memory.semantic_facts)
-
-    return f"""
-Conversation Summary:
-{memory.rolling_summary}
-
-Semantic Facts:
-{semantic}
-
-Recent Messages:
-{recent}
-"""
-```
-
----
-
-# Compression Trigger
-
-Compression can be triggered by:
-
-- Message count
-- Token count
-- Estimated context size
-
----
-
-# Message Count Trigger
-
-```python
-if len(memory.recent_messages) > 20:
-    await compress_memory(memory)
-```
-
----
-
-# Token Count Trigger
-
-```python
-if token_count(context) > 12000:
-    await compress_memory(memory)
-```
-
----
-
-# Compression Logic
-
-```python
-async def compress_memory(memory, llm):
-
-    old_messages = memory.recent_messages[:-5]
-
-    conversation_text = "\n".join(
-        f"{m['role']}: {m['content']}"
-        for m in old_messages
-    )
-
-    prompt = f"""
-    Summarize this conversation preserving:
-
-    - user goals
-    - technical context
-    - decisions
-    - preferences
-    - important facts
-
-    Conversation:
-    {conversation_text}
-    """
-
-    result = await llm.run(prompt)
-
-    memory.rolling_summary = result.data
-
-    memory.recent_messages = memory.recent_messages[-5:]
-```
-
----
-
-# Incremental Summarization (Recommended)
-
-Instead of summarizing the entire history repeatedly:
-
-```text
-Old Summary + New Messages → Updated Summary
-```
-
-This is significantly cheaper and faster.
-
----
-
-# Incremental Compression Example
-
-```python
-async def incremental_compress(memory, llm):
-
-    new_messages = "\n".join(
-        f"{m['role']}: {m['content']}"
-        for m in memory.recent_messages[:-5]
-    )
-
-    prompt = f"""
-    Current summary:
-    {memory.rolling_summary}
-
-    New messages:
-    {new_messages}
-
-    Update the summary preserving important context.
-    """
-
-    result = await llm.run(prompt)
-
-    memory.rolling_summary = result.data
-
-    memory.recent_messages = memory.recent_messages[-5:]
-```
-
----
-
-# PydanticAI Integration
-
-## Agent Creation
-
-```python
-from pydantic_ai import Agent
-
-agent = Agent(
-    model="openai:gpt-4.1"
+# Configuração sugerida
+capability = ContextManagerCapability(
+    max_tokens=30000,       # Limite total de tokens do contexto
+    compress_threshold=0.9  # Inicia compressão ao atingir 27.000 tokens
 )
-```
 
----
-
-# Running the Agent
-
-```python
-context = build_context(memory)
-
-result = await agent.run(
-    user_prompt,
-    system_prompt=context
+# No AgenteDecompositor e AgenteInterpretador:
+self._agent = Agent(
+    model,
+    deps_type=ContextoAgente,
+    output_type=ResultadoEsperado,
+    capabilities=[capability]
 )
-```
 
----
+4. Fluxo de Dados e Persistência
+O Orquestrador centraliza o movimento da memória:
 
-# Updating Memory
+Recuperação: O histórico é carregado do banco de dados (SQLite/SessionStore).
 
-```python
-add_message(memory, "user", user_prompt)
+Ciclo de Vida: O histórico circula pelos agentes. Se o Decompositor realizar uma compressão, o objeto message_history é atualizado.
 
-add_message(memory, "assistant", result.data)
-```
+Persistência: O Orquestrador recebe a lista de mensagens final (já resumida pela capability) e a persiste no banco de dados.
 
----
+5. Benefícios da Arquitetura
+Redução de Custos: Menor volume de tokens enviados para a API (Mistral/OpenAI).
 
-# Token Counting
+Consistência: Evita que o modelo "se perca" em conversas muito extensas.
 
-Recommended libraries:
-
-- tiktoken
-- provider tokenizer APIs
-
----
-
-# Example Token Counter
-
-```python
-import tiktoken
-
-encoding = tiktoken.encoding_for_model("gpt-4")
-
-def token_count(text):
-
-    return len(encoding.encode(text))
-```
-
----
-
-# Sliding Window Memory
-
-Keep only the latest messages:
-
-```python
-memory.recent_messages = memory.recent_messages[-5:]
-```
-
-This prevents uncontrolled growth.
-
----
-
-# Semantic Memory
-
-Semantic memory stores long-term facts separately.
-
-Example:
-
-```python
-memory.semantic_facts.append(
-    "User prefers PostgreSQL"
-)
-```
-
----
-
-# Vector Memory (Advanced)
-
-You can store embeddings for retrieval.
-
-Recommended stack:
-
-| Purpose | Tool |
-|---|---|
-| Embeddings | OpenAI |
-| Vector DB | Qdrant |
-| Cache | Redis |
-| Persistence | PostgreSQL |
-
----
-
-# Vector Retrieval Flow
-
-```text
-User Query
-    ↓
-Embedding Generation
-    ↓
-Vector Search
-    ↓
-Relevant Memories Retrieved
-    ↓
-Injected Into Context
-```
-
----
-
-# Example Embedding Search
-
-```python
-embedding = embed(user_input)
-
-results = vectordb.search(
-    embedding,
-    top_k=5
-)
-```
-
----
-
-# Production Architecture
-
-```text
-Frontend
-    ↓
-API Layer
-    ↓
-PydanticAI Agent
-    ↓
-Memory Manager
-    ├── Rolling Summary
-    ├── Sliding Window
-    ├── Semantic Memory
-    ├── Redis Cache
-    └── PostgreSQL
-    ↓
-LLM Provider
-```
-
----
-
-# Recommended Technologies
-
-| Component | Recommendation |
-|---|---|
-| Agent Framework | PydanticAI |
-| Cache | Redis |
-| Persistence | PostgreSQL |
-| Vector Database | Qdrant |
-| Embeddings | OpenAI |
-| Token Counting | tiktoken |
-
----
-
-# Benefits
-
-## Reduced Token Usage
-
-Compression dramatically lowers context size.
-
----
-
-## Better Long Conversations
-
-The agent maintains continuity even after thousands of messages.
-
----
-
-## Lower Cost
-
-Smaller prompts reduce inference costs.
-
----
-
-## Better Scalability
-
-Allows persistent multi-session conversations.
-
----
-
-# Recommended Hybrid Strategy
-
-```text
-Rolling Summary
-+
-Recent Conversation Window
-+
-Semantic Vector Memory
-```
-
-This is the architecture used by most modern production agents.
-
----
-
-# Best Practices
-
-- Never send the entire conversation history
-- Compress old messages
-- Preserve recent interactions
-- Store important facts separately
-- Use token-based compression triggers
-- Persist memory externally
-- Use incremental summaries whenever possible
-
----
-
-# Common Mistakes
-
-## Sending Full History
-
-```text
-Huge token cost
-Slow inference
-Context overflow
-```
-
----
-
-## Compressing Too Aggressively
-
-```text
-Loss of conversational continuity
-Missing important details
-```
-
----
-
-## No Semantic Separation
-
-Mixing:
-- conversation
-- preferences
-- long-term facts
-- tool state
-
-creates poor retrieval quality.
-
----
-
-# Final Recommended Architecture
-
-```text
-Conversation
-    ↓
-Sliding Window
-    ↓
-Compression
-    ↓
-Rolling Summary
-    ↓
-Persistent Storage
-    ↓
-Semantic Retrieval
-    ↓
-Context Reconstruction
-    ↓
-LLM
-```
+Baixa Latência: Ao não comprimir em todos os agentes, evitamos chamadas redundantes de sumarização.
