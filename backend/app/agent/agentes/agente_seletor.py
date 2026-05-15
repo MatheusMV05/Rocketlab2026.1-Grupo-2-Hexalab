@@ -9,6 +9,7 @@ from pydantic_ai import Agent
 
 from app.agent.agentes.agente_base import AgenteBase
 from app.agent.contexto import ContextoAgente
+from app.agent.hints.generator import generate_examples_from_schema
 from app.agent.models.resultado import ResultadoSeletor, ResultadoSeletorLLM
 from app.agent.config import Config
 

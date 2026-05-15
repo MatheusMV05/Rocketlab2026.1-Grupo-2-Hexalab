@@ -110,12 +110,21 @@ class AgenteDecompositor(AgenteBase):
 
 		raciocinio, sql_limpo = self._interpretar_saida_llm(texto_llm)
 
-		if not sql_limpo:
-			return ResultadoDecompositor(
-				sql="",
-				raciocinio="Raciocínio não informado pelo modelo.",
-				tokens_usados=tokens_usados,
-			)
+				if not sql_limpo:
+					return ResultadoDecompositor(
+						sql="",
+						raciocinio=raciocinio,
+						tokens_usados=tokens_usados,
+					)
+			except Exception as erro:
+				logger.warning(
+					"AgenteDecompositor.run: falha na saída do LLM (%s).", erro
+				)
+				return ResultadoDecompositor(
+					sql="",
+					raciocinio="Raciocínio não informado pelo modelo.",
+					tokens_usados=0,
+				)
 
 		if not validar_sql_seguro(sql_limpo):
 			logger.warning("AgenteDecompositor: SQL inválido ou inseguro detectado.")
@@ -125,6 +134,9 @@ class AgenteDecompositor(AgenteBase):
 				tokens_usados=0,
 			)
 
+		if not raciocinio:
+			raciocinio = "Raciocínio não informado pelo modelo."
+	
 		return ResultadoDecompositor(
 			sql=sql_limpo,
 			raciocinio=raciocinio,
