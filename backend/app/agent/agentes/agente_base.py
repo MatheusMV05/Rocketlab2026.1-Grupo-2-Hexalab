@@ -2,16 +2,18 @@ from __future__ import annotations
  
 import asyncio
 import json
+import os
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
  
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
- 
 from app.agent.config import Config
  
 from pydantic_ai import Agent, RunContext
+from pydantic_ai import messages as pai_messages
 from pydantic_ai.models.mistral import MistralModel
+from pydantic_ai.providers.mistral import MistralProvider
 
 from app.agent.config import Config
 from app.agent.contexto import ContextoAgente
@@ -59,11 +61,7 @@ class AgenteBase(ABC):
         """
         self.config = config or Config()
 
-        import asyncio
-        try:
-            asyncio.get_event_loop()
-        except RuntimeError:
-            asyncio.set_event_loop(asyncio.new_event_loop())
+        self._garantir_event_loop()
 
         diretorio_prompts = Path(__file__).resolve().parents[1] / "prompts"
         self._jinja = Environment(
@@ -77,7 +75,7 @@ class AgenteBase(ABC):
         self._agent: Any | None = None
 
         if self.config.api_key:
-            model = MistralModel(self.config.model, api_key=self.config.api_key)
+            model = self._criar_modelo_mistral()
             self._agent = Agent(
                 model,
                 deps_type=ContextoAgente,
@@ -86,6 +84,24 @@ class AgenteBase(ABC):
             @self._agent.system_prompt
             def get_system_prompt(ctx: RunContext[ContextoAgente]) -> str:
                 return ctx.deps.sistema
+
+    def _criar_modelo_mistral(self) -> MistralModel:
+        """Cria o modelo Mistral de forma compatível com versões do PydanticAI."""
+        os.environ["MISTRAL_API_KEY"] = self.config.api_key
+        try:
+            return MistralModel(
+                self.config.model,
+                provider=MistralProvider(api_key=self.config.api_key),
+            )
+        except TypeError:
+            return MistralModel(self.config.model, api_key=self.config.api_key)
+
+    @staticmethod
+    def _garantir_event_loop() -> None:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.set_event_loop(asyncio.new_event_loop())
  
     def _call_llm(
         self, 
@@ -118,27 +134,142 @@ class AgenteBase(ABC):
  
         deps = ContextoAgente(config=self.config, sistema=sistema)
         try:
+            historico_pydantic = self._normalizar_message_history(message_history)
             if hasattr(self._agent, "run_sync"):
                 # Injeta message_history nativamente
-                resultado = self._agent.run_sync(usuario, deps=deps, message_history=message_history)
+                try:
+                    resultado = self._agent.run_sync(usuario, deps=deps, message_history=historico_pydantic)
+                except TypeError as erro:
+                    if "message_history" not in str(erro):
+                        raise
+                    resultado = self._agent.run_sync(usuario, deps=deps)
             else:
-                resultado = asyncio.run(self._agent.run(usuario, deps=deps, message_history=message_history))
+                try:
+                    resultado = asyncio.run(self._agent.run(usuario, deps=deps, message_history=historico_pydantic))
+                except TypeError as erro:
+                    if "message_history" not in str(erro):
+                        raise
+                    resultado = asyncio.run(self._agent.run(usuario, deps=deps))
             
-            texto = str(resultado.data)
-            uso = resultado.usage()
-            tokens_usados = uso.total_tokens if uso else 0
+            output = self._extrair_output(resultado)
+            texto = self._serializar_output(output)
+            tokens_usados = self._extrair_tokens(resultado)
             
             # 3. Captura o histórico de mensagens resultante (já com compressão automática se ativada)
-            novo_historico = resultado.all_messages()
-
-            if hasattr(resultado.data, "model_dump"):
-                texto = json.dumps(resultado.data.model_dump(), ensure_ascii=False)
-        except Exception:
+            novo_historico = self._historico_serializavel(message_history, usuario, texto)
+        except Exception as e:
+            if os.getenv("AGENT_DEBUG_TRACEBACK") == "1":
+                import traceback
+                traceback.print_exc()
+            print(f"Erro em _call_llm: {e}")
             texto = ""
             tokens_usados = 0
             novo_historico = []
 
         return texto, tokens_usados, novo_historico
+
+    @staticmethod
+    def _normalizar_message_history(message_history: list[Any] | None) -> list[Any] | None:
+        """Converte historico simples role/content para ModelMessage do PydanticAI."""
+        if not message_history:
+            return None
+
+        mensagens: list[Any] = []
+        for item in message_history:
+            if hasattr(item, "conversation_id") and hasattr(item, "parts"):
+                mensagens.append(item)
+                continue
+
+            if isinstance(item, dict):
+                role = str(item.get("role") or item.get("from") or "user").lower()
+                content = str(item.get("content") or "")
+            elif isinstance(item, str):
+                role = "user"
+                content = item
+            else:
+                role = str(getattr(item, "role", "user")).lower()
+                content = str(getattr(item, "content", item))
+
+            if not content.strip():
+                continue
+
+            if role in {"assistant", "model"}:
+                mensagens.append(
+                    pai_messages.ModelResponse(
+                        parts=[pai_messages.TextPart(content=content)]
+                    )
+                )
+            else:
+                if role == "system":
+                    content = f"Resumo de contexto anterior: {content}"
+                mensagens.append(
+                    pai_messages.ModelRequest(
+                        parts=[pai_messages.UserPromptPart(content=content)]
+                    )
+                )
+
+        return mensagens or None
+
+    @staticmethod
+    def _extrair_output(resultado: Any) -> Any:
+        if hasattr(resultado, "output"):
+            return resultado.output
+        return getattr(resultado, "data", "")
+
+    @staticmethod
+    def _serializar_output(output: Any) -> str:
+        if hasattr(output, "model_dump"):
+            return json.dumps(output.model_dump(), ensure_ascii=False)
+        return str(output or "")
+
+    @staticmethod
+    def _extrair_tokens(resultado: Any) -> int:
+        uso = getattr(resultado, "usage", None)
+        if uso is not None and hasattr(uso, "total_tokens"):
+            return int(getattr(uso, "total_tokens", 0) or 0)
+        if callable(uso):
+            uso = uso()
+        return int(getattr(uso, "total_tokens", 0) or 0)
+
+    @staticmethod
+    def _historico_serializavel(
+        message_history: list[Any] | None,
+        usuario: str,
+        resposta: str,
+    ) -> list[dict[str, str]]:
+        historico: list[dict[str, str]] = []
+
+        for item in message_history or []:
+            if isinstance(item, dict):
+                role = str(item.get("role") or item.get("from") or "user")
+                content = str(item.get("content") or "")
+            elif isinstance(item, str):
+                role = "user"
+                content = item
+            else:
+                role = str(getattr(item, "role", "user"))
+                content = str(getattr(item, "content", item))
+
+            if content.strip():
+                historico.append({"role": role, "content": content})
+
+        if usuario.strip():
+            historico.append({"role": "user", "content": usuario})
+        if resposta.strip():
+            historico.append({"role": "assistant", "content": resposta})
+
+        return historico
+
+    @staticmethod
+    def _desempacotar_call_llm(resultado: Any) -> tuple[str, int, list[Any]]:
+        if isinstance(resultado, tuple):
+            if len(resultado) >= 3:
+                return str(resultado[0] or ""), int(resultado[1] or 0), list(resultado[2] or [])
+            if len(resultado) == 2:
+                return str(resultado[0] or ""), int(resultado[1] or 0), []
+            if len(resultado) == 1:
+                return str(resultado[0] or ""), 0, []
+        return str(resultado or ""), 0, []
  
     def _render(self, template_name: str, **kwargs: object) -> str:
         """Renderiza um template Jinja2 do diretório ``prompts/``.

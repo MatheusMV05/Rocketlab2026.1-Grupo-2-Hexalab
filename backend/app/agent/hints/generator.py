@@ -1,38 +1,16 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Tuple
+import sqlite3
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 
 _PADRAO_CREATE_TABLE = re.compile(
     r"(CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)[\s\S]*?;)",
     re.IGNORECASE,
 )
-
-
-def _extrair_blocos_tabelas(esquema_ddl: str) -> Dict[str, str]:
-    blocos: Dict[str, str] = {}
-    for correspondencia in _PADRAO_CREATE_TABLE.finditer(esquema_ddl or ""):
-        bloco = correspondencia.group(1).strip()
-        nome = correspondencia.group(2)
-        blocos[nome] = bloco
-    return blocos
-
-
-def _extrair_nomes_colunas(bloco_tabela: str) -> List[str]:
-    correspondencia = re.search(r"\((([\s\S]*?))\)\s*;?$", bloco_tabela)
-    if not correspondencia:
-        return []
-    bloco_colunas = correspondencia.group(1)
-    colunas: List[str] = []
-    for linha in bloco_colunas.splitlines():
-        linha = linha.strip().rstrip(',')
-        if not linha:
-            continue
-        m = re.match(r"[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)", linha)
-        if m:
-            colunas.append(m.group(1))
-    return colunas
+_PADRAO_IDENTIFICADOR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 _COLUNAS_PARA_LISTAR_VALORES = [
@@ -60,94 +38,10 @@ _COLUNAS_PARA_LISTAR_VALORES = [
     "metodo_pagamento",
     "status",
 ]
-
-_COLUNAS_PARA_APENAS_DESCREVER = [
-    "sk_ticket",
-    "sk_cliente",
-    "sk_pedido",
-    "sk_produto",
-    "sk_sessao",
-    "sk_dispositivo",
-    "sk_avaliacao",
-    "sk_evento",
-    "id_ticket",
-    "id_cliente",
-    "id_pedido",
-    "id_produto",
-    "id_sessao",
-    "id_dispositivo",
-    "id_avaliacao",
-    "id_evento",
-    "comentario",
-    "nome",
-    "sobrenome",
-    "nome_produto",
-    "cidade",
-    "categorias_compradas",
-    "fornecedor",
-    "dispositivos",
-    "idade",
-    "receita_bruta_brl",
-    "valor_pedido_brl",
-    "ticket_medio_brl",
-    "tempo_resolucao_horas",
-    "total_pedidos",
-    "avg_tempo_pagina_seg",
-    "preco_brl",
-    "peso_kg",
-    "estoque_disponivel",
-    "nota_produto",
-    "nota_nps",
-    "quantidade",
-    "receita_liquida_brl",
-    "avg_nota_suporte",
-    "dias_desde_ultimo_pedido",
-    "preco_medio_venda_brl",
-    "sessoes_com_view",
-    "sessoes_com_carrinho",
-    "sessoes_com_compra",
-    "taxa_conversao_pct",
-    "total_unidades_vendidas",
-    "receita_total_brl",
-    "avg_nota_produto",
-    "avg_nps",
-    "total_recomendacoes",
-    "total_tickets_suporte",
-    "qtd_dispositivos",
-    "total_eventos",
-    "total_sessoes",
-    "produtos_visualizados",
-    "eventos_compra",
-    "eventos_pagamento",
-    "eventos_carrinho",
-    "eventos_abandono",
-    "eventos_visualizacao",
-    "taxa_conversao_sessao_pct",
-    "pedidos_aprovados",
-    "receita_lifetime_brl",
-    "receita_bruta_lifetime_brl",
-    "total_add_to_cart_lifetime",
-    "total_eventos_alto_engajamento",
-    "nps_medio_cliente",
-    "total_tickets",
-    "sk_data_abertura",
-    "sk_data_resolucao",
-    "gold_timestamp",
-    "data_ultimo_pedido",
-    "data_ultima_venda",
-    "data_cadastro",
-    "sk_data_cadastro",
-    "data_cadastro_produto",
-    "sk_data_avaliacao",
-    "sk_data_evento",
-    "data_evento",
-    "sk_data_pedido",
-]
+_COLUNAS_LISTAR_SET = set(_COLUNAS_PARA_LISTAR_VALORES)
 
 
 _PALAVRAS_CHAVE_NUMERICAS = (
-    "id_",
-    "sk_",
     "qtd_",
     "quantidade",
     "valor",
@@ -160,23 +54,40 @@ _PALAVRAS_CHAVE_NUMERICAS = (
     "taxa",
     "total_",
     "media",
-    "media_",
+    "avg_",
     "pct",
     "dias",
+    "peso",
+    "estoque",
 )
 
 
-def _tipo_coluna_quebra_linha(definicao_coluna: str) -> str:
+def _extrair_blocos_tabelas(esquema_ddl: str) -> Dict[str, str]:
+    blocos: Dict[str, str] = {}
+    for correspondencia in _PADRAO_CREATE_TABLE.finditer(esquema_ddl or ""):
+        bloco = correspondencia.group(1).strip()
+        nome = correspondencia.group(2)
+        blocos[nome] = bloco
+    return blocos
+
+
+def _tipo_coluna(definicao_coluna: str) -> str:
     partes = definicao_coluna.split(None, 1)
     if len(partes) < 2:
         return ""
+
     tipo = partes[1].rstrip(",")
-    tipo = re.split(r"\b(?:PRIMARY\s+KEY|NOT\s+NULL|NULL|DEFAULT|UNIQUE|CHECK|REFERENCES|COLLATE)\b", tipo, maxsplit=1, flags=re.IGNORECASE)[0]
+    tipo = re.split(
+        r"\b(?:PRIMARY\s+KEY|NOT\s+NULL|NULL|DEFAULT|UNIQUE|CHECK|REFERENCES|COLLATE)\b",
+        tipo,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0]
     return tipo.strip().upper()
 
 
 def _extrair_colunas_e_tipos(bloco_tabela: str) -> List[Tuple[str, str]]:
-    correspondencia = re.search(r"\((([\s\S]*?))\)\s*;?$", bloco_tabela)
+    correspondencia = re.search(r"\(([\s\S]*?)\)\s*;?$", bloco_tabela)
     if not correspondencia:
         return []
 
@@ -188,121 +99,128 @@ def _extrair_colunas_e_tipos(bloco_tabela: str) -> List[Tuple[str, str]]:
             continue
         if re.match(r"^(PRIMARY|FOREIGN|UNIQUE|CHECK|CONSTRAINT)\b", linha, flags=re.IGNORECASE):
             continue
+
         m = re.match(r"[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)", linha)
-        if not m:
-            continue
-        nome_coluna = m.group(1)
-        tipo_coluna = _tipo_coluna_quebra_linha(linha)
-        colunas.append((nome_coluna, tipo_coluna))
+        if m:
+            colunas.append((m.group(1), _tipo_coluna(linha)))
+
     return colunas
 
 
-def _coluna_listar_valores(nome_coluna: str, tipo_coluna: str) -> bool:
+def _quote_identificador(nome: str) -> str:
+    if not _PADRAO_IDENTIFICADOR.match(nome):
+        raise ValueError(f"Identificador invalido: {nome}")
+    return f'"{nome}"'
+
+
+def _normalizar_valor(valor: Any) -> str:
+    if valor is None:
+        return "NULL"
+    return str(valor)
+
+
+def _extrair_valores_distintos(
+    db_path: str | Path,
+    tabela: str,
+    coluna: str,
+    limite: int,
+) -> list[str]:
+    tabela_sql = _quote_identificador(tabela)
+    coluna_sql = _quote_identificador(coluna)
+    sql = (
+        f"SELECT DISTINCT {coluna_sql} "
+        f"FROM {tabela_sql} "
+        f"WHERE {coluna_sql} IS NOT NULL "
+        f"ORDER BY {coluna_sql} "
+        f"LIMIT ?"
+    )
+
+    with sqlite3.connect(str(db_path)) as conexao:
+        cursor = conexao.execute(sql, (limite,))
+        return [_normalizar_valor(linha[0]) for linha in cursor.fetchall()]
+
+
+def _descricao_coluna(nome_coluna: str, tipo_coluna: str) -> str:
     nome_normalizado = nome_coluna.lower()
     tipo_normalizado = tipo_coluna.lower()
 
-    if nome_normalizado in _COLUNAS_PARA_LISTAR_VALORES:
-        return True
+    if nome_normalizado.startswith(("sk_", "id_")):
+        return "Coluna de identificador/chave; use para joins, contagens ou referencia, nao para listar valores no prompt."
 
-    if any(palavra in nome_normalizado for palavra in ("genero", "estado", "origem", "categoria", "status", "canal", "segmento", "tipo", "metodo")):
-        return True
+    if "data" in nome_normalizado or "timestamp" in nome_normalizado or any(
+        termo in tipo_normalizado for termo in ("date", "time", "timestamp")
+    ):
+        return "Coluna temporal; use para filtros de periodo, ordenacao e agrupamentos por data."
 
-    if tipo_normalizado and any(palavra in tipo_normalizado for palavra in ("char", "text", "clob", "bool")):
-        return True
+    if any(termo in nome_normalizado for termo in _PALAVRAS_CHAVE_NUMERICAS) or any(
+        termo in tipo_normalizado for termo in ("int", "real", "float", "numeric", "decimal")
+    ):
+        return "Coluna numerica/continua; use para soma, media, min/max, ordenacao ou filtros de faixa."
 
-    return False
-
-
-def _coluna_apenas_descrever(nome_coluna: str, tipo_coluna: str) -> bool:
-    nome_normalizado = nome_coluna.lower()
-    tipo_normalizado = tipo_coluna.lower()
-
-    if nome_normalizado in _COLUNAS_PARA_APENAS_DESCREVER:
-        return True
-
-    if any(nome_normalizado.startswith(prefixo) for prefixo in ("sk_", "id_")):
-        return True
-
-    if any(palavra in nome_normalizado for palavra in ("data", "timestamp", "hora", "idade", "valor", "receita", "preco", "quantidade", "taxa", "total", "nps", "tempo", "peso")):
-        return True
-
-    if tipo_normalizado and any(palavra in tipo_normalizado for palavra in ("int", "real", "float", "numeric", "decimal", "date", "time", "timestamp")):
-        return True
-
-    return len(nome_normalizado) > 12
+    return "Coluna descritiva ou de texto livre; use como contexto, mas nao injete valores distintos automaticamente."
 
 
-def _classificar_colunas(colunas: List[Tuple[str, str]]) -> Tuple[List[str], List[str]]:
-    """Retorna duas listas: colunas que podem listar valores e colunas que devem apenas ser descritas."""
-    colunas_para_listar: List[str] = []
-    colunas_para_descrever: List[str] = []
+def generate_examples_from_schema(
+    esquema_ddl: str,
+    db_path: str | Path | None = None,
+    limite_valores: int = 60,
+) -> List[Dict[str, Any]]:
+    """Gera hints do schema para o prompt.
 
-    for nome_coluna, tipo_coluna in colunas:
-        if _coluna_listar_valores(nome_coluna, tipo_coluna):
-            colunas_para_listar.append(nome_coluna)
-        elif _coluna_apenas_descrever(nome_coluna, tipo_coluna):
-            colunas_para_descrever.append(nome_coluna)
-        else:
-            colunas_para_listar.append(nome_coluna)
-
-    return colunas_para_listar, colunas_para_descrever
-
-
-def generate_examples_from_schema(esquema_ddl: str) -> List[Dict[str, str]]:
-    """Gera exemplos SQL a partir do DDL fornecido.
-
-    Para cada tabela encontrada, gera consultas de exemplo com base em duas regras:
-    - colunas que devem listar valores distintos;
-    - colunas que devem apenas ser descritas com agregações.
-
-    Retorna uma lista de dicionários com as chaves mantidas em inglês para compatibilidade
-    com o template atual: "table", "example_sql" e "description".
+    Se a coluna estiver em _COLUNAS_PARA_LISTAR_VALORES, busca valores reais no
+    banco com SELECT DISTINCT e retorna esses valores. Para qualquer outra
+    coluna, retorna apenas uma descricao de uso sem executar listagem de valores.
     """
     blocos = _extrair_blocos_tabelas(esquema_ddl or "")
-    exemplos: List[Dict[str, str]] = []
+    exemplos: List[Dict[str, Any]] = []
+
     for tabela, bloco in blocos.items():
-        cols = _extrair_colunas_e_tipos(bloco)
-        if not cols:
-            continue
+        for coluna, tipo_coluna in _extrair_colunas_e_tipos(bloco):
+            deve_listar = coluna.lower() in _COLUNAS_LISTAR_SET
+            valores: list[str] = []
+            erro: str | None = None
 
-        colunas_para_listar, colunas_para_descrever = _classificar_colunas(cols)
+            if deve_listar:
+                if db_path is None:
+                    erro = "db_path nao informado; valores reais nao foram extraidos."
+                else:
+                    try:
+                        valores = _extrair_valores_distintos(
+                            db_path=db_path,
+                            tabela=tabela,
+                            coluna=coluna,
+                            limite=limite_valores,
+                        )
+                    except Exception as exc:
+                        erro = str(exc)
 
-        if colunas_para_listar:
-            colunas_relevantes = colunas_para_listar[:2]
-            for coluna in colunas_relevantes:
-                exemplos.append({
+            exemplos.append(
+                {
                     "table": tabela,
-                    "example_sql": f'SELECT DISTINCT {coluna} FROM {tabela} LIMIT 5',
+                    "column": coluna,
+                    "type": tipo_coluna,
+                    "list_values": deve_listar,
+                    "values": valores,
                     "description": (
-                        f"Exemplo de valores distintos para a coluna '{coluna}', que serve para separar valores categóricos."
+                        "Coluna categorica controlada; valores reais extraidos do banco para orientar filtros."
+                        if deve_listar
+                        else _descricao_coluna(coluna, tipo_coluna)
                     ),
-                })
-
-        if colunas_para_descrever:
-            colunas_relevantes = colunas_para_descrever[:2]
-            for coluna in colunas_relevantes:
-                exemplos.append({
-                    "table": tabela,
-                    "example_sql": (
-                        f"SELECT MIN({coluna}) AS menor_{coluna}, "
-                        f"MAX({coluna}) AS maior_{coluna}, "
-                        f"AVG({coluna}) AS media_{coluna} FROM {tabela}"
-                    ),
-                    "description": (
-                        f"Exemplo de resumo para a coluna '{coluna}', que deve ser apenas descrita e não listada com valores distintos."
-                    ),
-                })
-
-        if not colunas_para_listar and not colunas_para_descrever:
-            exemplos.append({
-                "table": tabela,
-                "example_sql": f"SELECT * FROM {tabela} LIMIT 5",
-                "description": "Exemplo genérico de amostra da tabela.",
-            })
+                    "error": erro or "",
+                }
+            )
 
     return exemplos
 
 
-def gerar_exemplos_do_esquema(esquema_ddl: str) -> List[Dict[str, str]]:
-    """Alias em português para o gerador de exemplos."""
-    return generate_examples_from_schema(esquema_ddl)
+def gerar_exemplos_do_esquema(
+    esquema_ddl: str,
+    db_path: str | Path | None = None,
+    limite_valores: int = 20,
+) -> List[Dict[str, Any]]:
+    """Alias em portugues para o gerador de hints do schema."""
+    return generate_examples_from_schema(
+        esquema_ddl=esquema_ddl,
+        db_path=db_path,
+        limite_valores=limite_valores,
+    )

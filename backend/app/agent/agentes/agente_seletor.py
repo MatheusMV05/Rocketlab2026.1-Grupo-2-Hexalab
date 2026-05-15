@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
+from typing import Any
 
-from pydantic_ai.models.mistral import MistralModel
 from pydantic_ai import Agent
 
 from app.agent.agentes.agente_base import AgenteBase
@@ -54,7 +53,12 @@ class AgenteSeletor(AgenteBase):
     def __init__(self, config: Config | None = None) -> None:
         super().__init__(config)
 
-    def run(self, esquema_completo: str, pergunta: str) -> ResultadoSeletor:
+    def run(
+        self,
+        esquema_completo: str,
+        pergunta: str,
+        message_history: list[Any] | None = None,
+    ) -> ResultadoSeletor:
         """Filtra o esquema e retorna apenas as tabelas relevantes para a pergunta.
 
         Fluxo:
@@ -113,13 +117,10 @@ class AgenteSeletor(AgenteBase):
         
         # Configura agent real apenas se houver API key
         if self.config.api_key:
-            try:
-                asyncio.get_event_loop()
-            except RuntimeError:
-                asyncio.set_event_loop(asyncio.new_event_loop())
+            self._garantir_event_loop()
 
-            model = MistralModel(self.config.model, api_key=self.config.api_key)
-            agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoSeletorLLM)
+            model = self._criar_modelo_mistral()
+            agent = Agent(model, deps_type=ContextoAgente, output_type=ResultadoSeletorLLM)
 
             @agent.system_prompt
             def get_system_prompt(ctx) -> str:
@@ -128,26 +129,35 @@ class AgenteSeletor(AgenteBase):
             self._agent = agent
 
         # Chama LLM (será mockado em testes ou executará agente real se houver api_key)
-        texto_llm, tokens_usados, _ = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+        chamada_llm = (
+            self._call_llm(
+                sistema=prompt_sistema,
+                usuario=pergunta,
+                message_history=message_history,
+            )
+            if message_history
+            else self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+        )
+        texto_llm, tokens_usados, _ = self._desempacotar_call_llm(chamada_llm)
         
-        esquema_filtrado = ""
-        tabelas_selecionadas: list[str] = []
-        
-        if texto_llm and _PADRAO_CREATE_TABLE.search(texto_llm):
-            tabelas_candidatas = self._extrair_tabelas(texto_llm)
-            blocos_validados: list[str] = []
-            for tabela in tabelas_candidatas:
-                if tabela in blocos_originais:
-                    blocos_validados.append(blocos_originais[tabela])
-                    tabelas_selecionadas.append(tabela)
-            if blocos_validados:
-                esquema_filtrado = "\n\n".join(blocos_validados)
+        esquema_filtrado, tabelas_selecionadas = self._interpretar_saida_llm(
+            texto_llm=texto_llm,
+            blocos_originais=blocos_originais,
+        )
+
+        if not esquema_filtrado:
+            esquema_filtrado, tabelas_selecionadas = self._selecionar_por_heuristica(
+                pergunta=pergunta,
+                blocos_originais=blocos_originais,
+                resumo_esquema=resumo_esquema,
+            )
         
         if not esquema_filtrado:
             logger.info("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
             return ResultadoSeletor(
                 esquema_filtrado=esquema_completo,
                 tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
+                generated_examples=[],
                 tokens_usados=tokens_usados,
             )
 
@@ -155,8 +165,107 @@ class AgenteSeletor(AgenteBase):
         return ResultadoSeletor(
             esquema_filtrado=esquema_filtrado,
             tabelas_selecionadas=tabelas_selecionadas,
+            generated_examples=[],
             tokens_usados=tokens_usados,
         )
+
+    @classmethod
+    def _interpretar_saida_llm(
+        cls,
+        texto_llm: str,
+        blocos_originais: dict[str, str],
+    ) -> tuple[str, list[str]]:
+        """Interpreta saída do seletor em JSON estruturado ou DDL puro."""
+        texto_llm = (texto_llm or "").strip()
+        if not texto_llm:
+            return "", []
+
+        blocos_candidatos: list[str] = []
+        try:
+            dados = ResultadoSeletorLLM.model_validate_json(texto_llm)
+            blocos_candidatos.extend(str(bloco) for bloco in dados.blocos_ddl)
+        except Exception:
+            try:
+                dados_dict = json.loads(texto_llm)
+                if isinstance(dados_dict, dict):
+                    blocos = dados_dict.get("blocos_ddl") or dados_dict.get("ddl") or []
+                    if isinstance(blocos, str):
+                        blocos_candidatos.append(blocos)
+                    elif isinstance(blocos, list):
+                        blocos_candidatos.extend(str(bloco) for bloco in blocos)
+            except Exception:
+                pass
+
+        if not blocos_candidatos and _PADRAO_CREATE_TABLE.search(texto_llm):
+            blocos_candidatos.append(texto_llm)
+
+        tabelas_selecionadas: list[str] = []
+        blocos_validados: list[str] = []
+        for bloco in blocos_candidatos:
+            for tabela in cls._extrair_tabelas(bloco):
+                if tabela in blocos_originais and tabela not in tabelas_selecionadas:
+                    tabelas_selecionadas.append(tabela)
+                    blocos_validados.append(blocos_originais[tabela])
+
+        return "\n\n".join(blocos_validados), tabelas_selecionadas
+
+    @classmethod
+    def _selecionar_por_heuristica(
+        cls,
+        pergunta: str,
+        blocos_originais: dict[str, str],
+        resumo_esquema: dict[str, dict[str, object]],
+    ) -> tuple[str, list[str]]:
+        """Fallback local quando o seletor LLM não devolve DDL utilizável."""
+        if not blocos_originais:
+            return "", []
+
+        texto_pergunta = (pergunta or "").lower()
+        tokens_pergunta = cls._tokens_busca(texto_pergunta)
+        preferencias: list[str] = []
+
+        if any(t in texto_pergunta for t in ["cliente", "clientes", "vip", "lifetime", "sem comprar", "recencia", "recência"]):
+            preferencias.append("mart_cliente_360")
+        if any(t in texto_pergunta for t in ["produto", "produtos", "categoria", "receita", "venda", "vendas"]):
+            preferencias.append("mart_desempenho_produtos")
+        if any(t in texto_pergunta for t in ["sessao", "sessão", "click", "funil", "carrinho"]):
+            preferencias.append("mart_comportamento_digital")
+
+        pergunta_de_cliente = any(t in texto_pergunta for t in ["cliente", "clientes", "vip"])
+        pergunta_de_produto = any(t in texto_pergunta for t in ["produto", "produtos"])
+        if pergunta_de_cliente and not pergunta_de_produto and "mart_cliente_360" in blocos_originais:
+            return blocos_originais["mart_cliente_360"], ["mart_cliente_360"]
+
+        pontuados: list[tuple[int, str]] = []
+        for tabela, ddl in blocos_originais.items():
+            resumo = resumo_esquema.get(tabela, {})
+            descricao = str(resumo.get("descricao", ""))
+            colunas = " ".join(str(c) for c in resumo.get("colunas", []))
+            score = len(tokens_pergunta & cls._tokens_busca(f"{tabela} {ddl} {descricao} {colunas}"))
+            if tabela in preferencias:
+                score += 20
+            if score > 0:
+                pontuados.append((score, tabela))
+
+        pontuados.sort(key=lambda item: item[0], reverse=True)
+        tabelas: list[str] = []
+        for _, tabela in pontuados[:3]:
+            if tabela not in tabelas:
+                tabelas.append(tabela)
+
+        if not tabelas and "mart_cliente_360" in blocos_originais:
+            tabelas = ["mart_cliente_360"]
+
+        return "\n\n".join(blocos_originais[t] for t in tabelas), tabelas
+
+    @staticmethod
+    def _tokens_busca(texto: str) -> set[str]:
+        tokens: set[str] = set()
+        for token in re.findall(r"[A-Za-zÀ-ÿ0-9_]+", (texto or "").lower()):
+            for parte in token.split("_"):
+                if len(parte) > 2:
+                    tokens.add(parte)
+        return tokens
 
     @staticmethod
     def _extrair_nomes_colunas(bloco_tabela: str) -> list[str]:

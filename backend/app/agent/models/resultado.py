@@ -70,8 +70,8 @@ class ResultadoSeletor:
 
     esquema_filtrado: str
     tabelas_selecionadas: list[str]
-    generated_examples: list[dict[str, str]]
     tokens_usados: int
+    generated_examples: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -109,6 +109,7 @@ class ResultadoRefinador:
     tentativas: int
     ultimo_erro: str | None
     tokens_usados: int
+    novo_historico: list[Any] = field(default_factory=list)
 
 
 @dataclass
@@ -135,7 +136,9 @@ class ResultadoInterpretador:
     Attributes:
         resposta: Texto final em linguagem natural para o usuario.
         tokens_usados: Total de tokens consumidos na chamada ao LLM.
+        novo_historico: Histórico atualizado da chamada, pronto para persistir.
     """
 
     resposta: str
     tokens_usados: int
+    novo_historico: list[Any] = field(default_factory=list)

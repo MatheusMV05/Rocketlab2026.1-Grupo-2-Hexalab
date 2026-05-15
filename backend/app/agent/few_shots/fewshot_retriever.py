@@ -1,5 +1,6 @@
 import yaml
 import logging
+import re
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -49,18 +50,47 @@ class FewShotRetriever:
             return
 
         logger.info(f"Carregando modelo de embeddings: {model_name}")
-        self.model = SentenceTransformer(model_name)
-
-        perguntas_yaml = [e.question for e in self.exemplos]
-        self.index = self.model.encode(perguntas_yaml, convert_to_numpy=True)
-        logger.info(f"Modelo carregado e {len(self.exemplos)} exemplos indexados.")
+        try:
+            self.model = SentenceTransformer(model_name)
+            perguntas_yaml = [e.question for e in self.exemplos]
+            self.index = self.model.encode(perguntas_yaml, convert_to_numpy=True)
+            logger.info(f"Modelo carregado e {len(self.exemplos)} exemplos indexados.")
+        except Exception as erro:
+            logger.warning(
+                "Modelo de embeddings indisponível (%s). Usando retrieval lexical.",
+                erro,
+            )
+            self.model = None
+            self.index = None
 
     def retrieve(self, pergunta: str, k: int = 3) -> list[ExemploFewShot]:
         """Retorna os `k` exemplos mais similares à pergunta informada."""
-        if not self.model or self.index is None or not self.exemplos or k <= 0:
+        if not self.exemplos or k <= 0:
             return []
+
+        if not self.model or self.index is None:
+            return self._retrieve_lexical(pergunta, k)
 
         vetor_pergunta = self.model.encode([pergunta], convert_to_numpy=True)
         scores = cosine_similarity(vetor_pergunta, self.index)[0]
         top_k_indices = scores.argsort()[::-1][:k]
         return [self.exemplos[i] for i in top_k_indices]
+
+    def _retrieve_lexical(self, pergunta: str, k: int) -> list[ExemploFewShot]:
+        tokens_pergunta = self._tokens(pergunta)
+        ranqueados: list[tuple[int, ExemploFewShot]] = []
+        for exemplo in self.exemplos:
+            texto = f"{exemplo.question} {exemplo.reasoning} {exemplo.sql}"
+            score = len(tokens_pergunta & self._tokens(texto))
+            ranqueados.append((score, exemplo))
+
+        ranqueados.sort(key=lambda item: item[0], reverse=True)
+        return [exemplo for score, exemplo in ranqueados[:k] if score > 0] or self.exemplos[:k]
+
+    @staticmethod
+    def _tokens(texto: str) -> set[str]:
+        return {
+            token
+            for token in re.findall(r"[A-Za-zÀ-ÿ0-9_]+", (texto or "").lower())
+            if len(token) > 2
+        }

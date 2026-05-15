@@ -9,6 +9,11 @@ APENAS SERVE DE GUIA PARA SILVIO ENTENDER O FLUXO DAS CHAMADAS DOS ROUTERS
 
 import os
 import sys
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 from pathlib import Path
 
 # Adiciona o diretório backend ao PYTHONPATH para os imports locais funcionarem
@@ -29,6 +34,20 @@ from app.agent.agentes.agente_decompositor import AgenteDecompositor
 from app.agent.agentes.agente_refinador import AgenteRefinador
 from app.agent.agentes.agente_interpretador import AgenteInterpretador
 from app.agent.agentes.agente_sugestor import AgenteSugestor
+from app.agent.hints.generator import generate_examples_from_schema
+
+
+def _imprimir_historico(rotulo: str, historico: list[object] | None) -> None:
+    """Mostra no console o histórico que está sendo injetado no agente."""
+    print(f"\n🧠 [DEBUG HISTÓRICO] {rotulo}")
+    print("-" * 70)
+    if not historico:
+        print("(histórico vazio)")
+        return
+
+    print(f"Total de mensagens: {len(historico)}")
+    for indice, mensagem in enumerate(historico, 1):
+        print(f"  [{indice}] {mensagem}")
 
 def run_com_debug():
     """Executa o pipeline com debug detalhado de cada agente."""
@@ -51,11 +70,17 @@ def run_com_debug():
 
     # Inicializa as configurações
     config = Config()
-    pergunta = "Liste os 10 clientes VIP com receita lifetime > 1000 que estão há mais de 90 dias sem comprar."
+    pergunta = "Liste os 10 clientes com receita lifetime > 1000 que estão há mais de 90 dias sem comprar."
+    historico_debug = [
+        {"role": "user", "content": "Quero focar em clientes premium e recorrência."},
+        {"role": "assistant", "content": "Entendi, vou priorizar lifetime value e recência de compra."},
+        {"role": "user", "content": "Agora filtre apenas quem está parado há bastante tempo."},
+    ]
 
     print("\n" + "="*70)
     print(f"❓ PERGUNTA: {pergunta}")
     print("="*70)
+    _imprimir_historico("Histórico inicial para o pipeline", historico_debug)
 
     # === DEBUG: AGENTE SELETOR ===
     print("\n🔍 [DEBUG SELETOR]")
@@ -74,6 +99,7 @@ def run_com_debug():
     resultado_seletor = seletor.run(
         esquema_completo=esquema_completo,
         pergunta=pergunta,
+        message_history=historico_debug,
     )
     
     print(f"✅ Seletor finalizado")
@@ -81,6 +107,35 @@ def run_com_debug():
     print(f"🪙 Tokens consumidos: {resultado_seletor.tokens_usados}")
     print(f"📏 Esquema filtrado: {len(resultado_seletor.esquema_filtrado)} caracteres")
     print(f"Esquema filtrado completo:\n{resultado_seletor.esquema_filtrado}\n")
+
+    # === DEBUG: HINTS GERADOS DO ESQUEMA ===
+    print("\n🔍 [DEBUG EXEMPLOS SQL GERADOS]")
+    print("-" * 70)
+
+    try:
+        exemplos_gerados = generate_examples_from_schema(
+            resultado_seletor.esquema_filtrado,
+            db_path=db_path,
+        )
+
+        print("✅ Gerador de hints ativado")
+        print(f"📊 Hints gerados: {len(exemplos_gerados)}")
+
+        if exemplos_gerados:
+            for i, exemplo in enumerate(exemplos_gerados, 1):
+                print(f"\n  [{i}] Tabela: {exemplo.get('table', 'N/A')}")
+                print(f"      Descrição: {exemplo.get('description', 'N/A')}")
+                print(f"      Coluna: {exemplo.get('column', 'N/A')}")
+                print(f"      Tipo: {exemplo.get('type', 'N/A')}")
+                print(f"      Lista valores: {exemplo.get('list_values', False)}")
+                print(f"      Valores: {exemplo.get('values', [])}")
+                if exemplo.get("error"):
+                    print(f"      Erro: {exemplo.get('error')}")
+        else:
+            print("  ⚠️ Nenhum exemplo foi gerado a partir do esquema filtrado")
+        print()
+    except Exception as e:
+        print(f"⚠️ Erro ao gerar hints do esquema: {e}\n")
 
     # === DEBUG: FEW-SHOT RETRIEVER ===
     print("\n🔍 [DEBUG FEW-SHOT RETRIEVER]")
@@ -117,12 +172,19 @@ def run_com_debug():
     resultado_decompositor = decompositor.run(
         esquema_filtrado=resultado_seletor.esquema_filtrado,
         pergunta=pergunta,
+        db_path=db_path,
+        message_history=historico_debug,
     )
     
     print(f"✅ Decompositor finalizado")
     print(f"🪙 Tokens consumidos: {resultado_decompositor.tokens_usados}")
     print(f"💭 Raciocínio:\n{resultado_decompositor.raciocinio}\n")
     print(f"⚙️ SQL gerado:\n{resultado_decompositor.sql}\n")
+
+    if not resultado_decompositor.sql.strip():
+        print("Pipeline interrompido: decompositor nao gerou SQL.")
+        print("Verifique a chamada ao LLM acima antes de seguir para refinador/execucao.")
+        return
 
     # === DEBUG: AGENTE REFINADOR ===
     print("\n🔍 [DEBUG REFINADOR]")
@@ -134,6 +196,7 @@ def run_com_debug():
         question=pergunta,
         filtered_schema=resultado_seletor.esquema_filtrado,
         db_path=db_path,
+        message_history=historico_debug,
     )
     
     print(f"✅ Refinador finalizado")
@@ -180,6 +243,7 @@ def run_com_debug():
         colunas=colunas,
         dados=dados,
         erro=None if not resultado_refinador.ultimo_erro else resultado_refinador.ultimo_erro,
+        message_history=historico_debug,
     )
     
     print(f"✅ Interpretador finalizado")
@@ -252,71 +316,29 @@ def run():
 
     # Inicializa as configurações
     config = Config()
+    historico_debug = [
+        {"role": "user", "content": "Quero focar em clientes premium e recorrência."},
+        {"role": "assistant", "content": "Entendi, vou priorizar lifetime value e recência de compra."},
+        {"role": "user", "content": "Agora filtre apenas quem está parado há bastante tempo."},
+    ]
     
     # Instancia o Orquestrador
     print("🤖 Instanciando Orquestrador...")
     orquestrador = Orquestrador(db_path=db_path, config=config)
 
     pergunta = "Quais os 5 produtos com maior receita no último trimestre?"
+    _imprimir_historico("Histórico enviado ao Orquestrador", historico_debug)
 
-    print("\n" + "="*70)
-    print(f"❓ PERGUNTA: {pergunta}")
-    print("="*70)
-    
-    # Executa o pipeline completo
-    resultado = orquestrador.responder(pergunta)
-    
-    print(f"\n✅ Sucesso: {resultado.sucesso}")
-    print(f"🚫 Impossível: {resultado.impossivel}")
-    
-    if resultado.erro:
-        print(f"❌ Erro: {resultado.erro}")
-    
-    if resultado.raciocinio:
-        print(f"\n🧠 [Raciocínio]")
-        print(resultado.raciocinio)
-    
-    if resultado.sql_final:
-        print(f"\n⚙️ [SQL Final]")
-        print(resultado.sql_final)
-
-    if resultado.resposta_natural:
-        print(f"\n🗣️ [Resposta em Linguagem Natural]")
-        print(resultado.resposta_natural)
-    
-    if resultado.dados:
-        print(f"\n📊 [Resultados: {len(resultado.dados)} linhas]")
-        print(f"Colunas: {resultado.colunas}")
-        for i, linha in enumerate(resultado.dados[:5], 1):
-            print(f"  {i}. {linha}")
-        if len(resultado.dados) > 5:
-            print(f"  ... ({len(resultado.dados) - 5} mais linhas)")
-    
-    # === GERAR SUGESTÕES ===
-    sugestor = AgenteSugestor(config=config)
-    
-    amostra_resultado = ""
-    if resultado.dados and resultado.colunas:
-        amostra_resultado = "\n".join([
-            ", ".join([f"{col}: {val}" for col, val in zip(resultado.colunas, linha)])
-            for linha in resultado.dados[:2]
-        ])
-    
-    resultado_sugestor = sugestor.run(
+    resultado = orquestrador.responder(
         pergunta=pergunta,
-        sql_gerado=resultado.sql_final,
-        schema=None,
-        amostra_resultado=amostra_resultado,
+        message_history=historico_debug,
     )
-    
-    if resultado_sugestor.sugestoes:
-        print(f"\n💡 [Próximas Perguntas Sugeridas]")
-        for i, sugestao in enumerate(resultado_sugestor.sugestoes, 1):
-            print(f"  {i}. {sugestao}")
-    
-    print(f"\n🪙 Tokens consumidos: {resultado.tokens_totais + resultado_sugestor.tokens_usados}")
-    
-    print("\n🎉 Teste finalizado com sucesso!")
+
+    print("\n✅ Orquestrador finalizado")
+    print(f"🪙 Tokens consumidos: {resultado.tokens_totais}")
+    print(f"💬 Resposta natural: {resultado.resposta_natural}")
+    print(f"🧾 SQL final: {resultado.sql_final}")
+    _imprimir_historico("Histórico retornado pelo pipeline", resultado.novo_historico)
 
 if __name__ == "__main__":
     import sys

@@ -79,9 +79,11 @@ class Orquestrador:
         self.interpretador = AgenteInterpretador(config=self.config)
 
     def responder(
-        self, 
+        self,
         pergunta: str,
         message_history: list[Any] | None = None,
+        session_id: str | None = None,
+        session_store: Any | None = None,
     ) -> ResultadoOrquestrador:
         """Executa o pipeline completo para uma pergunta em linguagem natural.
 
@@ -145,11 +147,27 @@ class Orquestrador:
 
         tokens_totais = 0
 
+        def salvar_historico(historico: list[Any] | None) -> None:
+            if session_store is not None and session_id and historico:
+                try:
+                    session_store.save_history(session_id, historico)
+                except Exception:
+                    logger.exception("Erro ao salvar histórico da sessão %s", session_id)
+
+        # If a session_store and session_id are provided and no explicit
+        # message_history was passed, load the history from the store.
+        if session_store is not None and session_id and not message_history:
+            try:
+                message_history = session_store.get_history(session_id)
+            except Exception:
+                logger.exception("Erro ao carregar histórico da sessão %s", session_id)
+
         # Seletor filtra as tabelas relevantes
         logger.info("Orquestrador: iniciando AgenteSeletor")
         resultado_seletor = self.seletor.run(
             esquema_completo=esquema_completo,
             pergunta=pergunta,
+            message_history=message_history,
         )
         tokens_totais += resultado_seletor.tokens_usados
 
@@ -158,6 +176,7 @@ class Orquestrador:
         resultado_decompositor = self.decompositor.run(
             esquema_filtrado=resultado_seletor.esquema_filtrado,
             pergunta=pergunta,
+            db_path=self.db_path,
             message_history=message_history,
         )
         tokens_totais += resultado_decompositor.tokens_usados
@@ -165,7 +184,12 @@ class Orquestrador:
         # Captura o histórico processado pela capability de sumarização
         historico_atualizado = resultado_decompositor.novo_historico
 
+        # Persist the updated history back to the store (if present)
+        if session_store is not None and session_id and historico_atualizado:
+            salvar_historico(historico_atualizado)
+
         if not resultado_decompositor.sql:
+            salvar_historico(historico_atualizado)
             return ResultadoOrquestrador(
                 pergunta=pergunta,
                 sql_final="",
@@ -186,10 +210,14 @@ class Orquestrador:
             question=pergunta,
             filtered_schema=resultado_seletor.esquema_filtrado,
             db_path=self.db_path,
+            message_history=message_history,
         )
         tokens_totais += resultado_refinador.tokens_usados
+        if resultado_refinador.novo_historico:
+            historico_atualizado = resultado_refinador.novo_historico
 
         if resultado_refinador.impossivel:
+            salvar_historico(historico_atualizado)
             return ResultadoOrquestrador(
                 pergunta=pergunta,
                 sql_final=resultado_refinador.sql,
@@ -204,6 +232,7 @@ class Orquestrador:
             )
 
         if not resultado_refinador.sucesso:
+            salvar_historico(historico_atualizado)
             return ResultadoOrquestrador(
                 pergunta=pergunta,
                 sql_final=resultado_refinador.sql,
@@ -228,8 +257,14 @@ class Orquestrador:
             colunas=colunas,
             dados=dados,
             erro=erro_execucao,
+            message_history=message_history,
         )
         tokens_totais += resultado_interpretador.tokens_usados
+
+        if resultado_interpretador.novo_historico:
+            historico_atualizado = resultado_interpretador.novo_historico
+
+        salvar_historico(historico_atualizado)
 
         return ResultadoOrquestrador(
             pergunta=pergunta,

@@ -1,9 +1,12 @@
+# NOTE: now the project uses a persistent SQL-backed session store by default.
 from fastapi import Header, HTTPException
-from app.agent.agentes.memory.memory_store import InMemoryTTLSessionStore, SessionStoreProtocol
+from app.agent.agentes.memory.memory_store import SessionStoreProtocol
+from app.agent.agentes.memory.sql_store import SessionStoreSQL
 from app.agent.orquestrador import Orquestrador
 
 # Instância global única (Singleton) do gerenciador de memória para o ciclo de vida do app
-_session_store = InMemoryTTLSessionStore(ttl_seconds=1800)
+# Uses the configured DATABASE_URL from app.config.Settings
+_session_store = SessionStoreSQL()
 
 # Instância do Orquestrador
 _orquestrador = Orquestrador(db_path="banco.db")

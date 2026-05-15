@@ -57,14 +57,22 @@ PERGUNTA: {{ ex.question }}
 
 {% if generated_examples %}
 <generated_examples>
-Exemplos SQL gerados automaticamente a partir do esquema (úteis para entender tipos/valores de variáveis):
+Hints gerados automaticamente a partir do esquema e do banco:
+
+IMPORTANTE: quando LISTA_VALORES for true, VALORES contem valores reais da coluna extraidos do banco para orientar filtros. Quando for false, use apenas a descricao da coluna.
 
 {% for ge in generated_examples %}
 TABELA: {{ ge.table }}
 -- {{ ge.description }}
-<sql>
-{{ ge.example_sql }}
-</sql>
+COLUNA: {{ ge.column }}
+TIPO: {{ ge.type }}
+LISTA_VALORES: {{ ge["list_values"] }}
+{% if ge["values"] %}
+VALORES: {{ ge["values"] | join(", ") }}
+{% endif %}
+{% if ge["error"] %}
+ERRO_AO_EXTRAIR_VALORES: {{ ge["error"] }}
+{% endif %}
 
 {% endfor %}
 </generated_examples>
