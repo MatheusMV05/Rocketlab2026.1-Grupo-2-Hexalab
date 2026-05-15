@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
+import { formatarVariacao } from '../../../utils/formatadores'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
 import { useTaxaSatisfacao } from '../../../hooks/useDashboard'
 
@@ -54,18 +55,52 @@ function arcSegment(startPct: number, endPct: number): string {
 // Props
 interface Props {
   filtrosGlobais: FiltrosPeriodo
+  onFiltrosLocaisChange?: (filtros: FiltrosPeriodo) => void
 }
 
-export function GraficoTaxaSatisfacao({ filtrosGlobais }: Props) {
+export function GraficoTaxaSatisfacao({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
   const [filtros, setFiltros] = useState(filtrosGlobais)
 
   useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
 
-  const { data, isLoading } = useTaxaSatisfacao()
+  function handleFiltrosChange(f: FiltrosPeriodo) {
+    setFiltros(f)
+    onFiltrosLocaisChange?.(f)
+  }
 
-  const VALOR = data?.valor ?? 88
-  const META = data?.meta ?? 90
+  const { data, isLoading } = useTaxaSatisfacao(filtros)
+
+  const VALOR = data?.valor ?? 0
+  const META = 70
   const TOTAL_AVALIACOES = data?.total_avaliacoes ?? 0
+
+  const [agulha, setAgulha] = useState(0)
+  const animRef = useRef<number | null>(null)
+  const fromRef = useRef(0)
+
+  useEffect(() => {
+    if (isLoading) return
+    if (animRef.current) cancelAnimationFrame(animRef.current)
+    const from = fromRef.current
+    const to = VALOR
+    const duracao = 1400
+    let inicio: number | null = null
+
+    function passo(ts: number) {
+      if (!inicio) inicio = ts
+      const t = Math.min((ts - inicio) / duracao, 1)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setAgulha(from + (to - from) * eased)
+      if (t < 1) {
+        animRef.current = requestAnimationFrame(passo)
+      } else {
+        fromRef.current = to
+      }
+    }
+
+    animRef.current = requestAnimationFrame(passo)
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current) }
+  }, [VALOR, isLoading])
 
   const metaAngle = pctToRad(META)
   const mcos = Math.cos(metaAngle)
@@ -86,7 +121,7 @@ export function GraficoTaxaSatisfacao({ filtrosGlobais }: Props) {
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto y=13 do card, alinhado à direita — conforme SVG */}
       <div className="absolute top-[5px] right-[28px]">
-        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
+        <FiltroPeriodo filtros={filtros} onChange={handleFiltrosChange} />
       </div>
 
       {/* Título: abaixo dos filtros — pt-[50px] posiciona abaixo do filtro (y=41) */}
@@ -151,9 +186,10 @@ export function GraficoTaxaSatisfacao({ filtrosGlobais }: Props) {
               strokeWidth="0.75"
             />
             <text
-              x={f(metaBoxX + (boxW + 5.5) / 2 + 2)}
-              y={f(metaBoxY + 4.5)}
+              x={f(metaBoxX + (5.5 + boxW) / 2)}
+              y={f(metaBoxY)}
               textAnchor="middle"
+              dominantBaseline="middle"
               fontSize="6.5"
               fill="black"
               fontFamily="Inter, sans-serif"
@@ -163,7 +199,7 @@ export function GraficoTaxaSatisfacao({ filtrosGlobais }: Props) {
           </g>
 
           {/* Agulha */}
-          <g transform={needleTransform(VALOR)} fill="#757575">
+          <g transform={needleTransform(agulha)} fill="#757575">
             <path d={SETA_HUB_PATH} />
             <path d={SETA_NEEDLE_PATH} />
           </g>
@@ -188,11 +224,16 @@ export function GraficoTaxaSatisfacao({ filtrosGlobais }: Props) {
         {/* Estatísticas */}
         <div className="flex flex-col items-center -mt-2">
           <span className="text-[48px] font-bold text-black leading-none">
-            {isLoading ? '...' : `${VALOR}%`}
+            {isLoading ? '...' : `${Math.round(agulha)}%`}
           </span>
-          <div className="mt-2">
-            <TagVariacao valor="+3%/ABR" tipo="bom" />
-          </div>
+          {(() => {
+            const tag = formatarVariacao(data?.variacao, data?.periodo_ref)
+            return tag ? (
+              <div className="mt-2">
+                <TagVariacao valor={tag.valor} tipo={tag.tipo} />
+              </div>
+            ) : null
+          })()}
           <span className="text-[12px] font-medium text-[#4d4d4d] mt-2">
             {isLoading ? '' : `Baseado em ${TOTAL_AVALIACOES} avaliações`}
           </span>

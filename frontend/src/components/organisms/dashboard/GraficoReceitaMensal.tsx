@@ -13,7 +13,7 @@ import {
 import { useReceitaGrafico } from '../../../hooks/useDashboard'
 import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
-import { formatarReais } from '../../../utils/formatadores'
+import { formatarReais, formatarVariacao } from '../../../utils/formatadores'
 
 // Tooltip
 function TooltipReceita(props: TooltipProps<number, string>) {
@@ -85,13 +85,19 @@ function TrianguloMeta(props: DotProps) {
 // Props
 interface Props {
   filtrosGlobais: FiltrosPeriodo
+  onFiltrosLocaisChange?: (filtros: FiltrosPeriodo) => void
 }
 
 // Componente
-export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
+export function GraficoReceitaMensal({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
   const [filtros, setFiltros] = useState(filtrosGlobais)
 
   useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
+
+  function handleFiltrosChange(f: FiltrosPeriodo) {
+    setFiltros(f)
+    onFiltrosLocaisChange?.(f)
+  }
 
   const { data, isLoading, isError } = useReceitaGrafico(filtros)
 
@@ -100,10 +106,20 @@ export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
   const receitaTotal = dados.reduce((s, i) => s + i.receita, 0)
   const metaTotal    = dados.reduce((s, i) => s + i.meta, 0)
 
+  const tagReceita = (() => {
+    if (dados.length < 2) return null
+    const ultimo = dados[dados.length - 1]
+    const penultimo = dados[dados.length - 2]
+    const variacao = penultimo.receita
+      ? ((ultimo.receita - penultimo.receita) / penultimo.receita) * 100
+      : null
+    return formatarVariacao(variacao, penultimo.label)
+  })()
+
   return (
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       <div className="absolute top-[5px] right-[19px]">
-        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
+        <FiltroPeriodo filtros={filtros} onChange={handleFiltrosChange} />
       </div>
 
       {/* Cabeçalho */}
@@ -116,7 +132,7 @@ export function GraficoReceitaMensal({ filtrosGlobais }: Props) {
               ? `R$ ${receitaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
               : '—'}
           </span>
-          {receitaTotal > 0 && <TagVariacao valor="+6,6%/ABR" tipo="bom" />}
+          {tagReceita && <TagVariacao valor={tagReceita.valor} tipo={tagReceita.tipo} />}
         </div>
         <div className="text-[11px] text-[#898989] mt-0.5">
           {metaTotal > 0

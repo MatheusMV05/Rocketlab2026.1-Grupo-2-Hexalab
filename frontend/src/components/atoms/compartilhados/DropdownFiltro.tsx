@@ -8,9 +8,10 @@ interface Props {
   onChange: (valor: string) => void
   rotulo?: string
   pesquisavel?: boolean
+  overrideado?: boolean
 }
 
-export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo, pesquisavel = false }: Props) {
+export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo, pesquisavel = false, overrideado = false }: Props) {
   const [aberto, setAberto] = useState(false)
   const [pendente, setPendente] = useState(valor)
   const [busca, setBusca] = useState('')
@@ -48,8 +49,8 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo, pesquis
         style={{ border: `2px solid ${aberto ? '#3f7377' : '#e0e0e0'}` }}
       >
         <span className="font-semibold text-[#262626]">{nomeLabel}:</span>
-        <span className={valor ? 'text-[#1d5358]' : 'text-[#262626]'}>
-          {valor || 'Todos'}
+        <span className={overrideado ? 'text-[#898989]' : (valor ? 'text-[#1d5358]' : 'text-[#262626]')}>
+          {overrideado ? '---' : (valor || 'Todos')}
         </span>
         <svg
           width="10" height="6" viewBox="0 0 10 6"

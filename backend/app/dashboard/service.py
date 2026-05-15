@@ -22,8 +22,10 @@ from app.dashboard.schemas import (
 )
 
 
-async def get_kpis(db: AsyncSession) -> KpiResponse:
-    data = await repository.get_kpis(db)
+async def get_kpis(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> KpiResponse:
+    data = await repository.get_kpis(db, ano, mes, localidade)
     return KpiResponse(**data)
 
 
@@ -45,14 +47,21 @@ async def get_vendas_mensal(db: AsyncSession) -> VendasMensalResponse:
     return VendasMensalResponse(items=items)
 
 
-async def get_top_produtos(db: AsyncSession) -> TopProdutosResponse:
-    data = await repository.get_top_produtos(db)
+async def get_top_produtos(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> TopProdutosResponse:
+    data = await repository.get_top_produtos(db, ano, mes, localidade)
     items = sorted(
-        [TopProdutoItem(**item) for item in data],
+        [TopProdutoItem(**item) for item in data["items"]],
         key=lambda x: x.receita_total,
         reverse=True,
     )
-    return TopProdutosResponse(items=items)
+    return TopProdutosResponse(
+        items=items,
+        variacao_receita=data["variacao_receita"],
+        variacao_volume=data["variacao_volume"],
+        periodo_ref=data["periodo_ref"],
+    )
 
 
 async def get_por_regiao(db: AsyncSession) -> RegiaoResponse:
@@ -65,9 +74,11 @@ async def get_por_regiao(db: AsyncSession) -> RegiaoResponse:
     return RegiaoResponse(items=items)
 
 
-async def get_status_pedidos(db: AsyncSession) -> StatusPedidosResponse:
-    data = await repository.get_status_pedidos(db)
-    total = sum(item["total"] for item in data)
+async def get_status_pedidos(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> StatusPedidosResponse:
+    data = await repository.get_status_pedidos(db, ano, mes, localidade)
+    total = sum(item["total"] for item in data["items"])
     items = sorted(
         [
             StatusPedidoItem(
@@ -75,16 +86,22 @@ async def get_status_pedidos(db: AsyncSession) -> StatusPedidosResponse:
                 total=item["total"],
                 percentual=round(item["total"] / total * 100, 2) if total > 0 else 0.0,
             )
-            for item in data
+            for item in data["items"]
         ],
         key=lambda x: x.total,
         reverse=True,
     )
-    return StatusPedidosResponse(items=items)
+    return StatusPedidosResponse(
+        items=items,
+        variacao_total=data["variacao_total"],
+        periodo_ref=data["periodo_ref"],
+    )
 
 
-async def get_taxa_satisfacao(db: AsyncSession) -> TaxaSatisfacaoResponse:
-    data = await repository.get_taxa_satisfacao(db)
+async def get_taxa_satisfacao(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> TaxaSatisfacaoResponse:
+    data = await repository.get_taxa_satisfacao(db, ano, mes, localidade)
     return TaxaSatisfacaoResponse(**data)
 
 
@@ -114,6 +131,17 @@ async def get_receita_grafico(
     return ReceitaGraficoResponse(items=items, modo=data["modo"])
 
 
+async def get_entregas_todas(
+    db: AsyncSession,
+    status: list[str] | None = None,
+    ano: str = "",
+    mes: str = "",
+    ordem: str = "desc",
+    busca: str = "",
+) -> list[dict]:
+    return await repository.get_entregas_todas(db, status, ano, mes, ordem, busca)
+
+
 async def get_entregas(
     db: AsyncSession,
     pagina: int = 1,
@@ -121,8 +149,10 @@ async def get_entregas(
     status: list[str] | None = None,
     ano: str = "",
     mes: str = "",
+    ordem: str = "desc",
+    busca: str = "",
 ) -> EntregasResponse:
-    data = await repository.get_entregas(db, pagina, por_pagina, status, ano, mes)
+    data = await repository.get_entregas(db, pagina, por_pagina, status, ano, mes, ordem, busca)
     items = [EntregaItem(**item) for item in data["items"]]
     return EntregasResponse(
         items=items,

@@ -25,3 +25,17 @@ export function formatarReaisCompleto(valor: number): string {
   if (valor >= 1_000)     return `R$ ${(valor / 1_000).toFixed(0)}K`
   return `R$ ${valor.toLocaleString('pt-BR')}`
 }
+
+/** Formata variação percentual como props da TagVariacao. Retorna null quando não há dado. */
+export function formatarVariacao(
+  variacao: number | null | undefined,
+  periodoRef: string | undefined,
+): { valor: string; tipo: 'bom' | 'ruim' } | null {
+  if (variacao == null || !periodoRef) return null
+  const sinal = variacao >= 0 ? '+' : ''
+  const pct = variacao.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+  return {
+    valor: `${sinal}${pct}%/${periodoRef}`,
+    tipo: variacao >= 0 ? 'bom' : 'ruim',
+  }
+}

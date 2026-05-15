@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react'
 import { useStatusPedidos } from '../../../hooks/useDashboard'
 import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
+import { formatarVariacao } from '../../../utils/formatadores'
 
 // Traduz valores de status do backend para os rótulos exibidos no Figma
 const ROTULOS: Record<string, string> = {
@@ -36,16 +37,23 @@ const ROTULOS: Record<string, string> = {
 
 interface Props {
   filtrosGlobais: FiltrosPeriodo
+  onFiltrosLocaisChange?: (filtros: FiltrosPeriodo) => void
 }
 
-export function GraficoDistribuicaoPedidos({ filtrosGlobais }: Props) {
+export function GraficoDistribuicaoPedidos({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
   const [filtros, setFiltros] = useState(filtrosGlobais)
 
   useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
 
-  const { data, isLoading, isError } = useStatusPedidos()
+  function handleFiltrosChange(f: FiltrosPeriodo) {
+    setFiltros(f)
+    onFiltrosLocaisChange?.(f)
+  }
+
+  const { data, isLoading, isError } = useStatusPedidos(filtros)
 
   const total = data?.items.reduce((s, i) => s + i.total, 0) ?? 0
+  const tagTotal = formatarVariacao(data?.variacao_total, data?.periodo_ref)
 
   const dados = (data?.items ?? []).map((item) => ({
     status: ROTULOS[item.status] ?? item.status,
@@ -56,7 +64,7 @@ export function GraficoDistribuicaoPedidos({ filtrosGlobais }: Props) {
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto no topo direito */}
       <div className="absolute top-[9px] right-[19px]">
-        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
+        <FiltroPeriodo filtros={filtros} onChange={handleFiltrosChange} />
       </div>
 
       {/* Cabeçalho abaixo dos filtros */}
@@ -67,7 +75,7 @@ export function GraficoDistribuicaoPedidos({ filtrosGlobais }: Props) {
         <div className="flex items-center gap-1 mt-1 text-[11px]">
           <span className="text-[#343434] font-medium">Total de pedidos no mês:</span>
           <span className="font-bold text-[#343434]">{total || '—'}</span>
-          {total > 0 && <TagVariacao valor="+12%/ABR" tipo="bom" />}
+          {tagTotal && <TagVariacao valor={tagTotal.valor} tipo={tagTotal.tipo} />}
         </div>
       </div>
 

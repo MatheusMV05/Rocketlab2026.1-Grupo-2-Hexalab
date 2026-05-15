@@ -1,4 +1,5 @@
 from math import ceil
+from datetime import datetime
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +7,54 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dashboard.models import _entregas_overrides
 
 _MESES_ABREV = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+
+def _periodo_anterior_info(ano: str, mes: str) -> tuple[str, str, str]:
+    """Retorna (ano_ant, mes_ant, label) para comparação com o período anterior."""
+    if mes:
+        ano_ref = ano if ano else str(datetime.now().year)
+        mes_int = int(mes)
+        if mes_int > 1:
+            return ano_ref, str(mes_int - 1), _MESES_ABREV[mes_int - 1]
+        return str(int(ano_ref) - 1), "12", "Dez"
+    if ano:
+        return str(int(ano) - 1), "", str(int(ano) - 1)
+    # Sem filtro: compara mês atual com o mês anterior
+    now = datetime.now()
+    if now.month > 1:
+        return str(now.year), str(now.month - 1), _MESES_ABREV[now.month - 1]
+    return str(now.year - 1), "12", "Dez"
+
+
+def _variacao_pct(atual: float, anterior: float) -> float | None:
+    if not anterior:
+        return None
+    return round((atual - anterior) / abs(anterior) * 100, 1)
+
+
+async def _query_agregado(
+    db: AsyncSession,
+    sql_template: str,
+    ano: str,
+    mes: str,
+    localidade: str,
+    ano_key: str = "ano",
+    mes_key: str = "mes",
+) -> "any":
+    loc_join = "JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente" if localidade else ""
+    loc_filter = "AND dc.estado = :localidade" if localidade else ""
+    ano_filter = f"AND dd.ano::text = :{ano_key}" if ano else ""
+    mes_filter = f"AND dd.mes::text = :{mes_key}" if mes else ""
+    sql = text(sql_template.format(
+        loc_join=loc_join, loc_filter=loc_filter,
+        ano_filter=ano_filter, mes_filter=mes_filter,
+    ))
+    params: dict = {"localidade": localidade}
+    if ano:
+        params[ano_key] = ano
+    if mes:
+        params[mes_key] = mes
+    return (await db.execute(sql, params)).mappings().first()
 
 _STATUS_DISPLAY = {
     "aprovado": "Entregue",
@@ -104,22 +153,47 @@ async def _query_periodo_matriz(db: AsyncSession, ano: str, mes: str, localidade
     return {"items": items, "mediana_volume": mediana_volume, "mediana_satisfacao": mediana_satisfacao}
 
 
-async def get_kpis(db: AsyncSession) -> dict:
-    sql = text("""
-        SELECT
-            SUM(receita_bruta_brl)       AS receita_total,
-            COUNT(*)                     AS total_pedidos,
-            AVG(valor_pedido_brl)        AS ticket_medio,
-            COUNT(DISTINCT sk_cliente)   AS total_clientes
-        FROM fat_pedidos
-        WHERE fl_pedido_aprovado = 1
-    """)
-    row = (await db.execute(sql)).mappings().first()
+_SQL_KPI = """
+    SELECT
+        SUM(fp.receita_bruta_brl)     AS receita_total,
+        COUNT(*)                      AS total_pedidos,
+        AVG(fp.valor_pedido_brl)      AS ticket_medio,
+        COUNT(DISTINCT fp.sk_cliente) AS total_clientes
+    FROM fat_pedidos fp
+    JOIN dim_data dd ON dd.sk_data = fp.sk_data_pedido AND dd.ano > 0
+    {loc_join}
+    WHERE fp.fl_pedido_aprovado = 1
+      {ano_filter}
+      {mes_filter}
+      {loc_filter}
+"""
+
+
+async def get_kpis(db: AsyncSession, ano: str = "", mes: str = "", localidade: str = "") -> dict:
+    row = await _query_agregado(db, _SQL_KPI, ano, mes, localidade)
+    receita = round(float(row["receita_total"] or 0), 2)
+    pedidos = int(row["total_pedidos"] or 0)
+    ticket  = round(float(row["ticket_medio"] or 0), 2)
+    clientes = int(row["total_clientes"] or 0)
+
+    ano_ant, mes_ant, periodo_ref = _periodo_anterior_info(ano, mes)
+    row_ant = await _query_agregado(db, _SQL_KPI, ano_ant, mes_ant, localidade,
+                                    ano_key="ano_ant", mes_key="mes_ant")
+    var_receita  = _variacao_pct(receita,  float(row_ant["receita_total"] or 0))
+    var_pedidos  = _variacao_pct(pedidos,  float(row_ant["total_pedidos"] or 0))
+    var_ticket   = _variacao_pct(ticket,   float(row_ant["ticket_medio"] or 0))
+    var_clientes = _variacao_pct(clientes, float(row_ant["total_clientes"] or 0))
+
     return {
-        "receita_total": round(float(row["receita_total"] or 0), 2),
-        "total_pedidos": int(row["total_pedidos"] or 0),
-        "ticket_medio": round(float(row["ticket_medio"] or 0), 2),
-        "total_clientes": int(row["total_clientes"] or 0),
+        "receita_total": receita,
+        "total_pedidos": pedidos,
+        "ticket_medio": ticket,
+        "total_clientes": clientes,
+        "variacao_receita": var_receita,
+        "variacao_pedidos": var_pedidos,
+        "variacao_ticket": var_ticket,
+        "variacao_clientes": var_clientes,
+        "periodo_ref": periodo_ref or "",
     }
 
 
@@ -146,20 +220,52 @@ async def get_vendas_mensal(db: AsyncSession) -> list[dict]:
     ]
 
 
-async def get_top_produtos(db: AsyncSession) -> list[dict]:
-    sql = text("""
-        SELECT p.nome_produto, p.categoria,
-               SUM(fp.receita_bruta_brl) AS receita,
-               SUM(fp.quantidade)        AS unidades
-        FROM fat_pedidos fp
-        JOIN dim_produtos p ON p.sk_produto = fp.sk_produto
-        WHERE fp.fl_pedido_aprovado = 1
-        GROUP BY p.nome_produto, p.categoria
-        ORDER BY receita DESC
-        LIMIT 10
-    """)
-    rows = (await db.execute(sql)).mappings().all()
-    return [
+_SQL_TOP_PRODUTOS = """
+    SELECT p.nome_produto, p.categoria,
+           SUM(fp.receita_bruta_brl) AS receita,
+           SUM(fp.quantidade)        AS unidades
+    FROM fat_pedidos fp
+    JOIN dim_produtos p  ON p.sk_produto  = fp.sk_produto
+    JOIN dim_data    dd  ON dd.sk_data    = fp.sk_data_pedido AND dd.ano > 0
+    {loc_join}
+    WHERE fp.fl_pedido_aprovado = 1
+      {ano_filter}
+      {mes_filter}
+      {loc_filter}
+    GROUP BY p.nome_produto, p.categoria
+    ORDER BY receita DESC
+    LIMIT 10
+"""
+
+_SQL_TOP_TOTAL = """
+    SELECT SUM(fp.receita_bruta_brl) AS receita, SUM(fp.quantidade) AS unidades
+    FROM fat_pedidos fp
+    JOIN dim_data dd ON dd.sk_data = fp.sk_data_pedido AND dd.ano > 0
+    {loc_join}
+    WHERE fp.fl_pedido_aprovado = 1
+      {ano_filter}
+      {mes_filter}
+      {loc_filter}
+"""
+
+
+async def get_top_produtos(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> dict:
+    loc_join = "JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente" if localidade else ""
+    loc_filter = "AND dc.estado = :localidade" if localidade else ""
+    ano_filter = "AND dd.ano::text = :ano" if ano else ""
+    mes_filter = "AND dd.mes::text = :mes" if mes else ""
+    params: dict = {"localidade": localidade}
+    if ano: params["ano"] = ano
+    if mes: params["mes"] = mes
+
+    sql = text(_SQL_TOP_PRODUTOS.format(
+        loc_join=loc_join, loc_filter=loc_filter,
+        ano_filter=ano_filter, mes_filter=mes_filter,
+    ))
+    rows = (await db.execute(sql, params)).mappings().all()
+    items = [
         {
             "nome_produto": row["nome_produto"],
             "categoria": row["categoria"],
@@ -168,6 +274,22 @@ async def get_top_produtos(db: AsyncSession) -> list[dict]:
         }
         for row in rows
     ]
+
+    receita_atual = sum(i["receita_total"] for i in items[:5])
+    volume_atual  = sum(i["total_unidades"] for i in items[:5])
+
+    ano_ant, mes_ant, periodo_ref = _periodo_anterior_info(ano, mes)
+    row_ant = await _query_agregado(db, _SQL_TOP_TOTAL, ano_ant, mes_ant, localidade,
+                                    ano_key="ano_ant", mes_key="mes_ant")
+    var_receita = _variacao_pct(receita_atual, float(row_ant["receita"] or 0))
+    var_volume  = _variacao_pct(float(volume_atual), float(row_ant["unidades"] or 0))
+
+    return {
+        "items": items,
+        "variacao_receita": var_receita,
+        "variacao_volume": var_volume,
+        "periodo_ref": periodo_ref or "",
+    }
 
 
 async def get_por_regiao(db: AsyncSession) -> list[dict]:
@@ -193,40 +315,119 @@ async def get_por_regiao(db: AsyncSession) -> list[dict]:
     ]
 
 
-async def get_status_pedidos(db: AsyncSession) -> list[dict]:
-    sql = text("""
-        SELECT status, COUNT(*) AS total
-        FROM fat_pedidos
-        GROUP BY status
+_SQL_STATUS_TOTAL = """
+    SELECT COUNT(*) AS total
+    FROM fat_pedidos fp
+    JOIN dim_data dd ON dd.sk_data = fp.sk_data_pedido AND dd.ano > 0
+    {loc_join}
+    WHERE 1=1
+      {ano_filter}
+      {mes_filter}
+      {loc_filter}
+"""
+
+
+async def get_status_pedidos(
+    db: AsyncSession, ano: str = "", mes: str = "", localidade: str = ""
+) -> list[dict]:
+    loc_join = "JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente" if localidade else ""
+    loc_filter = "AND dc.estado = :localidade" if localidade else ""
+    ano_filter = "AND dd.ano::text = :ano" if ano else ""
+    mes_filter = "AND dd.mes::text = :mes" if mes else ""
+    params: dict = {"localidade": localidade}
+    if ano: params["ano"] = ano
+    if mes: params["mes"] = mes
+
+    sql = text(f"""
+        SELECT fp.status, COUNT(*) AS total
+        FROM fat_pedidos fp
+        JOIN dim_data dd ON dd.sk_data = fp.sk_data_pedido AND dd.ano > 0
+        {loc_join}
+        WHERE 1=1
+          {ano_filter}
+          {mes_filter}
+          {loc_filter}
+        GROUP BY fp.status
         ORDER BY total DESC
     """)
-    rows = (await db.execute(sql)).mappings().all()
-    return [
+    rows = (await db.execute(sql, params)).mappings().all()
+    total_atual = sum(int(r["total"]) for r in rows)
+
+    ano_ant, mes_ant, periodo_ref = _periodo_anterior_info(ano, mes)
+    row_ant = await _query_agregado(db, _SQL_STATUS_TOTAL, ano_ant, mes_ant, localidade,
+                                    ano_key="ano_ant", mes_key="mes_ant")
+    variacao_total = _variacao_pct(float(total_atual), float(row_ant["total"] or 0))
+
+    items = [
         {
             "status": _STATUS_DISPLAY.get(row["status"], row["status"].title()),
             "total": int(row["total"]),
         }
         for row in rows
     ]
+    return {"items": items, "variacao_total": variacao_total, "periodo_ref": periodo_ref or ""}
 
 
-async def get_taxa_satisfacao(db: AsyncSession) -> dict:
-    sql = text("""
-        SELECT
-            COUNT(*)                                                  AS total,
-            SUM(CASE WHEN nota_nps >= 9 THEN 1 ELSE 0 END)           AS promotores,
-            SUM(CASE WHEN nota_nps <= 6 THEN 1 ELSE 0 END)           AS detratores
-        FROM fat_avaliacoes
-    """)
-    row = (await db.execute(sql)).mappings().first()
+_SQL_TAXA_SATISFACAO = """
+    SELECT
+        COUNT(*)                                             AS total,
+        SUM(CASE WHEN fa.nota_nps >= 7 THEN 1 ELSE 0 END)  AS positivos
+    FROM fat_avaliacoes fa
+    JOIN fat_pedidos fp ON fp.sk_pedido = fa.sk_pedido AND fp.fl_pedido_aprovado = 1
+    JOIN dim_data dd ON dd.sk_data = fp.sk_data_pedido AND dd.ano > 0
+    {loc_join}
+    WHERE 1=1
+      {ano_filter}
+      {mes_filter}
+      {loc_filter}
+"""
+
+
+def _calcular_taxa_satisfacao(row) -> float:
     total = int(row["total"] or 0)
-    promotores = int(row["promotores"] or 0)
-    detratores = int(row["detratores"] or 0)
-    nps = round((promotores - detratores) / total * 100, 1) if total > 0 else 0.0
+    if total == 0:
+        return 0.0
+    positivos = int(row["positivos"] or 0)
+    return round(positivos / total * 100, 1)
+
+
+async def get_taxa_satisfacao(
+    db: AsyncSession,
+    ano: str = "",
+    mes: str = "",
+    localidade: str = "",
+) -> dict:
+    loc_join = "JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente" if localidade else ""
+    loc_filter = "AND dc.estado = :localidade" if localidade else ""
+    ano_filter = "AND dd.ano::text = :ano" if ano else ""
+    mes_filter = "AND dd.mes::text = :mes" if mes else ""
+
+    sql_filtrado = text(_SQL_TAXA_SATISFACAO.format(
+        loc_join=loc_join, loc_filter=loc_filter,
+        ano_filter=ano_filter, mes_filter=mes_filter,
+    ))
+    params: dict = {"ano": ano, "mes": mes, "localidade": localidade}
+    row = (await db.execute(sql_filtrado, params)).mappings().first()
+    valor = _calcular_taxa_satisfacao(row)
+    total = int(row["total"] or 0)
+
+    ano_ant, mes_ant, periodo_ref = _periodo_anterior_info(ano, mes)
+    sql_ant = text(_SQL_TAXA_SATISFACAO.format(
+        loc_join=loc_join, loc_filter=loc_filter,
+        ano_filter="AND dd.ano::text = :ano_ant" if ano_ant else "",
+        mes_filter="AND dd.mes::text = :mes_ant" if mes_ant else "",
+    ))
+    params_ant: dict = {"localidade": localidade}
+    if ano_ant: params_ant["ano_ant"] = ano_ant
+    if mes_ant: params_ant["mes_ant"] = mes_ant
+    row_ant = (await db.execute(sql_ant, params_ant)).mappings().first()
+    variacao = _variacao_pct(valor, _calcular_taxa_satisfacao(row_ant))
+
     return {
-        "valor": nps,
-        "meta": 50.0,
+        "valor": valor,
         "total_avaliacoes": total,
+        "variacao": variacao,
+        "periodo_ref": periodo_ref or "",
     }
 
 
@@ -351,10 +552,12 @@ async def get_receita_grafico(
 async def get_entregas(
     db: AsyncSession,
     pagina: int = 1,
-    por_pagina: int = 7,
+    por_pagina: int = 10,
     status: list[str] | None = None,
     ano: str = "",
     mes: str = "",
+    ordem: str = "desc",
+    busca: str = "",
 ) -> dict:
     conditions = ["dd.ano > 0"]
     params: dict = {"limit": por_pagina, "offset": (pagina - 1) * por_pagina}
@@ -374,10 +577,15 @@ async def get_entregas(
         conditions.append("dd.mes::text = :mes")
         params["mes"] = mes
 
+    if busca:
+        conditions.append("(dc.nome || ' ' || dc.sobrenome) ILIKE :busca")
+        params["busca"] = f"%{busca}%"
+
     where = " AND ".join(conditions)
 
     count_sql = text(f"""
         SELECT COUNT(*) FROM fat_pedidos fp
+        JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente
         JOIN dim_data dd ON dd.sk_data = fp.sk_data_pedido
         WHERE {where}
     """)
@@ -392,7 +600,7 @@ async def get_entregas(
         JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente
         JOIN dim_data     dd ON dd.sk_data    = fp.sk_data_pedido
         WHERE {where}
-        ORDER BY fp.sk_data_pedido DESC
+        ORDER BY {("cliente ASC" if ordem == "cliente_az" else "cliente DESC" if ordem == "cliente_za" else ("fp.sk_data_pedido ASC" if ordem == "asc" else "fp.sk_data_pedido DESC"))}
         LIMIT :limit OFFSET :offset
     """)
     rows = (await db.execute(data_sql, params)).mappings().all()
@@ -414,6 +622,69 @@ async def get_entregas(
         "por_pagina": por_pagina,
         "total_paginas": ceil(int(total) / por_pagina) if total > 0 else 1,
     }
+
+
+async def get_entregas_todas(
+    db: AsyncSession,
+    status: list[str] | None = None,
+    ano: str = "",
+    mes: str = "",
+    ordem: str = "desc",
+    busca: str = "",
+) -> list[dict]:
+    conditions = ["dd.ano > 0"]
+    params: dict = {}
+
+    if status:
+        db_statuses = [_STATUS_DB.get(s, s.lower()) for s in status]
+        placeholders = ", ".join(f":s{i}" for i in range(len(db_statuses)))
+        conditions.append(f"fp.status IN ({placeholders})")
+        for i, s in enumerate(db_statuses):
+            params[f"s{i}"] = s
+
+    if ano:
+        conditions.append("dd.ano::text = :ano")
+        params["ano"] = ano
+
+    if mes:
+        conditions.append("dd.mes::text = :mes")
+        params["mes"] = mes
+
+    if busca:
+        conditions.append("(dc.nome || ' ' || dc.sobrenome) ILIKE :busca")
+        params["busca"] = f"%{busca}%"
+
+    where = " AND ".join(conditions)
+    if ordem == "cliente_az":
+        order_clause = "cliente ASC"
+    elif ordem == "cliente_za":
+        order_clause = "cliente DESC"
+    elif ordem == "asc":
+        order_clause = "fp.sk_data_pedido ASC"
+    else:
+        order_clause = "fp.sk_data_pedido DESC"
+
+    sql = text(f"""
+        SELECT fp.id_pedido,
+               dc.nome || ' ' || dc.sobrenome AS cliente,
+               fp.status,
+               dd.data_completa               AS prazo
+        FROM fat_pedidos fp
+        JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente
+        JOIN dim_data     dd ON dd.sk_data    = fp.sk_data_pedido
+        WHERE {where}
+        ORDER BY {order_clause}
+    """)
+    rows = (await db.execute(sql, params)).mappings().all()
+    return [
+        {
+            "id": row["id_pedido"],
+            "cliente": row["cliente"],
+            "status": _STATUS_DISPLAY.get(row["status"], row["status"].title()),
+            "prazo": str(row["prazo"]) if row["prazo"] else "",
+        }
+        for row in rows
+    ]
 
 
 async def get_filtros_opcoes(db: AsyncSession) -> dict:

@@ -93,16 +93,27 @@ function BadgeQuadrante({
   )
 }
 
-function agruparPorPosicao(items: ProdutoBase[]): ProdutoAgrupado[] {
-  const map = new Map<string, ProdutoBase[]>()
-  for (const item of items) {
-    const key = `${item.satisfacao}`
-    if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push(item)
+function agruparPorProximidade(items: ProdutoBase[], limiar = 0.2): ProdutoAgrupado[] {
+  if (items.length === 0) return []
+  const sorted = [...items].sort((a, b) => a.satisfacao - b.satisfacao)
+  const grupos: ProdutoBase[][] = []
+  let grupo: ProdutoBase[] = [sorted[0]]
+  let ancora = sorted[0].satisfacao
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].satisfacao - ancora <= limiar) {
+      grupo.push(sorted[i])
+    } else {
+      grupos.push(grupo)
+      grupo = [sorted[i]]
+      ancora = sorted[i].satisfacao
+    }
   }
-  return Array.from(map.values()).map((grupo) => {
-    const sorted = [...grupo].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-    return { ...sorted[0], membros: sorted }
+  grupos.push(grupo)
+  return grupos.map((g) => {
+    const membros = [...g].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    const avgSat = g.reduce((s, p) => s + p.satisfacao, 0) / g.length
+    const avgVol = Math.round(g.reduce((s, p) => s + p.volume, 0) / g.length)
+    return { ...membros[0], satisfacao: avgSat, volume: avgVol, membros }
   })
 }
 
@@ -237,7 +248,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
   }, [data])
 
   const produtos = useMemo(
-    () => calcLabelPositions(agruparPorPosicao(data?.items ?? []), chartWidth, domX),
+    () => calcLabelPositions(agruparPorProximidade(data?.items ?? []), chartWidth, domX),
     [data, chartWidth, domX],
   )
 
@@ -416,25 +427,41 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {grupoAberto.membros.map((membro) => (
-              <div
-                key={membro.nome}
-                className="px-3 py-1.5 text-[11px] text-[#343434] hover:bg-[#f5f5f5] cursor-default"
-                onMouseEnter={(e) => {
-                  const itemRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                  const chartRect = chartAreaRef.current?.getBoundingClientRect()
-                  if (!chartRect) return
-                  setTooltipDrop({
-                    produto: membro,
-                    left: itemRect.left - chartRect.left + itemRect.width / 2,
-                    top: itemRect.bottom - chartRect.top + 4,
-                  })
-                }}
-                onMouseLeave={() => setTooltipDrop(null)}
-              >
-                {membro.nome}
-              </div>
-            ))}
+            {(() => {
+              const porAvaliacao = new Map<number, ProdutoBase[]>()
+              for (const m of grupoAberto.membros) {
+                if (!porAvaliacao.has(m.satisfacao)) porAvaliacao.set(m.satisfacao, [])
+                porAvaliacao.get(m.satisfacao)!.push(m)
+              }
+              return Array.from(porAvaliacao.entries())
+                .sort(([a], [b]) => b - a)
+                .map(([sat, membros]) => (
+                  <div key={sat}>
+                    <div className="px-3 pt-2 pb-0.5 text-[9px] font-semibold text-[#888] tracking-wide">
+                      {sat.toFixed(1)} <span style={{ color: '#FBBF24' }}>★</span>
+                    </div>
+                    {membros.map((membro) => (
+                      <div
+                        key={membro.nome}
+                        className="px-3 py-1.5 text-[11px] text-[#343434] hover:bg-[#f5f5f5] cursor-default"
+                        onMouseEnter={(e) => {
+                          const itemRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const chartRect = chartAreaRef.current?.getBoundingClientRect()
+                          if (!chartRect) return
+                          setTooltipDrop({
+                            produto: membro,
+                            left: itemRect.left - chartRect.left + itemRect.width / 2,
+                            top: itemRect.bottom - chartRect.top + 4,
+                          })
+                        }}
+                        onMouseLeave={() => setTooltipDrop(null)}
+                      >
+                        {membro.nome}
+                      </div>
+                    ))}
+                  </div>
+                ))
+            })()}
           </div>
         )}
 

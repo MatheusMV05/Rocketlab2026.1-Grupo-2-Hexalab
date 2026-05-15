@@ -6,6 +6,11 @@ class KpiResponse(BaseModel):
     total_pedidos: int
     ticket_medio: float
     total_clientes: int
+    variacao_receita: float | None = None
+    variacao_pedidos: float | None = None
+    variacao_ticket: float | None = None
+    variacao_clientes: float | None = None
+    periodo_ref: str = ""
 
 
 class VendasMensalItem(BaseModel):
@@ -27,6 +32,9 @@ class TopProdutoItem(BaseModel):
 
 class TopProdutosResponse(BaseModel):
     items: list[TopProdutoItem]
+    variacao_receita: float | None = None
+    variacao_volume: float | None = None
+    periodo_ref: str = ""
 
 
 class RegiaoItem(BaseModel):
@@ -47,12 +55,15 @@ class StatusPedidoItem(BaseModel):
 
 class StatusPedidosResponse(BaseModel):
     items: list[StatusPedidoItem]
+    variacao_total: float | None = None
+    periodo_ref: str = ""
 
 
 class TaxaSatisfacaoResponse(BaseModel):
     valor: float
-    meta: float
     total_avaliacoes: int
+    variacao: float | None = None
+    periodo_ref: str = ""
 
 
 class MatrizProdutoItem(BaseModel):

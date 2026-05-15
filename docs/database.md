@@ -1,6 +1,6 @@
 # Conexão com o Banco de Dados
 
-Banco PostgreSQL hospedado no **Google Cloud SQL** (São Paulo).
+Banco PostgreSQL hospedado no **Google Cloud SQL**.
 
 ## Credenciais
 

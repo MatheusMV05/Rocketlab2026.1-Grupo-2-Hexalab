@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Square,
   CheckSquare,
@@ -14,7 +14,7 @@ import { BotaoFiltro } from '../../atoms/compartilhados/BotaoFiltro'
 import { ANOS_FILTRO, MESES_FILTRO, ESTADOS_NOME } from '../../../constants/opcoesFiltro'
 import { useEntregas, useAtualizarEntrega } from '../../../hooks/useDashboard'
 
-type StatusEntrega = 'hoje' | 'no_prazo' | 'atrasado'
+type StatusEntrega = 'Entregue' | 'Em Processamento' | 'Reembolsado' | 'Cancelado'
 
 interface FiltroEntregas {
   ano: string
@@ -24,19 +24,20 @@ interface FiltroEntregas {
 }
 
 const STATUS_CONFIG: Record<StatusEntrega, { label: string; cor: string }> = {
-  hoje: { label: 'Hoje', cor: '#e37405' },
-  no_prazo: { label: 'No prazo', cor: '#1a9a45' },
-  atrasado: { label: 'Atrasado', cor: '#c20000' },
+  'Entregue':        { label: 'Entregue',        cor: '#1a9a45' },
+  'Em Processamento':{ label: 'Em Processamento', cor: '#e37405' },
+  'Reembolsado':     { label: 'Reembolsado',      cor: '#3f7377' },
+  'Cancelado':       { label: 'Cancelado',         cor: '#c20000' },
 }
 
 const STATUS_OPCOES: { valor: StatusEntrega; label: string }[] = [
-  { valor: 'atrasado', label: 'Atrasado' },
-  { valor: 'no_prazo', label: 'No prazo' },
-  { valor: 'hoje', label: 'Hoje' },
+  { valor: 'Entregue',         label: 'Entregue' },
+  { valor: 'Em Processamento', label: 'Em Processamento' },
+  { valor: 'Reembolsado',      label: 'Reembolsado' },
+  { valor: 'Cancelado',        label: 'Cancelado' },
 ]
 
 interface EdicaoEntrega {
-  idPedido: string
   cliente: string
   status: string
   dia: string
@@ -65,21 +66,53 @@ export function ListaEntregas() {
   const [buscaLocalidade, setBuscaLocalidade] = useState('')
   const [selecionados, setSelecionados] = useState<string[]>([])
   const [ordenacaoAberta, setOrdenacaoAberta] = useState(false)
-  const [ordenacao, setOrdenacao] = useState<'recentes' | 'antigos'>('recentes')
+  const [ordenacao, setOrdenacao] = useState<'recentes' | 'antigos' | 'cliente_az' | 'cliente_za'>('recentes')
+  const [searchAberto, setSearchAberto] = useState(false)
+  const [buscaInput, setBuscaInput] = useState('')
+  const [buscaCliente, setBuscaCliente] = useState('')
   const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false)
   const [edicao, setEdicao] = useState<EdicaoEntrega>({
-    idPedido: '', cliente: '', status: '', dia: '', mes: '', ano: '',
+    cliente: '', status: '', dia: '', mes: '', ano: '',
   })
   const ordenacaoRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setBuscaCliente(buscaInput.trim())
+      setPaginaAtual(1)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [buscaInput])
+
+  useEffect(() => {
+    if (searchAberto) searchInputRef.current?.focus()
+  }, [searchAberto])
 
   const filtrosApi = {
     status: filtro.status.length > 0 ? filtro.status : undefined,
     ano: filtro.ano || undefined,
     mes: filtro.mes || undefined,
+    busca: buscaCliente || undefined,
   }
 
-  const { data, isLoading, isError } = useEntregas(paginaAtual, filtrosApi)
+  const { data, isLoading, isError } = useEntregas(paginaAtual, filtrosApi, 10, ordenacao)
   const atualizarEntrega = useAtualizarEntrega()
+
+  function exportarCsv() {
+    const params = new URLSearchParams()
+    const ordemMap: Record<string, string> = { recentes: 'desc', antigos: 'asc', cliente_az: 'cliente_az', cliente_za: 'cliente_za' }
+    params.set('ordem', ordemMap[ordenacao] ?? 'desc')
+    filtrosApi.status?.forEach((s) => params.append('status', s))
+    if (filtrosApi.ano) params.set('ano', filtrosApi.ano)
+    if (filtrosApi.mes) params.set('mes', filtrosApi.mes)
+    if (filtrosApi.busca) params.set('busca', filtrosApi.busca)
+    const url = `http://localhost:8080/api/dashboard/entregas/exportar?${params}`
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'entregas.csv'
+    a.click()
+  }
   const entregas = data?.items ?? []
   const totalPaginas = data?.total_paginas ?? 1
 
@@ -130,13 +163,7 @@ export function ListaEntregas() {
 
   function abrirModalEdicao() {
     if (selecionados.length === 0) return
-    const primeira = entregas.find((e) => e.id === selecionados[0])
-    setEdicao({
-      idPedido: primeira?.id ?? '',
-      cliente: primeira?.cliente ?? '',
-      status: primeira?.status ?? '',
-      dia: '', mes: '', ano: '',
-    })
+    setEdicao({ cliente: '', status: '', dia: '', mes: '', ano: '' })
     setModalEdicaoAberto(true)
   }
 
@@ -195,28 +222,74 @@ export function ListaEntregas() {
             </button>
 
             {ordenacaoAberta && (
-              <div className="absolute top-[calc(100%+6px)] left-0 z-20 bg-white border border-[#e0e0e0] rounded-[10px] shadow-md min-w-[160px] overflow-hidden">
-                {(['recentes', 'antigos'] as const).map((tipo) => (
+              <div className="absolute top-[calc(100%+6px)] left-0 z-20 bg-white border border-[#e0e0e0] rounded-[10px] shadow-md min-w-[180px] overflow-hidden">
+                {(
+                  [
+                    { valor: 'recentes',    label: 'Mais recentes' },
+                    { valor: 'antigos',     label: 'Mais antigos' },
+                    { valor: 'cliente_az',  label: 'Cliente A-Z' },
+                    { valor: 'cliente_za',  label: 'Cliente Z-A' },
+                  ] as const
+                ).map(({ valor, label }) => (
                   <button
-                    key={tipo}
+                    key={valor}
                     onClick={() => {
-                      setOrdenacao(tipo)
+                      setOrdenacao(valor)
                       setOrdenacaoAberta(false)
                     }}
                     className={`w-full text-left px-4 py-3 text-[13px] transition-colors hover:bg-[#f6f7f9] ${
-                      ordenacao === tipo ? 'text-[#1d5358] font-semibold' : 'text-[#343434]'
+                      ordenacao === valor ? 'text-[#1d5358] font-semibold' : 'text-[#343434]'
                     }`}
                   >
-                    {tipo === 'recentes' ? 'Mais recentes' : 'Mais antigos'}
+                    {label}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          <button className="flex items-center justify-center w-10 h-10 bg-[#f6f7f9] rounded-full hover:bg-[#dde5e6] transition-colors text-[#4d4d4d]">
-            <Search size={18} strokeWidth={1.5} />
-          </button>
+          <div className="flex items-center gap-2">
+            {searchAberto && (
+              <div className="relative">
+                <Search
+                  size={14}
+                  strokeWidth={1.5}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#898989] pointer-events-none"
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={buscaInput}
+                  onChange={(e) => setBuscaInput(e.target.value)}
+                  placeholder="Buscar cliente..."
+                  className="h-10 w-[200px] pl-8 pr-8 border border-[#e0e0e0] rounded-full text-[13px] text-[#343434] placeholder-[#898989] focus:outline-none focus:border-[#3f7377] bg-[#f6f7f9]"
+                />
+                {buscaInput && (
+                  <button
+                    onClick={() => setBuscaInput('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#898989] hover:text-[#343434] transition-colors"
+                  >
+                    <X size={13} strokeWidth={2} />
+                  </button>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => {
+                setSearchAberto((o) => {
+                  if (o) { setBuscaInput(''); }
+                  return !o
+                })
+              }}
+              className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+                searchAberto || buscaCliente
+                  ? 'bg-[#1d5358] text-white'
+                  : 'bg-[#f6f7f9] text-[#4d4d4d] hover:bg-[#dde5e6]'
+              }`}
+            >
+              <Search size={18} strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
@@ -244,7 +317,11 @@ export function ListaEntregas() {
             <Filter size={18} strokeWidth={1.5} />
           </button>
 
-          <button className="flex items-center justify-center w-10 h-10 bg-[#f6f7f9] rounded-[20px] text-[#4d4d4d] opacity-40 cursor-not-allowed">
+          <button
+            onClick={exportarCsv}
+            title="Exportar CSV"
+            className="flex items-center justify-center w-10 h-10 bg-[#f6f7f9] rounded-[20px] text-[#4d4d4d] hover:bg-[#dde5e6] transition-colors"
+          >
             <Upload size={18} strokeWidth={1.5} />
           </button>
         </div>
@@ -483,25 +560,7 @@ export function ListaEntregas() {
       {/* Divisor */}
       <div className="border-t border-[#e0e0e0] mx-1" />
 
-      {/* Cabeçalho da tabela */}
-      <div className="bg-[#f6f7f9] rounded-[10px] flex items-center gap-[6px] pl-[6px] pr-5 py-[10px]">
-        <button className="w-6 shrink-0" onClick={toggleTodos}>
-          {todosSelecionados ? (
-            <CheckSquare size={16} strokeWidth={1.5} className="text-[#1d5358]" />
-          ) : (
-            <Square size={16} strokeWidth={1.5} className="text-[#1d5358]" />
-          )}
-        </button>
-        <span className="text-[14px] font-semibold text-[#1d5358] w-[200px] shrink-0">Pedido</span>
-        <span className="text-[14px] font-semibold text-[#1d5358] flex-1">Cliente</span>
-        <span className="text-[14px] font-semibold text-[#1d5358] w-[160px] shrink-0">Status</span>
-        <span className="text-[14px] font-semibold text-[#1d5358] w-[120px] shrink-0 text-right">Prazo</span>
-      </div>
-
-      {/* Divisor */}
-      <div className="border-t border-[#e0e0e0] mx-1" />
-
-      {/* Linhas da tabela */}
+      {/* Tabela */}
       {isLoading && (
         <div className="flex items-center justify-center py-8 text-[#4d4d4d] text-sm">
           Carregando...
@@ -512,53 +571,82 @@ export function ListaEntregas() {
           Erro ao carregar entregas
         </div>
       )}
-      {!isLoading &&
-        !isError &&
-        entregas.map((entrega, idx) => {
-          const cfg = STATUS_CONFIG[entrega.status as StatusEntrega] ?? {
-            label: entrega.status,
-            cor: '#4d4d4d',
-          }
-          const selecionado = selecionados.includes(entrega.id)
-          return (
-            <div key={entrega.id}>
-              <div
-                className={`flex items-center gap-[6px] pl-[6px] py-[10px] rounded-[8px] cursor-pointer transition-colors ${
-                  selecionado ? 'bg-[#f0f5f5]' : 'hover:bg-[#f6f7f9]'
-                }`}
-                onClick={() => toggleSelecionado(entrega.id)}
-              >
-                <div className="w-6 shrink-0">
-                  {selecionado ? (
+      {!isLoading && !isError && (
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-[#f6f7f9]">
+              <th className="w-px pl-3 py-[10px] rounded-l-[10px] text-left font-normal">
+                <button onClick={toggleTodos}>
+                  {todosSelecionados ? (
                     <CheckSquare size={16} strokeWidth={1.5} className="text-[#1d5358]" />
                   ) : (
-                    <Square size={16} strokeWidth={1.5} className="text-[#4d4d4d]" />
+                    <Square size={16} strokeWidth={1.5} className="text-[#1d5358]" />
                   )}
-                </div>
-                <span className="text-[14px] font-medium text-[#343434] w-[200px] shrink-0">
-                  {entrega.id}
-                </span>
-                <span className="text-[14px] font-medium text-[#343434] flex-1">
-                  {entrega.cliente}
-                </span>
-                <div className="flex items-center gap-2 w-[160px] shrink-0">
-                  <span
-                    className="inline-block w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: cfg.cor }}
-                  />
-                  <span className="text-[14px] font-medium text-[#343434]">{cfg.label}</span>
-                </div>
-                <span className="text-[14px] font-medium text-[#343434] w-[120px] shrink-0 text-right">
-                  {entrega.prazo}
-                </span>
-              </div>
-              {idx < entregas.length - 1 && <div className="border-t border-[#e0e0e0] mx-1" />}
-            </div>
-          )
-        })}
+                </button>
+              </th>
+              <th className="w-px py-[10px] pr-6 text-left text-[14px] font-semibold text-[#1d5358] whitespace-nowrap">Pedido</th>
+              <th className="py-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Cliente</th>
+              <th className="w-[160px] py-[10px] pl-[18px] text-left text-[14px] font-semibold text-[#1d5358]">Status</th>
+              <th className="w-[120px] py-[10px] pr-3 rounded-r-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Prazo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entregas.map((entrega, idx) => {
+              const cfg = STATUS_CONFIG[entrega.status as StatusEntrega] ?? {
+                label: entrega.status,
+                cor: '#4d4d4d',
+              }
+              const selecionado = selecionados.includes(entrega.id)
+              return (
+                <React.Fragment key={entrega.id}>
+                  <tr
+                    onClick={() => toggleSelecionado(entrega.id)}
+                    className={`cursor-pointer transition-colors rounded-[8px] ${
+                      selecionado ? 'bg-[#f0f5f5]' : 'hover:bg-[#f6f7f9]'
+                    }`}
+                  >
+                    <td className="pl-3 py-[10px]">
+                      {selecionado ? (
+                        <CheckSquare size={16} strokeWidth={1.5} className="text-[#1d5358]" />
+                      ) : (
+                        <Square size={16} strokeWidth={1.5} className="text-[#4d4d4d]" />
+                      )}
+                    </td>
+                    <td className="py-[10px] pr-6 text-[14px] font-medium text-[#343434] whitespace-nowrap">
+                      {entrega.id}
+                    </td>
+                    <td className="py-[10px] text-[14px] font-medium text-[#343434]">
+                      {entrega.cliente}
+                    </td>
+                    <td className="py-[10px] pl-[18px]">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-block w-[10px] h-[10px] rounded-full shrink-0"
+                          style={{ backgroundColor: cfg.cor }}
+                        />
+                        <span className="text-[14px] font-medium text-[#343434]">{cfg.label}</span>
+                      </div>
+                    </td>
+                    <td className="py-[10px] pr-3 text-[14px] font-medium text-[#343434]">
+                      {entrega.prazo}
+                    </td>
+                  </tr>
+                  {idx < entregas.length - 1 && (
+                    <tr>
+                      <td colSpan={5} className="p-0">
+                        <div className="border-t border-[#e0e0e0] mx-1" />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
 
       {/* Paginação */}
-      <div className="flex items-center justify-center gap-[10px] p-[10px]">
+      <div className="flex items-center justify-center gap-[6px] p-[10px] flex-wrap">
         <button
           className="flex items-center justify-center w-7 h-7 rounded-full border border-[#e0e0e0] text-[#4d4d4d] hover:bg-[#dde5e6] hover:border-[#3f7377] hover:text-[#3f7377] transition-colors disabled:opacity-30"
           onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
@@ -567,19 +655,41 @@ export function ListaEntregas() {
           <ArrowRight size={14} strokeWidth={2} className="rotate-180" />
         </button>
 
-        {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((p) => (
-          <button
-            key={p}
-            className={`flex items-center justify-center w-7 h-7 rounded-[5px] text-[14px] font-medium transition-colors ${
-              p === paginaAtual
-                ? 'bg-[#e0e0e0] text-[#343434]'
-                : 'text-[#343434] hover:bg-[#f6f7f9]'
-            }`}
-            onClick={() => setPaginaAtual(p)}
-          >
-            {String(p).padStart(2, '0')}
-          </button>
-        ))}
+        {(() => {
+          const JANELA = 2
+          const paginas: (number | 'reticencias')[] = []
+          const adicionar = (p: number) => { if (!paginas.includes(p)) paginas.push(p) }
+
+          adicionar(1)
+          for (let p = Math.max(2, paginaAtual - JANELA); p <= Math.min(totalPaginas - 1, paginaAtual + JANELA); p++) adicionar(p)
+          if (totalPaginas > 1) adicionar(totalPaginas)
+
+          const resultado: (number | 'reticencias')[] = []
+          let anterior = 0
+          for (const p of paginas as number[]) {
+            if (p - anterior > 1) resultado.push('reticencias')
+            resultado.push(p)
+            anterior = p
+          }
+
+          return resultado.map((p, i) =>
+            p === 'reticencias' ? (
+              <span key={`r${i}`} className="flex items-center justify-center w-7 h-7 text-[13px] text-[#898989]">…</span>
+            ) : (
+              <button
+                key={p}
+                className={`flex items-center justify-center w-7 h-7 rounded-[5px] text-[13px] font-medium transition-colors ${
+                  p === paginaAtual
+                    ? 'bg-[#e0e0e0] text-[#343434]'
+                    : 'text-[#343434] hover:bg-[#f6f7f9]'
+                }`}
+                onClick={() => setPaginaAtual(p)}
+              >
+                {p}
+              </button>
+            )
+          )
+        })()}
 
         <button
           className="flex items-center justify-center w-7 h-7 rounded-full border border-[#e0e0e0] text-[#4d4d4d] hover:bg-[#dde5e6] hover:border-[#3f7377] hover:text-[#3f7377] transition-colors disabled:opacity-30"
@@ -597,7 +707,7 @@ export function ListaEntregas() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
           onClick={(e) => { if (e.target === e.currentTarget) setModalEdicaoAberto(false) }}
         >
-          <div className="bg-white rounded-[16px] shadow-xl w-full max-w-[380px] mx-4 flex flex-col gap-5 p-6 relative">
+          <div className="bg-white rounded-[16px] shadow-xl w-full max-w-[480px] mx-4 flex flex-col gap-5 p-6 relative">
             <button
               onClick={() => setModalEdicaoAberto(false)}
               className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#f6f7f9] text-[#4d4d4d] transition-colors"
@@ -610,15 +720,18 @@ export function ListaEntregas() {
             </h2>
 
             <div className="flex flex-col gap-4">
-              {/* ID do pedido */}
+              {/* Lista de pedidos selecionados */}
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-medium text-[#343434]">ID do pedido</label>
-                <input
-                  type="text"
-                  value={edicao.idPedido}
-                  onChange={(e) => setEdicao((ed) => ({ ...ed, idPedido: e.target.value }))}
-                  className="h-[42px] px-3 border border-[#d1d5db] rounded-[8px] text-[14px] text-[#343434] focus:outline-none focus:border-[#3f7377]"
-                />
+                <label className="text-[12px] font-medium text-[#343434]">
+                  Pedidos selecionados
+                </label>
+                <div className="border border-[#e0e0e0] rounded-[8px] bg-[#f6f7f9] max-h-[152px] overflow-y-auto divide-y divide-[#e0e0e0]">
+                  {selecionados.map((id) => (
+                    <div key={id} className="px-3 py-2 font-mono text-[11px] text-[#898989] select-all whitespace-nowrap">
+                      {id}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Cliente */}
@@ -643,7 +756,7 @@ export function ListaEntregas() {
                   >
                     <option value="">Status</option>
                     {STATUS_OPCOES.map(({ valor, label }) => (
-                      <option key={valor} value={valor}>{label}</option>
+                      <option key={valor} value={label}>{label}</option>
                     ))}
                   </select>
                   <ChevronDown size={14} strokeWidth={2} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4d4d4d] pointer-events-none" />
@@ -697,16 +810,16 @@ export function ListaEntregas() {
             {/* Ações */}
             <div className="flex items-center justify-end gap-3 pt-1">
               <button
-                onClick={aplicarEdicao}
-                className="h-[39px] px-5 bg-[#3f7377] rounded-[100px] text-[14px] font-medium text-white hover:bg-[#1d5358] transition-colors"
-              >
-                Aplicar
-              </button>
-              <button
                 onClick={() => setModalEdicaoAberto(false)}
                 className="h-[39px] px-5 border border-[#d1d5db] rounded-[100px] text-[14px] font-medium text-[#343434] hover:bg-[#f6f7f9] transition-colors"
               >
                 Cancelar
+              </button>
+              <button
+                onClick={aplicarEdicao}
+                className="h-[39px] px-5 bg-[#3f7377] rounded-[100px] text-[14px] font-medium text-white hover:bg-[#1d5358] transition-colors"
+              >
+                Aplicar
               </button>
             </div>
           </div>

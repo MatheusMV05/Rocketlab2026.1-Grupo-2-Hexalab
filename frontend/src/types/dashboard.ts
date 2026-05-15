@@ -3,6 +3,11 @@ export interface KpiDados {
   total_pedidos: number
   ticket_medio: number
   total_clientes: number
+  variacao_receita?: number | null
+  variacao_pedidos?: number | null
+  variacao_ticket?: number | null
+  variacao_clientes?: number | null
+  periodo_ref?: string
 }
 
 export interface VendaMensalItem {
@@ -24,6 +29,9 @@ export interface TopProdutoItem {
 
 export interface TopProdutosDados {
   items: TopProdutoItem[]
+  variacao_receita?: number | null
+  variacao_volume?: number | null
+  periodo_ref?: string
 }
 
 export interface RegiaoItem {
@@ -44,12 +52,15 @@ export interface StatusPedidoItem {
 
 export interface StatusPedidosDados {
   items: StatusPedidoItem[]
+  variacao_total?: number | null
+  periodo_ref?: string
 }
 
 export interface TaxaSatisfacaoDados {
   valor: number
-  meta: number
   total_avaliacoes: number
+  variacao?: number | null
+  periodo_ref?: string
 }
 
 export interface MatrizProdutoItem {

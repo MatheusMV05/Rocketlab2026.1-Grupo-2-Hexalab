@@ -14,9 +14,10 @@ const FILTRO_VAZIO: FiltrosPeriodo = { ano: '', mes: '', localidade: '' }
 interface Props {
   filtros: FiltrosPeriodo
   onChange: (filtros: FiltrosPeriodo) => void
+  camposOverrideados?: Set<keyof FiltrosPeriodo>
 }
 
-export function FiltroPeriodo({ filtros, onChange }: Props) {
+export function FiltroPeriodo({ filtros, onChange, camposOverrideados }: Props) {
   const { data: opcoes } = useFiltrosOpcoes()
   const anosOpcoes = opcoes?.anos ?? []
   const estadosOpcoes = opcoes?.estados ?? []
@@ -30,6 +31,7 @@ export function FiltroPeriodo({ filtros, onChange }: Props) {
         valor={filtros.ano}
         onChange={(v) => onChange({ ...filtros, ano: v })}
         rotulo="Ano"
+        overrideado={camposOverrideados?.has('ano')}
       />
       <DropdownFiltro
         label="Mês"
@@ -37,6 +39,7 @@ export function FiltroPeriodo({ filtros, onChange }: Props) {
         valor={filtros.mes}
         onChange={(v) => onChange({ ...filtros, mes: v })}
         rotulo="Mês"
+        overrideado={camposOverrideados?.has('mes')}
       />
       <DropdownFiltro
         label="Localidade"
@@ -45,6 +48,7 @@ export function FiltroPeriodo({ filtros, onChange }: Props) {
         onChange={(v) => onChange({ ...filtros, localidade: v })}
         rotulo="Localidade"
         pesquisavel
+        overrideado={camposOverrideados?.has('localidade')}
       />
       <button
         onClick={() => onChange(FILTRO_VAZIO)}
