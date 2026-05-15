@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { ListaPedidoPaginada, FiltrosPedidos } from '../types/pedidos'
+import type { ListaPedidoPaginada, FiltrosPedidos, KpisPedidos, AnaliseFluxo } from '../types/pedidos'
 
 const api = axios.create({
   baseURL: 'http://localhost:8000/api',
@@ -23,5 +23,11 @@ export const pedidosService = {
   },
 
   obterPedido: (id: number) => 
-    api.get(`/pedidos/${id}`).then((r) => r.data)
+    api.get(`/pedidos/${id}`).then((r) => r.data),
+
+  buscarKpis: () =>
+    api.get<KpisPedidos>('/pedidos/kpis').then((r) => r.data),
+
+  buscarAnaliseFluxo: () =>
+    api.get<AnaliseFluxo>('/pedidos/analise-fluxo').then((r) => r.data),
 }

@@ -16,3 +16,17 @@ export function usePedido(id: number) {
     enabled: !!id,
   })
 }
+
+export function useKpisPedidos() {
+  return useQuery({
+    queryKey: ['pedidos', 'kpis'],
+    queryFn: pedidosService.buscarKpis,
+  })
+}
+
+export function useAnaliseFluxo() {
+  return useQuery({
+    queryKey: ['pedidos', 'analise-fluxo'],
+    queryFn: pedidosService.buscarAnaliseFluxo,
+  })
+}

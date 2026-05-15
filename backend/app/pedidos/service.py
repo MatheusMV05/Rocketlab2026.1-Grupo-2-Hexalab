@@ -4,7 +4,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from fastapi import HTTPException
-from app.pedidos.schemas import ListaPedidoPaginada, PedidoItem
+from app.pedidos.schemas import ListaPedidoPaginada, PedidoItem, KpisPedidos, AnaliseFluxo, EtapaFluxo
 from app.pedidos.repository import PedidoRepository
 
 # Configuração de um log temporário para capturar erros do banco
@@ -87,3 +87,77 @@ class PedidoService:
             with open(LOG_FILE, "a") as f:
                 f.write(f"Erro em obter_pedido_por_id: {str(e)}\n")
             raise HTTPException(status_code=500, detail="Erro ao obter detalhes do pedido")
+
+    @staticmethod
+    async def obter_kpis(db: AsyncSession) -> KpisPedidos:
+        try:
+            kpis = await PedidoRepository.obter_kpis(db)
+            return KpisPedidos(**kpis)
+        except Exception as e:
+            with open(LOG_FILE, "a") as f:
+                f.write(f"Erro em obter_kpis: {str(e)}\n")
+            raise HTTPException(status_code=500, detail="Erro ao obter KPIs de pedidos")
+
+    @staticmethod
+    async def obter_analise_fluxo(db: AsyncSession) -> AnaliseFluxo:
+        """Constrói a análise de fluxo a partir de dados reais agrupados por categoria."""
+        try:
+            dados = await PedidoRepository.obter_contagem_por_categoria(db)
+            kpis = await PedidoRepository.obter_kpis(db)
+            
+            # Agrupa por categoria
+            categorias: dict = {}
+            for row in dados:
+                cat = row[0] or "Outros"
+                total = row[1] or 0
+                status = (row[2] or "").lower()
+                if cat not in categorias:
+                    categorias[cat] = {"total": 0, "aprovado": 0, "recusado": 0, "processando": 0, "reembolsado": 0}
+                categorias[cat]["total"] += total
+                if status in categorias[cat]:
+                    categorias[cat][status] += total
+
+            # Monta as etapas baseadas nas top 5 categorias por volume
+            sorted_cats = sorted(categorias.items(), key=lambda x: x[1]["total"], reverse=True)[:5]
+            
+            etapas = []
+            for cat_nome, cat_data in sorted_cats:
+                total = cat_data["total"]
+                recusados = cat_data["recusado"]
+                processando = cat_data["processando"]
+                reembolsado = cat_data["reembolsado"]
+                aprovado = cat_data["aprovado"]
+                
+                # Determina o status
+                taxa_problema = (recusados + reembolsado) / total * 100 if total > 0 else 0
+                if taxa_problema > 15:
+                    status_etapa = "Risco de atraso"
+                elif taxa_problema > 8:
+                    status_etapa = "Atraso"
+                else:
+                    status_etapa = "Dentro do SLA"
+                
+                etapas.append(EtapaFluxo(
+                    id=cat_nome.lower().replace(" ", "_"),
+                    titulo=cat_nome.capitalize(),
+                    total_pedidos=total,
+                    status=status_etapa,
+                    problemas=[
+                        f"{recusados} pedidos recusados nesta categoria ({recusados/total*100:.1f}% do total)" if total > 0 else "Sem dados",
+                        f"{reembolsado} pedidos reembolsados ({reembolsado/total*100:.1f}% do total)" if total > 0 else "Sem dados",
+                    ],
+                    gargalos=[
+                        f"Aprovados: {aprovado}",
+                        f"Processando: {processando}",
+                        f"Recusados: {recusados}",
+                    ]
+                ))
+
+            return AnaliseFluxo(
+                etapas=etapas,
+                total_pedidos=kpis["total"]
+            )
+        except Exception as e:
+            with open(LOG_FILE, "a") as f:
+                f.write(f"Erro em obter_analise_fluxo: {str(e)}\n")
+            raise HTTPException(status_code=500, detail="Erro ao obter análise de fluxo")

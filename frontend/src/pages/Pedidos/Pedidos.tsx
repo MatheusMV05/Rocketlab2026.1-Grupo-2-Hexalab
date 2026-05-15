@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { LayoutPrincipal } from '../../components/templates/LayoutPrincipal'
-import { usePedidos } from '../../hooks/usePedidos'
+import { usePedidos, useKpisPedidos } from '../../hooks/usePedidos'
 import { Box, CheckCircle, Clock, RefreshCcw, FileEdit, Filter, Upload } from 'lucide-react'
 import { CardKpi } from '../../components/molecules/dashboard/CardKpi'
 import { SeletorOrganizarLista } from '../../components/molecules/pedidos/SeletorOrganizarLista'
@@ -45,6 +45,8 @@ export default function Pedidos() {
     tamanho: 10,
   })
 
+  const { data: kpis } = useKpisPedidos()
+
   const pedidos = data?.itens ?? []
   const totalPaginas = data?.paginas ?? 1
   const totalResultados = data?.total ?? 0
@@ -78,30 +80,30 @@ export default function Pedidos() {
         <div className="flex gap-4 overflow-x-auto pb-2">
           <CardKpi 
             titulo="Em andamento" 
-            valor="124 pedidos" 
-            variacao="+12%" 
+            valor={`${(kpis?.processando ?? 0).toLocaleString('pt-BR')} pedidos`}
+            variacao="Processando"
             tipo="bom"
             icone={<Box size={24} />} 
           />
           <CardKpi 
             titulo="Finalizados" 
-            valor="124 pedidos" 
-            variacao="-10%" 
-            tipo="ruim"
+            valor={`${(kpis?.aprovados ?? 0).toLocaleString('pt-BR')} pedidos`}
+            variacao="Aprovados"
+            tipo="bom"
             icone={<CheckCircle size={24} />} 
           />
           <CardKpi 
-            titulo="Atrasados" 
-            valor="124 pedidos" 
-            variacao="-12%" 
+            titulo="Recusados" 
+            valor={`${(kpis?.recusados ?? 0).toLocaleString('pt-BR')} pedidos`}
+            variacao="Recusados"
             tipo="ruim"
             icone={<Clock size={24} />} 
           />
           <CardKpi 
             titulo="Reembolsados" 
-            valor="124 pedidos" 
-            variacao="+12%" 
-            tipo="bom"
+            valor={`${(kpis?.reembolsados ?? 0).toLocaleString('pt-BR')} pedidos`}
+            variacao="Reembolsados"
+            tipo="ruim"
             icone={<RefreshCcw size={24} />} 
           />
         </div>
@@ -121,7 +123,6 @@ export default function Pedidos() {
               onSearch={(query) => handleFiltroChange({ query })}
             />
             
-            <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => selecionados.length > 0 && setModalEdicaoAberto(true)}
@@ -149,6 +150,7 @@ export default function Pedidos() {
               </button>
             </div>
           </div>
+        
 
           {/* Active Tags */}
           <div className="flex flex-wrap gap-2">

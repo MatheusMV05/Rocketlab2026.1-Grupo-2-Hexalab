@@ -21,3 +21,27 @@ class ListaPedidoPaginada(BaseModel):
     pagina: int
     tamanho: int
     paginas: int
+
+class KpisPedidos(BaseModel):
+    processando: int
+    processando_valor: float
+    aprovados: int
+    aprovados_valor: float
+    recusados: int
+    recusados_valor: float
+    reembolsados: int
+    reembolsados_valor: float
+    total: int
+    total_valor: float
+
+class EtapaFluxo(BaseModel):
+    id: str
+    titulo: str
+    total_pedidos: int
+    status: str
+    problemas: List[str]
+    gargalos: List[str]
+
+class AnaliseFluxo(BaseModel):
+    etapas: List[EtapaFluxo]
+    total_pedidos: int

@@ -34,3 +34,5 @@ class DataDim(Base):
     __tablename__ = "dim_data"
     sk_data: Mapped[int] = mapped_column(Integer, primary_key=True)
     data_completa: Mapped[str] = mapped_column(String)
+    ano: Mapped[int] = mapped_column(Integer)
+    mes: Mapped[int] = mapped_column(Integer)

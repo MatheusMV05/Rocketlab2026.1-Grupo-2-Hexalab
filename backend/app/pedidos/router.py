@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, HTTPException, Query, Depends
 from app.database import get_db
 from datetime import datetime, date
-from app.pedidos.schemas import ListaPedidoPaginada, PedidoItem
+from app.pedidos.schemas import ListaPedidoPaginada, PedidoItem, KpisPedidos, AnaliseFluxo
 from app.pedidos.service import PedidoService
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
@@ -48,6 +48,20 @@ async def listar_pedidos(
         pagina=pagina,
         tamanho=tamanho
     )
+
+@router.get("/kpis", response_model=KpisPedidos, summary="KPIs Gerais de Pedidos")
+async def obter_kpis_pedidos(db: AsyncSession = Depends(get_db)):
+    """
+    Retorna contagens de pedidos agrupadas por status (processando, aprovados, recusados, reembolsados).
+    """
+    return await PedidoService.obter_kpis(db)
+
+@router.get("/analise-fluxo", response_model=AnaliseFluxo, summary="Análise de Fluxo de Pedidos")
+async def obter_analise_fluxo(db: AsyncSession = Depends(get_db)):
+    """
+    Retorna a análise de fluxo por categoria de produto com dados reais do banco.
+    """
+    return await PedidoService.obter_analise_fluxo(db)
 
 @router.get("/{pedido_id}", response_model=PedidoItem, summary="Detalhes do Pedido")
 async def obter_pedido(pedido_id: str, db: AsyncSession = Depends(get_db)):
