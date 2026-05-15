@@ -116,24 +116,22 @@ class AgenteRefinador(AgenteBase):
             deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
 
             try:
-                try:
-                    resultado = agent.run_sync(
-                        "Corrija o SQL.",
-                        deps=deps,
-                        message_history=self._normalizar_message_history(
-                            message_history,
-                            sistema=prompt_sistema,
-                        ),
-                    )
-                except TypeError as erro:
-                    if "message_history" not in str(erro):
-                        raise
-                    resultado = agent.run_sync("Corrija o SQL.", deps=deps)
+                historico_limitado = self._limitar_message_history(message_history)
+                historico_pydantic = self._normalizar_message_history(
+                    historico_limitado,
+                    sistema=prompt_sistema,
+                )
+                argumentos_run: dict[str, Any] = {
+                    "deps": deps,
+                }
+                if historico_pydantic:
+                    argumentos_run["message_history"] = historico_pydantic
+                resultado = agent.run_sync("Corrija o SQL.", **argumentos_run)
                 dados = self._extrair_output(resultado)
                 total_tokens += self._extrair_tokens(resultado)
                 resposta_serializada = self._serializar_output(dados)
                 novo_historico = self._historico_serializavel(
-                    message_history,
+                    historico_limitado,
                     "Corrija o SQL.",
                     resposta_serializada,
                 )
@@ -152,6 +150,19 @@ class AgenteRefinador(AgenteBase):
                     )
 
                 current_sql = extract_sql(resposta_texto) or resposta_texto.strip()
+                result = self._executar_sql(current_sql, db_connection_string)
+                if result["ok"]:
+                    return ResultadoRefinador(
+                        sql=current_sql,
+                        raciocinio=extract_reasoning(resposta_texto) or "SQL corrigido e executou sem erros.",
+                        sucesso=True,
+                        impossivel=False,
+                        tentativas=tentativa + 1,
+                        ultimo_erro=None,
+                        tokens_usados=total_tokens,
+                        novo_historico=novo_historico,
+                    )
+                last_error = result["error"] or "Query executou mas retornou 0 linhas. Revise os filtros."
 
             except Exception as erro:
                 logger.warning("AgenteRefinador: falha na chamada ao LLM (tentativa %d): %s", tentativa, erro)

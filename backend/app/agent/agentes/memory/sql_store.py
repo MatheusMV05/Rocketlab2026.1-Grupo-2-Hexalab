@@ -1,24 +1,17 @@
 from __future__ import annotations
 
 import datetime
+import json
 import logging
 import re
 from typing import Any, List
 
-from sqlalchemy import (
-    create_engine,
-    Column,
-    String,
-    Text,
-    Integer,
-    DateTime,
-    ForeignKey,
-    func,
-)
+from pydantic_ai import ModelMessagesTypeAdapter
+from pydantic_core import to_jsonable_python
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, create_engine, func
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.agent.agentes.memory.memory_store import SessionStoreProtocol
-from app.agent.config import Config
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -31,7 +24,7 @@ class SessionModel(Base):
     session_id = Column(String, primary_key=True)
     last_accessed = Column(DateTime, nullable=False)
     summary = Column(Text, nullable=True)
-    metadata = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=True)
 
 
 class MessageModel(Base):
@@ -44,33 +37,27 @@ class MessageModel(Base):
 
 
 class SessionStoreSQL(SessionStoreProtocol):
-    """Store persistente usando SQLAlchemy (sync).
+    """Store persistente de histórico por sessão.
 
-    Esta implementação usa a `settings.DATABASE_URL` existente, removendo o
-    sufixo de driver assíncrono caso presente (ex: `+aiosqlite`, `+asyncpg`) e
-    criando um engine síncrono para operações de histórico.
-
-    Observação: para ambientes com drivers específicos (Cloud SQL, async)
-    prefira fornecer uma `DATABASE_URL` compatível com driver sync ou ajustar
-    o código para usar o conector específico.
+    A compressão não acontece aqui: o histórico salvo já vem processado pelas
+    capabilities do PydanticAI nos agentes editores.
     """
 
     def __init__(self, db_url: str | None = None, ttl_seconds: int = 1800, compress_threshold: int = 100):
         self.db_url = db_url or settings.DATABASE_URL
         self.ttl = ttl_seconds
-        # Remove o sufixo +driver assíncrono para criar um engine sync compatível
+        self.compress_threshold = compress_threshold
         sync_url = re.sub(r"\+[^:]+(?=://)", "", self.db_url)
         self.engine = create_engine(sync_url, future=True)
         Base.metadata.create_all(self.engine)
         self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)
-        self.compress_threshold = compress_threshold
-        self._agent = None
 
     def get_history(self, session_id: str) -> List[Any]:
         with self.SessionLocal() as db:
             session = db.get(SessionModel, session_id)
             if not session:
                 return []
+
             session.last_accessed = datetime.datetime.utcnow()
             db.add(session)
             db.commit()
@@ -78,18 +65,10 @@ class SessionStoreSQL(SessionStoreProtocol):
             messages = (
                 db.query(MessageModel)
                 .filter(MessageModel.session_id == session_id)
-                .order_by(MessageModel.created_at)
+                .order_by(MessageModel.created_at, MessageModel.id)
                 .all()
             )
-
-            result: List[dict[str, str]] = []
-            if session.summary:
-                result.append({"role": "system", "content": session.summary})
-
-            for m in messages:
-                result.append({"role": m.role, "content": m.content})
-
-            return result
+            return self._desserializar_historico(messages)
 
     def save_history(self, session_id: str, history: List[Any]) -> None:
         with self.SessionLocal() as db:
@@ -98,87 +77,48 @@ class SessionStoreSQL(SessionStoreProtocol):
                 session = SessionModel(session_id=session_id, last_accessed=datetime.datetime.utcnow())
             else:
                 session.last_accessed = datetime.datetime.utcnow()
+                session.summary = None
 
             db.add(session)
             db.flush()
-
-            # Simples: remove mensagens existentes e regrava o histórico recebido.
             db.query(MessageModel).filter(MessageModel.session_id == session_id).delete()
 
-            for item in history:
-                if isinstance(item, dict):
-                    role = item.get("role") or item.get("from") or "user"
-                    content = item.get("content") or str(item)
-                else:
-                    role = getattr(item, "role", "user")
-                    content = getattr(item, "content", str(item))
-
-                msg = MessageModel(session_id=session_id, role=role, content=content)
-                db.add(msg)
+            for item in self._serializar_historico(history):
+                db.add(MessageModel(session_id=session_id, role=item["role"], content=item["content"]))
 
             db.commit()
 
-            total = db.query(MessageModel).filter(MessageModel.session_id == session_id).count()
-            if total > self.compress_threshold:
-                try:
-                    self._compress_session(db, session)
-                except Exception:
-                    logger.exception("Falha ao comprimir sessão %s", session_id)
-
-    def _compress_session(self, db, session: SessionModel) -> None:
-        messages = (
-            db.query(MessageModel)
-            .filter(MessageModel.session_id == session.session_id)
-            .order_by(MessageModel.created_at)
-            .all()
-        )
-
-        text = "\n".join([f"{m.role}: {m.content}" for m in messages])
-        summary = self._summarize_text(text)
-        session.summary = summary
-
-        # Keep only the last 30 messages to bound storage per session
-        recent = (
-            db.query(MessageModel)
-            .filter(MessageModel.session_id == session.session_id)
-            .order_by(MessageModel.created_at.desc())
-            .limit(30)
-            .all()
-        )
-
-        if recent:
-            cutoff = recent[-1].created_at
-            db.query(MessageModel).filter(MessageModel.session_id == session.session_id, MessageModel.created_at < cutoff).delete()
-
-        db.add(session)
-        db.commit()
-
-    def _summarize_text(self, text: str) -> str:
-        """Usa Mistral via PydanticAI (quando configurado) para gerar um resumo."""
-        cfg = Config()
-        if not cfg.api_key:
-            # sem chave, retorna truncamento simples
-            return text[:4000]
-
+    @staticmethod
+    def _serializar_historico(history: List[Any]) -> list[dict[str, str]]:
         try:
-            # import local to avoid hard dependency if not usado
-            from pydantic_ai import Agent, RunContext
-            from pydantic_ai.models.mistral import MistralModel
-            from pydantic_ai.providers.mistral import MistralProvider
-            import os
-
-            # Set the API key as environment variable for MistralModel
-            os.environ["MISTRAL_API_KEY"] = cfg.api_key
-            model = MistralModel(cfg.model, provider=MistralProvider(api_key=cfg.api_key))
-            agent = Agent(model)
-
-            @agent.system_prompt
-            def sys(ctx: RunContext):
-                return "Resuma o histórico de conversa preservando intenções, entidades e resultados relevantes. Seja conciso e preserve fatos numéricos."
-
-            resultado = agent.run_sync(text)
-            texto = str(getattr(resultado, "output", getattr(resultado, "data", "")))
-            return texto
+            mensagens = ModelMessagesTypeAdapter.validate_python(list(history or []))
+            return [
+                {"role": "pydantic", "content": json.dumps(item, ensure_ascii=False)}
+                for item in to_jsonable_python(mensagens)
+            ]
         except Exception:
-            logger.exception("Erro ao gerar resumo via LLM")
-            return text[:4000]
+            serializado: list[dict[str, str]] = []
+            for item in history or []:
+                if isinstance(item, dict):
+                    role = str(item.get("role") or item.get("from") or "user")
+                    content = str(item.get("content") or item)
+                else:
+                    role = str(getattr(item, "role", "user"))
+                    content = str(getattr(item, "content", item))
+                if content.strip():
+                    serializado.append({"role": role, "content": content})
+            return serializado
+
+    @staticmethod
+    def _desserializar_historico(messages: list[MessageModel]) -> List[Any]:
+        if messages and all(m.role == "pydantic" for m in messages):
+            try:
+                payload = [json.loads(m.content) for m in messages]
+                return list(ModelMessagesTypeAdapter.validate_python(payload))
+            except Exception:
+                logger.exception("Falha ao desserializar histórico PydanticAI")
+
+        result: List[dict[str, str]] = []
+        for message in messages:
+            result.append({"role": message.role, "content": message.content})
+        return result

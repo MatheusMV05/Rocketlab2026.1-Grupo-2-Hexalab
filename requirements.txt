@@ -17,3 +17,4 @@ PyYAML==6.0.2
 sentence-transformers
 sqlglot==25.34.1
 pydantic-ai==1.96.0
+summarization-pydantic-ai==0.1.4

@@ -1,0 +1,802 @@
+{
+  "context_manager": [
+    {
+      "timestamp": "2026-05-15T18:05:36",
+      "etapa": "AgenteDecompositor",
+      "status": "OK",
+      "usa_context_manager_capability": true,
+      "entrada": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "dict": 57
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      },
+      "saida": {
+        "mensagens": 23,
+        "chars_aproximados": 10875,
+        "tipos": {
+          "ModelRequest": 13,
+          "ModelResponse": 10
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "ModelRequest",
+            "chars": 627,
+            "preview": "Summary of previous conversation:\n\n**Tabela de referência:** `mart_cliente_360`\n\n**Definições:**\n- **Clientes premium:** `receita_lifetime_brl > 1000`\n- **Clientes parados:** `dias_desde_ultimo_pedido > 90`\n\n**Colunas-chave para análise:**\n"
+          },
+          {
+            "indice": 2,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 20. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 3,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 20. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 4,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 21. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 5,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 21. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          }
+        ]
+      },
+      "delta_mensagens": -34,
+      "delta_chars": -16631
+    },
+    {
+      "timestamp": "2026-05-15T18:05:37",
+      "etapa": "AgenteRefinador",
+      "status": "NAO_APLICAVEL",
+      "usa_context_manager_capability": false,
+      "entrada": {
+        "mensagens": 23,
+        "chars_aproximados": 10875,
+        "tipos": {
+          "ModelRequest": 13,
+          "ModelResponse": 10
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "ModelRequest",
+            "chars": 627,
+            "preview": "Summary of previous conversation:\n\n**Tabela de referência:** `mart_cliente_360`\n\n**Definições:**\n- **Clientes premium:** `receita_lifetime_brl > 1000`\n- **Clientes parados:** `dias_desde_ultimo_pedido > 90`\n\n**Colunas-chave para análise:**\n"
+          },
+          {
+            "indice": 2,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 20. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 3,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 20. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 4,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 21. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 5,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 21. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          }
+        ]
+      },
+      "saida": {
+        "mensagens": 0,
+        "chars_aproximados": 0,
+        "tipos": {},
+        "amostras": []
+      },
+      "delta_mensagens": -23,
+      "delta_chars": -10875
+    },
+    {
+      "timestamp": "2026-05-15T18:05:46",
+      "etapa": "AgenteInterpretador",
+      "status": "OK",
+      "usa_context_manager_capability": true,
+      "entrada": {
+        "mensagens": 23,
+        "chars_aproximados": 10875,
+        "tipos": {
+          "ModelRequest": 13,
+          "ModelResponse": 10
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "ModelRequest",
+            "chars": 627,
+            "preview": "Summary of previous conversation:\n\n**Tabela de referência:** `mart_cliente_360`\n\n**Definições:**\n- **Clientes premium:** `receita_lifetime_brl > 1000`\n- **Clientes parados:** `dias_desde_ultimo_pedido > 90`\n\n**Colunas-chave para análise:**\n"
+          },
+          {
+            "indice": 2,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 20. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 3,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 20. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 4,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 21. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 5,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 21. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          }
+        ]
+      },
+      "saida": {
+        "mensagens": 23,
+        "chars_aproximados": 11028,
+        "tipos": {
+          "ModelRequest": 13,
+          "ModelResponse": 10
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "ModelRequest",
+            "chars": 731,
+            "preview": "Summary of previous conversation:\n\n**Extraído:**\n\n- **Tabela base:** `mart_cliente_360`.\n- **Análise focada em:**\n  - Retenção.\n  - Recorrência.\n  - Clientes premium.\n- **Definições:**\n  - **Clientes premium:** `receita_lifetime_brl > 1000`"
+          },
+          {
+            "indice": 2,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 20. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 3,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 20. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 4,
+            "tipo": "ModelRequest",
+            "chars": 501,
+            "preview": "Turno 21. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 5,
+            "tipo": "ModelResponse",
+            "chars": 470,
+            "preview": "Turno 21. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          }
+        ]
+      },
+      "delta_mensagens": 0,
+      "delta_chars": 153
+    }
+  ],
+  "injecao_historico": [
+    {
+      "timestamp": "2026-05-15T18:05:15",
+      "etapa": "AgenteSeletor",
+      "ponto": "entrada_limitar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 11,
+        "chars_aproximados": 4866,
+        "tipos": {
+          "dict": 11
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 185,
+            "preview": "Resumo curto para continuidade: use apenas para resolver referencias como 'tambem', 'agora', 'ultimo mes', 'mesma regra'. A selecao de tabelas deve continuar obedecendo ao schema atual."
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 24. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 25. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 25. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 26. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:15",
+      "etapa": "AgenteSeletor",
+      "ponto": "saida_limitar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 11,
+        "chars_aproximados": 4866,
+        "tipos": {
+          "dict": 11
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 185,
+            "preview": "Resumo curto para continuidade: use apenas para resolver referencias como 'tambem', 'agora', 'ultimo mes', 'mesma regra'. A selecao de tabelas deve continuar obedecendo ao schema atual."
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 24. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 25. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 25. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 26. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:15",
+      "etapa": "AgenteSeletor",
+      "ponto": "entrada_normalizar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 11,
+        "chars_aproximados": 4866,
+        "tipos": {
+          "dict": 11
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 185,
+            "preview": "Resumo curto para continuidade: use apenas para resolver referencias como 'tambem', 'agora', 'ultimo mes', 'mesma regra'. A selecao de tabelas deve continuar obedecendo ao schema atual."
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 24. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 25. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 25. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 26. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:15",
+      "etapa": "AgenteSeletor",
+      "ponto": "saida_normalizar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 11,
+        "chars_aproximados": 4895,
+        "tipos": {
+          "ModelRequest": 6,
+          "ModelResponse": 5
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "ModelRequest",
+            "chars": 214,
+            "preview": "Resumo de contexto anterior: Resumo curto para continuidade: use apenas para resolver referencias como 'tambem', 'agora', 'ultimo mes', 'mesma regra'. A selecao de tabelas deve continuar obedecendo ao schema atual."
+          },
+          {
+            "indice": 2,
+            "tipo": "ModelResponse",
+            "chars": 469,
+            "preview": "Turno 24. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 3,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 25. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          },
+          {
+            "indice": 4,
+            "tipo": "ModelResponse",
+            "chars": 469,
+            "preview": "Turno 25. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretare"
+          },
+          {
+            "indice": 5,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 26. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recênci"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:28",
+      "etapa": "AgenteDecompositor",
+      "ponto": "entrada_limitar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "dict": 57
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:28",
+      "etapa": "AgenteDecompositor",
+      "ponto": "saida_limitar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "dict": 57
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:28",
+      "etapa": "AgenteDecompositor",
+      "ponto": "entrada_normalizar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "dict": 57
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:28",
+      "etapa": "AgenteDecompositor",
+      "ponto": "saida_normalizar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "ModelRequest": 29,
+          "ModelResponse": 28
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "ModelResponse",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "ModelResponse",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:37",
+      "etapa": "AgenteInterpretador",
+      "ponto": "entrada_limitar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "dict": 57
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:37",
+      "etapa": "AgenteInterpretador",
+      "ponto": "saida_limitar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "dict": 57
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:37",
+      "etapa": "AgenteInterpretador",
+      "ponto": "entrada_normalizar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "dict": 57
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "dict",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "dict",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:05:37",
+      "etapa": "AgenteInterpretador",
+      "ponto": "saida_normalizar_message_history",
+      "status": "OK",
+      "marcador": "DEBUG_CONTEXT_MARKER_RUN_TEST_2026",
+      "marcador_presente": true,
+      "historico": {
+        "mensagens": 57,
+        "chars_aproximados": 27506,
+        "tipos": {
+          "ModelRequest": 29,
+          "ModelResponse": 28
+        },
+        "amostras": [
+          {
+            "indice": 1,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 1. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 2,
+            "tipo": "ModelResponse",
+            "chars": 469,
+            "preview": "Turno 1. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 3,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 2. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          },
+          {
+            "indice": 4,
+            "tipo": "ModelResponse",
+            "chars": 469,
+            "preview": "Turno 2. Entendido. Vou manter no contexto que a análise deve focar mart_cliente_360, receita_lifetime_brl, dias_desde_ultimo_pedido, segmento_valor, total_pedidos e risco de churn. Quando a pergunta falar em clientes parados, interpretarei"
+          },
+          {
+            "indice": 5,
+            "tipo": "ModelRequest",
+            "chars": 500,
+            "preview": "Turno 3. Quero analisar retenção, recorrência e clientes premium. Considere como contexto fixo que a tabela preferida para perguntas de cliente é mart_cliente_360. Clientes premium são os que têm receita_lifetime_brl acima de 1000. Recência"
+          }
+        ]
+      }
+    }
+  ]
+}

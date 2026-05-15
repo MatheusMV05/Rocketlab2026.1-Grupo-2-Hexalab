@@ -51,6 +51,20 @@ def _ler_modelo_mistral() -> str:
     return os.getenv("MISTRAL_MODEL", "mistral-large-latest")
 
 
+def _ler_float_env(nome: str, padrao: float) -> float:
+    try:
+        return float(os.getenv(nome, str(padrao)))
+    except (TypeError, ValueError):
+        return padrao
+
+
+def _ler_int_env(nome: str, padrao: int) -> int:
+    try:
+        return int(os.getenv(nome, str(padrao)))
+    except (TypeError, ValueError):
+        return padrao
+
+
 @dataclass
 class Config:
     """Configuração usada pelos agentes da pipeline.
@@ -68,3 +82,16 @@ class Config:
     max_tokens: int = 99999
     max_retries: int = 3
     few_shot_path: str = "few_shots/exemplos.yaml"
+    mistral_timeout_seconds: float = field(
+        default_factory=lambda: _ler_float_env("MISTRAL_TIMEOUT_SECONDS", 240.0)
+    )
+    input_history_max_tokens: int = field(
+        default_factory=lambda: _ler_int_env("AGENT_INPUT_HISTORY_MAX_TOKENS", 7_000)
+    )
+    context_capability_mode: str = "summarize"
+    context_summarizer_model: str = field(
+        default_factory=lambda: os.getenv(
+            "AGENT_CONTEXT_SUMMARIZER_MODEL",
+            "mistral:ministral-8b-latest",
+        )
+    )
