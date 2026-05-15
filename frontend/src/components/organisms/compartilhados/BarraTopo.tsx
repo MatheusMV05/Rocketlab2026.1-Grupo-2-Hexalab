@@ -1,12 +1,14 @@
-import { Link } from 'react-router-dom'
-import { Search, Bell, Settings } from 'lucide-react'
+import { Search, Bell, Settings } from 'react-feather'
 import logoAgente from '../../../assets/logos/logo-agente.svg'
+import { useAssistente } from '../chat/AssistenteProvider'
 
 interface Props {
   titulo: string
 }
 
 export function BarraTopo({ titulo }: Props) {
+  const { abrir } = useAssistente()
+
   return (
     <header className="fixed left-[60px] md:left-[104px] right-0 top-0 h-[60px] md:h-[87px] bg-[#f6f7f9] z-10 flex items-center px-4 md:px-6 border-b border-[#e0e0e0]">
       {/* Título da página */}
@@ -23,14 +25,16 @@ export function BarraTopo({ titulo }: Props) {
 
         <div className="w-px h-10 bg-[#e0e0e0]" />
 
-        {/* Assistente IA */}
-        <Link
-          to="/chat"
-          className="flex items-center gap-2 text-[#343434] hover:text-[#3f7377] transition-colors"
+        {/* Assistente IA — abre o popup do agente */}
+        <button
+          type="button"
+          onClick={abrir}
+          aria-label="Abrir assistente"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-[12px] text-[#343434] hover:bg-[#D9D9D9] transition-colors focus:outline-none"
         >
           <img src={logoAgente} alt="Logo Agente" className="w-[32px] h-[32px] object-contain" />
           <span className="text-[20px] font-semibold hidden md:inline">Assistente</span>
-        </Link>
+        </button>
 
         <div className="w-px h-10 bg-[#e0e0e0]" />
 
