@@ -147,3 +147,47 @@ async def test_get_matriz_produtos_respeita_limites(mock_db):
     quadrantes = [item.quadrante for item in result.items]
     assert quadrantes.count("estrelas") == 2
     assert quadrantes.count("ofensores") == 1
+
+
+@pytest.mark.asyncio
+async def test_get_matriz_estrelas_ordenadas_por_volume(mock_db):
+    dados_mock = mock_matriz_produtos()
+    with patch("app.dashboard.repository.get_matriz_produtos", new=AsyncMock(return_value=dados_mock)):
+        result = await service.get_matriz_produtos(mock_db)
+
+    estrelas = [i for i in result.items if i.quadrante == "estrelas"]
+    volumes = [i.volume for i in estrelas]
+    assert volumes == sorted(volumes, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_get_matriz_oportunidades_ordenadas_por_nota(mock_db):
+    dados_mock = mock_matriz_produtos()
+    with patch("app.dashboard.repository.get_matriz_produtos", new=AsyncMock(return_value=dados_mock)):
+        result = await service.get_matriz_produtos(mock_db)
+
+    ops = [i for i in result.items if i.quadrante == "oportunidades"]
+    notas = [i.satisfacao for i in ops]
+    assert notas == sorted(notas, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_get_matriz_ofensores_ordenados_por_nota_crescente(mock_db):
+    dados_mock = mock_matriz_produtos()
+    with patch("app.dashboard.repository.get_matriz_produtos", new=AsyncMock(return_value=dados_mock)):
+        result = await service.get_matriz_produtos(mock_db)
+
+    ofensores = [i for i in result.items if i.quadrante == "ofensores"]
+    notas = [i.satisfacao for i in ofensores]
+    assert notas == sorted(notas)
+
+
+@pytest.mark.asyncio
+async def test_get_matriz_status_sem_neutro(mock_db):
+    dados_mock = mock_matriz_produtos()
+    with patch("app.dashboard.repository.get_matriz_produtos", new=AsyncMock(return_value=dados_mock)):
+        result = await service.get_matriz_produtos(mock_db)
+
+    for item in result.items:
+        assert item.status in ("bom", "ruim")
+        assert item.status != "neutro"

@@ -89,21 +89,19 @@ _SQL_PERIODO_MATRIZ = text("""
     ),
     medians AS (
         SELECT
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY volume)     AS med_vol,
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY satisfacao) AS med_sat
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY volume) AS med_vol
         FROM periodo
     )
     SELECT
         p.nome,
         p.categoria,
         p.volume,
-        ROUND(p.satisfacao::numeric, 2)  AS satisfacao,
-        m.med_vol                        AS mediana_volume,
-        m.med_sat                        AS mediana_satisfacao,
+        ROUND(p.satisfacao::numeric, 2)         AS satisfacao,
+        m.med_vol                               AS mediana_volume,
         CASE
-            WHEN p.volume >= m.med_vol AND p.satisfacao >= m.med_sat THEN 'estrelas'
-            WHEN p.volume <  m.med_vol AND p.satisfacao >= m.med_sat THEN 'oportunidades'
-            WHEN p.volume >= m.med_vol AND p.satisfacao <  m.med_sat THEN 'alerta_vermelho'
+            WHEN p.volume >= COALESCE(:corte_vol, m.med_vol) AND p.satisfacao >= :corte_sat THEN 'estrelas'
+            WHEN p.volume <  COALESCE(:corte_vol, m.med_vol) AND p.satisfacao >= :corte_sat THEN 'oportunidades'
+            WHEN p.volume >= COALESCE(:corte_vol, m.med_vol) AND p.satisfacao <  :corte_sat THEN 'alerta_vermelho'
             ELSE 'ofensores'
         END AS quadrante
     FROM periodo p CROSS JOIN medians m
@@ -122,23 +120,34 @@ def _periodo_anterior(ano: str, mes: str) -> tuple[str, str]:
     return "", ""
 
 
-def _calcular_status(satisfacao: float) -> str:
-    if satisfacao >= 4.0:
-        return "bom"
-    if satisfacao >= 3.5:
-        return "neutro"
-    return "ruim"
+def _calcular_status(satisfacao: float, corte: float = 4.0) -> str:
+    return "bom" if satisfacao >= corte else "ruim"
 
 
-async def _query_periodo_matriz(db: AsyncSession, ano: str, mes: str, localidade: str) -> dict:
-    result = await db.execute(_SQL_PERIODO_MATRIZ, {"ano": ano, "mes": mes, "localidade": localidade})
+async def _query_periodo_matriz(
+    db: AsyncSession,
+    ano: str,
+    mes: str,
+    localidade: str,
+    corte_satisfacao: float = 4.0,
+    corte_volume: float | None = None,
+) -> dict:
+    result = await db.execute(
+        _SQL_PERIODO_MATRIZ,
+        {
+            "ano": ano,
+            "mes": mes,
+            "localidade": localidade,
+            "corte_sat": corte_satisfacao,
+            "corte_vol": corte_volume,
+        },
+    )
     rows = result.mappings().all()
 
     if not rows:
-        return {"items": [], "mediana_volume": 0.0, "mediana_satisfacao": 0.0}
+        return {"items": [], "mediana_volume": 0.0}
 
     mediana_volume = float(rows[0]["mediana_volume"])
-    mediana_satisfacao = float(rows[0]["mediana_satisfacao"])
 
     items = [
         {
@@ -150,7 +159,7 @@ async def _query_periodo_matriz(db: AsyncSession, ano: str, mes: str, localidade
         }
         for row in rows
     ]
-    return {"items": items, "mediana_volume": mediana_volume, "mediana_satisfacao": mediana_satisfacao}
+    return {"items": items, "mediana_volume": mediana_volume}
 
 
 _SQL_KPI = """
@@ -440,19 +449,21 @@ async def get_matriz_produtos(
     limite_oportunidades: int = 4,
     limite_alerta_vermelho: int = 4,
     limite_ofensores: int = 4,
+    corte_satisfacao: float = 4.0,
+    corte_volume: float | None = None,
 ) -> dict:
-    atual = await _query_periodo_matriz(db, ano, mes, localidade)
+    atual = await _query_periodo_matriz(db, ano, mes, localidade, corte_satisfacao, corte_volume)
 
     if not atual["items"]:
         return {"items": [], "mediana_volume": 0.0}
 
     ano_ant, mes_ant = _periodo_anterior(ano, mes)
-    anterior = await _query_periodo_matriz(db, ano_ant, mes_ant, localidade)
+    anterior = await _query_periodo_matriz(db, ano_ant, mes_ant, localidade, corte_satisfacao, corte_volume)
     bloco_anterior_map = {item["nome"]: item["quadrante"] for item in anterior["items"]}
 
     for item in atual["items"]:
         item["bloco_anterior"] = bloco_anterior_map.get(item["nome"], "desconhecido")
-        item["status"] = _calcular_status(item["satisfacao"])
+        item["status"] = _calcular_status(item["satisfacao"], corte_satisfacao)
 
     quadrantes: dict[str, list] = {
         "estrelas": [],
@@ -463,10 +474,14 @@ async def get_matriz_produtos(
     for item in atual["items"]:
         quadrantes[item["quadrante"]].append(item)
 
-    quadrantes["estrelas"].sort(key=lambda x: (-x["satisfacao"], -x["volume"]))
-    quadrantes["oportunidades"].sort(key=lambda x: -x["satisfacao"])
-    quadrantes["alerta_vermelho"].sort(key=lambda x: (x["satisfacao"], -x["volume"]))
-    quadrantes["ofensores"].sort(key=lambda x: -x["volume"])
+    # Estrelas: maior volume, desempate por maior nota
+    quadrantes["estrelas"].sort(key=lambda x: (-x["volume"], -x["satisfacao"]))
+    # Oportunidades: maior nota, desempate por maior volume
+    quadrantes["oportunidades"].sort(key=lambda x: (-x["satisfacao"], -x["volume"]))
+    # Alerta Vermelho: maior volume, desempate por menor nota
+    quadrantes["alerta_vermelho"].sort(key=lambda x: (-x["volume"], x["satisfacao"]))
+    # Ofensores: menor nota, desempate por menor volume
+    quadrantes["ofensores"].sort(key=lambda x: (x["satisfacao"], x["volume"]))
 
     selecionados = (
         quadrantes["estrelas"][:limite_estrelas]
