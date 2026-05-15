@@ -20,16 +20,17 @@ import type { LimitesBloco, MatrizProdutoItem } from '../../../types/dashboard'
 // ─── Constantes visuais ───────────────────────────────────────────────────────
 
 const DOM_Y: [number, number] = [1, 5]
+const DOM_X: [number, number] = [0, 100]
+const CORTE_X = 50
 const LIMITES_PADRAO: LimitesBloco = {
   limite_estrelas: 4,
   limite_oportunidades: 4,
   limite_alerta_vermelho: 4,
   limite_ofensores: 4,
   corte_satisfacao: 4.0,
-  corte_volume: null,
 }
-const NOTE_TOLERANCE = 0.2
-const DOT_R = 5
+const RATING_GROUP_TOLERANCE = 0.2
+const X_GROUP_TOLERANCE = 5
 const PILL_H = 25
 const PILL_DOT_R = 5
 const PILL_DOT_CX = 10
@@ -40,9 +41,11 @@ const LABEL_FONT = 11
 const CHART_MARGIN = { top: 16, right: 24, left: 36, bottom: 20 }
 const CHART_H = 400
 
-const COR_PONTO: Record<string, string> = {
-  bom:  '#1a9a45',
-  ruim: '#c20000',
+const COR_QUADRANTE: Record<string, string> = {
+  estrelas:        '#15803D',
+  oportunidades:   '#D97706',
+  alerta_vermelho: '#B91C1C',
+  ofensores:       '#4B5563',
 }
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
@@ -60,32 +63,50 @@ interface ProdutoComLabel extends ProdutoAgrupado {
 
 // ─── Helpers de agrupamento ───────────────────────────────────────────────────
 
-function agruparPorProximidade(items: ProdutoBase[], limiar = NOTE_TOLERANCE): ProdutoAgrupado[] {
+function agruparPorProximidade(items: ProdutoBase[]): ProdutoAgrupado[] {
   if (items.length === 0) return []
-  // Sort by satisfacao for proximity detection; track original index to restore backend-ordered principal
+
   const comIdx = items.map((item, i) => ({ item, i }))
-  comIdx.sort((a, b) => a.item.satisfacao - b.item.satisfacao)
+  comIdx.sort(
+    (a, b) =>
+      a.item.participacao_percentual - b.item.participacao_percentual ||
+      a.item.satisfacao - b.item.satisfacao,
+  )
 
   const grupos: { item: ProdutoBase; i: number }[][] = []
-  let grupo = [comIdx[0]]
-  let ancora = comIdx[0].item.satisfacao
-  for (let i = 1; i < comIdx.length; i++) {
-    if (Math.abs(comIdx[i].item.satisfacao - ancora) <= limiar) {
-      grupo.push(comIdx[i])
-    } else {
-      grupos.push(grupo)
-      grupo = [comIdx[i]]
-      ancora = comIdx[i].item.satisfacao
+  const usado = new Set<number>()
+
+  for (let i = 0; i < comIdx.length; i++) {
+    if (usado.has(i)) continue
+    const grupo = [comIdx[i]]
+    usado.add(i)
+    const ancX = comIdx[i].item.participacao_percentual
+    const ancY = comIdx[i].item.satisfacao
+    // Membership uses anchor-radius: items within tolerance of the seed (not centroid)
+
+    for (let j = i + 1; j < comIdx.length; j++) {
+      if (usado.has(j)) continue
+      const dX = Math.abs(comIdx[j].item.participacao_percentual - ancX)
+      const dY = Math.abs(comIdx[j].item.satisfacao - ancY)
+      if (dX <= X_GROUP_TOLERANCE && dY <= RATING_GROUP_TOLERANCE) {
+        grupo.push(comIdx[j])
+        usado.add(j)
+      }
     }
+    grupos.push(grupo)
   }
-  grupos.push(grupo)
 
   return grupos.map((g) => {
     const members = g.map((x) => x.item)
     const principal = [...g].sort((a, b) => a.i - b.i)[0].item
     const avgSat = members.reduce((s, p) => s + p.satisfacao, 0) / members.length
-    const avgVol = Math.round(members.reduce((s, p) => s + p.volume, 0) / members.length)
-    return { ...principal, satisfacao: avgSat, volume: avgVol, membros: members }
+    const avgX = members.reduce((s, p) => s + p.participacao_percentual, 0) / members.length
+    return {
+      ...principal,
+      satisfacao: avgSat,
+      participacao_percentual: avgX,
+      membros: members,
+    }
   })
 }
 
@@ -117,6 +138,11 @@ function calcLabelPositions(
   const toPixY = (v: number) =>
     CHART_MARGIN.top + ((DOM_Y[1] - v) / (DOM_Y[1] - DOM_Y[0])) * plotH
 
+  const PLOT_LEFT = CHART_MARGIN.left
+  const PLOT_RIGHT = containerWidth - CHART_MARGIN.right
+  const PLOT_TOP = CHART_MARGIN.top
+  const PLOT_BOTTOM = CHART_H - CHART_MARGIN.bottom
+
   type Box = { x: number; y: number; w: number; h: number }
   const placed: Box[] = []
 
@@ -127,8 +153,12 @@ function calcLabelPositions(
         b.y < p.y + p.h + 2 && b.y + b.h + 2 > p.y,
     )
 
+  const inBounds = (b: Box) =>
+    b.x >= PLOT_LEFT && b.x + b.w <= PLOT_RIGHT &&
+    b.y >= PLOT_TOP && b.y + b.h <= PLOT_BOTTOM
+
   return items.map((item) => {
-    const px = toPixX(item.volume)
+    const px = toPixX(item.participacao_percentual)
     const py = toPixY(item.satisfacao)
     const isGrupo = item.membros.length > 1
     const lw = calcPillWidth(item.nome, isGrupo)
@@ -142,23 +172,40 @@ function calcLabelPositions(
       [-lw + PILL_DOT_CX, BASE_DY],
       [-lw + PILL_DOT_CX, BASE_DY - PILL_H - 4],
       [-lw + PILL_DOT_CX, BASE_DY + PILL_H + 4],
-      [-lw / 2, BASE_DY - PILL_H - DOT_R - 5],
-      [-lw / 2, BASE_DY + PILL_H + DOT_R + 5],
+      [-lw / 2, BASE_DY - PILL_H - PILL_DOT_R - 5],
+      [-lw / 2, BASE_DY + PILL_H + PILL_DOT_R + 5],
     ]
 
     let dx = candidates[0][0]
     let dy = candidates[0][1]
+    let chosen = false
+
     for (const [cdx, cdy] of candidates) {
       const box: Box = { x: px + cdx, y: py + cdy, w: lw, h: PILL_H }
-      if (!overlaps(box)) {
+      if (inBounds(box) && !overlaps(box)) {
         dx = cdx; dy = cdy
         placed.push(box)
+        chosen = true
         break
       }
     }
-    if (!placed.some((p) => p.x === px + dx && p.y === py + dy)) {
+
+    if (!chosen) {
+      for (const [cdx, cdy] of candidates) {
+        const box: Box = { x: px + cdx, y: py + cdy, w: lw, h: PILL_H }
+        if (inBounds(box)) {
+          dx = cdx; dy = cdy
+          placed.push(box)
+          chosen = true
+          break
+        }
+      }
+    }
+
+    if (!chosen) {
       placed.push({ x: px + dx, y: py + dy, w: lw, h: PILL_H })
     }
+
     return { ...item, labelDx: dx, labelDy: dy }
   })
 }
@@ -171,14 +218,12 @@ function LabelQuadrante({
   corTexto,
   corFundo,
   ancoragem,
-  vazio,
 }: {
   viewBox?: { x: number; y: number; width: number; height: number }
   texto: string
   corTexto: string
   corFundo: string
   ancoragem: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-  vazio?: boolean
 }) {
   if (!viewBox) return null
   const { x, y, width, height } = viewBox
@@ -195,26 +240,12 @@ function LabelQuadrante({
   if (ancoragem === 'bottom-left')  { bx = x + 6;                    by = y + height - boxHeight - 6 }
   if (ancoragem === 'bottom-right') { bx = x + width - boxWidth - 6; by = y + height - boxHeight - 6 }
 
-  const VAZIO_MSG = 'Nenhum produto neste quadrante'
-  const VAZIO_FONT = 9
-  const vazioCx = x + width / 2
-  const vazioCy = y + height / 2
-
   return (
     <g>
       <rect x={bx} y={by} width={boxWidth} height={boxHeight} rx={4} ry={4} fill={corFundo} />
       <text x={bx + PAD_X} y={by + PAD_Y + FONT - 1} fontSize={FONT} fontWeight={700} fontFamily="inherit" fill={corTexto}>
         {texto}
       </text>
-      {vazio && (
-        <text
-          x={vazioCx} y={vazioCy}
-          textAnchor="middle" dominantBaseline="middle"
-          fontSize={VAZIO_FONT} fill="#b0b0b0" fontFamily="inherit" fontStyle="italic"
-        >
-          {VAZIO_MSG}
-        </text>
-      )}
     </g>
   )
 }
@@ -223,6 +254,7 @@ function LabelQuadrante({
 
 interface Props {
   filtrosGlobais: FiltrosPeriodo
+  onFiltrosLocaisChange?: (filtros: FiltrosPeriodo) => void
 }
 
 interface TooltipPill {
@@ -239,8 +271,7 @@ interface TooltipDrop {
   produto: ProdutoBase; left: number; top: number
 }
 
-export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
-  const [filtros, setFiltros] = useState(filtrosGlobais)
+export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
   const [limites, setLimites] = useState<LimitesBloco>(LIMITES_PADRAO)
   const [painelAberto, setPainelAberto] = useState(false)
   const [chartWidth, setChartWidth] = useState(1000)
@@ -252,8 +283,6 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
   const painelRef = useRef<HTMLDivElement>(null)
 
   const clearPillHover = useCallback(() => setTooltipPill(null), [])
-
-  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
 
   useEffect(() => {
     const el = containerRef.current
@@ -273,36 +302,14 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
     return () => document.removeEventListener('mousedown', handler)
   }, [painelAberto])
 
-  const { data, isLoading, isError } = useMatrizProdutos(filtros, limites)
+  const { data, isLoading, isError } = useMatrizProdutos(filtrosGlobais, limites)
 
-  const corteX = limites.corte_volume ?? data?.mediana_volume ?? 1750
   const corteY = limites.corte_satisfacao
 
-  const medianaVolume = data?.mediana_volume ?? 0
-  const maxVolume = useMemo(
-    () => data?.items.reduce((m, i) => Math.max(m, i.volume), 0) ?? 0,
-    [data],
-  )
-
-  const domX = useMemo<[number, number]>(() => {
-    const ref = Math.max(corteX, maxVolume)
-    return [0, Math.ceil(ref * 1.3) || 3800]
-  }, [corteX, maxVolume])
-
   const produtos = useMemo(
-    () => calcLabelPositions(agruparTodos(data?.items ?? []), chartWidth, domX),
-    [data, chartWidth, domX],
+    () => calcLabelPositions(agruparTodos(data?.items ?? []), chartWidth, DOM_X),
+    [data, chartWidth],
   )
-
-  const quadrantesVazios = useMemo(() => {
-    const presentes = new Set((data?.items ?? []).map((i) => i.quadrante))
-    return {
-      estrelas:        !presentes.has('estrelas'),
-      oportunidades:   !presentes.has('oportunidades'),
-      alerta_vermelho: !presentes.has('alerta_vermelho'),
-      ofensores:       !presentes.has('ofensores'),
-    }
-  }, [data])
 
   return (
     <div ref={containerRef} className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] p-4 flex flex-col">
@@ -324,14 +331,12 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
             <div className="absolute right-0 top-full mt-1 z-50">
               <PainelLimitesBloco
                 limites={limites}
-                maxVolume={maxVolume}
-                medianaVolume={medianaVolume}
                 onAplicar={(novos) => { setLimites(novos); setPainelAberto(false) }}
               />
             </div>
           )}
         </div>
-        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
+        <FiltroPeriodo filtros={filtrosGlobais} onChange={(f) => onFiltrosLocaisChange?.(f)} />
       </div>
 
       <div className="mb-2 pr-4">
@@ -353,9 +358,10 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
             <ScatterChart margin={CHART_MARGIN} onMouseLeave={clearPillHover}>
               <CartesianGrid strokeDasharray="4 4" stroke="#e8e8e8" />
 
-              <XAxis type="number" dataKey="volume" name="Volume" domain={domX}
-                tick={{ fontSize: 9, fill: '#343434' }} axisLine={false} tickLine={false}>
-                <Label value="Volume de vendas" position="insideBottom" offset={-14} fontSize={11} fill="#343434" />
+              <XAxis type="number" dataKey="participacao_percentual" name="Participação" domain={DOM_X}
+                tick={{ fontSize: 9, fill: '#343434' }} axisLine={false} tickLine={false}
+                tickFormatter={(v: number) => `${v}%`}>
+                <Label value="Participação no volume (%)" position="insideBottom" offset={-14} fontSize={11} fill="#343434" />
               </XAxis>
 
               <YAxis type="number" dataKey="satisfacao" name="Satisfação" domain={DOM_Y}
@@ -364,37 +370,37 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
               </YAxis>
 
               {/* Quadrantes */}
-              <ReferenceArea x1={domX[0]} x2={corteX} y1={corteY} y2={DOM_Y[1]}
+              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={corteY} y2={DOM_Y[1]}
                 fill="#FFF9C9" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="OPORTUNIDADES" corTexto="#D97706" corFundo="#FFF9C9"
-                    ancoragem="top-left" vazio={quadrantesVazios.oportunidades} />
+                    ancoragem="top-left" />
                 )}
               />
-              <ReferenceArea x1={corteX} x2={domX[1]} y1={corteY} y2={DOM_Y[1]}
+              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={corteY} y2={DOM_Y[1]}
                 fill="#DCFCE7" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="ESTRELAS" corTexto="#15803D" corFundo="#DCFCE7"
-                    ancoragem="top-right" vazio={quadrantesVazios.estrelas} />
+                    ancoragem="top-right" />
                 )}
               />
-              <ReferenceArea x1={domX[0]} x2={corteX} y1={DOM_Y[0]} y2={corteY}
+              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={DOM_Y[0]} y2={corteY}
                 fill="#F3F4F6" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="OFENSORES" corTexto="#4B5563" corFundo="#F3F4F6"
-                    ancoragem="bottom-left" vazio={quadrantesVazios.ofensores} />
+                    ancoragem="bottom-left" />
                 )}
               />
-              <ReferenceArea x1={corteX} x2={domX[1]} y1={DOM_Y[0]} y2={corteY}
+              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={DOM_Y[0]} y2={corteY}
                 fill="#FEE2E2" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="ALERTA VERMELHO" corTexto="#B91C1C" corFundo="#FEE2E2"
-                    ancoragem="bottom-right" vazio={quadrantesVazios.alerta_vermelho} />
+                    ancoragem="bottom-right" />
                 )}
               />
 
               {/* Divisórias */}
-              <ReferenceLine x={corteX} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
+              <ReferenceLine x={CORTE_X} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
               <ReferenceLine y={corteY} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
 
               {/* Pílulas */}
@@ -403,11 +409,11 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
                 shape={(props: { cx?: number; cy?: number; payload?: ProdutoComLabel }) => {
                   const { cx = 0, cy = 0, payload } = props
                   if (!payload) return <g />
-                  const cor = COR_PONTO[payload.status] ?? '#b0b0b0'
+                  const cor = COR_QUADRANTE[payload.quadrante] ?? '#b0b0b0'
                   const { nome, labelDx: ldx, labelDy: ldy } = payload
                   const isGrupo = payload.membros.length > 1
                   const lw = calcPillWidth(nome, isGrupo)
-                  const grupoKey = `${payload.volume}|${payload.satisfacao}|${payload.quadrante}`
+                  const grupoKey = `${payload.participacao_percentual}|${payload.satisfacao}|${payload.quadrante}`
                   const isAberto = grupoAberto?.key === grupoKey
 
                   return (
@@ -473,10 +479,11 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
             <TooltipMatriz
               nome={tooltipPill.produto.nome}
               categoria={tooltipPill.produto.categoria}
-              volume={tooltipPill.produto.volume}
+              volume_produto={tooltipPill.produto.volume_produto}
+              participacao_percentual={tooltipPill.produto.participacao_percentual}
               satisfacao={tooltipPill.produto.satisfacao}
+              qtd_avaliacoes={tooltipPill.produto.qtd_avaliacoes}
               quadrante={tooltipPill.produto.quadrante}
-              bloco_anterior={tooltipPill.produto.bloco_anterior}
             />
           </div>
         )}
@@ -499,41 +506,34 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {(() => {
-              const porAvaliacao = new Map<number, ProdutoBase[]>()
-              for (const m of grupoAberto.membros) {
-                if (!porAvaliacao.has(m.satisfacao)) porAvaliacao.set(m.satisfacao, [])
-                porAvaliacao.get(m.satisfacao)!.push(m)
-              }
-              return Array.from(porAvaliacao.entries())
-                .sort(([a], [b]) => b - a)
-                .map(([sat, membros]) => (
-                  <div key={sat}>
-                    <div className="px-3 pt-2 pb-0.5 text-[9px] font-semibold text-[#888] tracking-wide">
-                      {sat.toFixed(1)} <span style={{ color: '#FBBF24' }}>★</span>
-                    </div>
-                    {membros.map((membro) => (
-                      <div
-                        key={membro.nome}
-                        className="px-3 py-1.5 text-[11px] text-[#343434] hover:bg-[#f5f5f5] cursor-default"
-                        onMouseEnter={(e) => {
-                          const itemRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                          const chartRect = chartAreaRef.current?.getBoundingClientRect()
-                          if (!chartRect) return
-                          setTooltipDrop({
-                            produto: membro,
-                            left: itemRect.left - chartRect.left + itemRect.width / 2,
-                            top: itemRect.bottom - chartRect.top + 4,
-                          })
-                        }}
-                        onMouseLeave={() => setTooltipDrop(null)}
-                      >
-                        {membro.nome}
-                      </div>
-                    ))}
-                  </div>
-                ))
-            })()}
+            {[...grupoAberto.membros]
+              .sort((a, b) => b.satisfacao - a.satisfacao || b.volume_produto - a.volume_produto)
+              .map((membro) => (
+                <div
+                  key={membro.nome}
+                  className="px-3 py-2 text-[11px] text-[#343434] hover:bg-[#f5f5f5] cursor-default border-b border-[#f5f5f5] last:border-b-0"
+                  onMouseEnter={(e) => {
+                    const itemRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                    const chartRect = chartAreaRef.current?.getBoundingClientRect()
+                    if (!chartRect) return
+                    setTooltipDrop({
+                      produto: membro,
+                      left: itemRect.left - chartRect.left + itemRect.width / 2,
+                      top: itemRect.bottom - chartRect.top + 4,
+                    })
+                  }}
+                  onMouseLeave={() => setTooltipDrop(null)}
+                >
+                  <p className="font-medium leading-tight">{membro.nome}</p>
+                  <p className="text-[#888] mt-0.5">
+                    Vol: {membro.volume_produto.toLocaleString('pt-BR')}
+                    <span className="mx-1">·</span>
+                    {membro.participacao_percentual.toFixed(1)}%
+                    <span className="mx-1">·</span>
+                    {membro.satisfacao.toFixed(1)} ★ ({membro.qtd_avaliacoes})
+                  </p>
+                </div>
+              ))}
           </div>
         )}
 
@@ -550,10 +550,11 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
             <TooltipMatriz
               nome={tooltipDrop.produto.nome}
               categoria={tooltipDrop.produto.categoria}
-              volume={tooltipDrop.produto.volume}
+              volume_produto={tooltipDrop.produto.volume_produto}
+              participacao_percentual={tooltipDrop.produto.participacao_percentual}
               satisfacao={tooltipDrop.produto.satisfacao}
+              qtd_avaliacoes={tooltipDrop.produto.qtd_avaliacoes}
               quadrante={tooltipDrop.produto.quadrante}
-              bloco_anterior={tooltipDrop.produto.bloco_anterior}
             />
           </div>
         )}
@@ -562,19 +563,19 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais }: Props) {
       {/* Legenda */}
       <div className="flex items-center gap-4 mt-2 text-[10px] text-[#343434]">
         {[
-          { cor: '#1a9a45', label: 'Alta satisfação' },
-          { cor: '#c20000', label: 'Baixa satisfação' },
+          { cor: COR_QUADRANTE.estrelas,        label: 'Estrelas' },
+          { cor: COR_QUADRANTE.oportunidades,   label: 'Oportunidades' },
+          { cor: COR_QUADRANTE.alerta_vermelho, label: 'Alerta Vermelho' },
+          { cor: COR_QUADRANTE.ofensores,       label: 'Ofensores' },
         ].map(({ cor, label }) => (
           <div key={label} className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: cor }} />
             <span>{label}</span>
           </div>
         ))}
-        {limites.corte_volume !== null && (
-          <span className="ml-auto text-[#888]">
-            Corte volume: {limites.corte_volume.toLocaleString('pt-BR')} · Satisfação: {limites.corte_satisfacao.toFixed(1)}
-          </span>
-        )}
+        <span className="ml-auto text-[#888]">
+          Satisfação ≥ {limites.corte_satisfacao.toFixed(1)} · Volume ≥ 50%
+        </span>
       </div>
     </div>
   )

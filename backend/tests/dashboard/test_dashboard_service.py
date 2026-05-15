@@ -124,7 +124,7 @@ async def test_get_matriz_produtos_retorna_schema_correto(mock_db):
 
     assert isinstance(result, MatrizProdutosResponse)
     assert len(result.items) == 16
-    assert result.mediana_volume > 0
+    assert result.volume_total > 0
 
 
 @pytest.mark.asyncio
@@ -136,6 +136,9 @@ async def test_get_matriz_produtos_itens_tem_campos_novos(mock_db):
     assert hasattr(item, "categoria")
     assert hasattr(item, "quadrante")
     assert hasattr(item, "bloco_anterior")
+    assert hasattr(item, "volume_produto")
+    assert hasattr(item, "participacao_percentual")
+    assert hasattr(item, "qtd_avaliacoes")
 
 
 @pytest.mark.asyncio
@@ -156,7 +159,7 @@ async def test_get_matriz_estrelas_ordenadas_por_volume(mock_db):
         result = await service.get_matriz_produtos(mock_db)
 
     estrelas = [i for i in result.items if i.quadrante == "estrelas"]
-    volumes = [i.volume for i in estrelas]
+    volumes = [i.volume_produto for i in estrelas]
     assert volumes == sorted(volumes, reverse=True)
 
 

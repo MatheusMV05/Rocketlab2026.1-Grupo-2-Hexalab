@@ -66,45 +66,65 @@ _STATUS_DISPLAY = {
 _STATUS_DB = {v: k for k, v in _STATUS_DISPLAY.items()}
 
 _SQL_PERIODO_MATRIZ = text("""
-    WITH periodo AS (
+    WITH vendas_por_produto AS (
         SELECT
-            p.sk_produto,
-            p.nome_produto        AS nome,
-            p.categoria,
-            COUNT(DISTINCT fp.sk_pedido)    AS volume,
-            AVG(fa.nota_produto)            AS satisfacao
-        FROM dim_produtos p
-        JOIN fat_pedidos   fp ON fp.sk_produto  = p.sk_produto  AND fp.fl_pedido_aprovado = 1
-        JOIN dim_data      dd ON dd.sk_data      = fp.sk_data_pedido AND dd.ano > 0
-        JOIN dim_clientes  dc ON dc.sk_cliente   = fp.sk_cliente
-        LEFT JOIN fat_avaliacoes fa
-               ON fa.sk_produto = p.sk_produto AND fa.sk_pedido = fp.sk_pedido
-        WHERE p.ativo = 1
-          AND (:ano        = '' OR dd.ano::text   = :ano)
-          AND (:mes        = '' OR dd.mes::text   = :mes)
-          AND (:localidade = '' OR dc.estado      = :localidade)
-        GROUP BY p.sk_produto, p.nome_produto, p.categoria
-        HAVING AVG(fa.nota_produto) IS NOT NULL
-           AND COUNT(DISTINCT fp.sk_pedido) > 0
+            fp.sk_produto,
+            SUM(fp.quantidade) AS volume_produto
+        FROM fat_pedidos fp
+        JOIN dim_data     dd ON dd.sk_data    = fp.sk_data_pedido AND dd.ano > 0
+        JOIN dim_clientes dc ON dc.sk_cliente = fp.sk_cliente
+        WHERE fp.fl_pedido_aprovado = 1
+          AND (:ano        = '' OR dd.ano::text  = :ano)
+          AND (:mes        = '' OR dd.mes::text  = :mes)
+          AND (:localidade = '' OR dc.estado     = :localidade)
+        GROUP BY fp.sk_produto
     ),
-    medians AS (
+    avaliacoes_por_produto AS (
         SELECT
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY volume) AS med_vol
-        FROM periodo
+            fa.sk_produto,
+            AVG(fa.nota_produto)   AS media_avaliacao,
+            COUNT(fa.nota_produto) AS qtd_avaliacoes
+        FROM fat_avaliacoes fa
+        JOIN fat_pedidos   fp ON fp.sk_pedido   = fa.sk_pedido AND fp.fl_pedido_aprovado = 1
+        JOIN dim_data      dd ON dd.sk_data     = fp.sk_data_pedido AND dd.ano > 0
+        JOIN dim_clientes  dc ON dc.sk_cliente  = fp.sk_cliente
+        WHERE fa.nota_produto BETWEEN 1 AND 5
+          AND (:ano        = '' OR dd.ano::text  = :ano)
+          AND (:mes        = '' OR dd.mes::text  = :mes)
+          AND (:localidade = '' OR dc.estado     = :localidade)
+        GROUP BY fa.sk_produto
+    ),
+    totais AS (
+        SELECT SUM(v.volume_produto) AS volume_total
+        FROM vendas_por_produto v
+        JOIN avaliacoes_por_produto a ON a.sk_produto = v.sk_produto
+    ),
+    pct AS (
+        SELECT
+            v.sk_produto,
+            v.volume_produto,
+            t.volume_total,
+            (v.volume_produto::numeric / NULLIF(t.volume_total, 0)) * 100 AS participacao
+        FROM vendas_por_produto v CROSS JOIN totais t
     )
     SELECT
-        p.nome,
+        p.nome_produto                          AS nome,
         p.categoria,
-        p.volume,
-        ROUND(p.satisfacao::numeric, 2)         AS satisfacao,
-        m.med_vol                               AS mediana_volume,
+        pct.volume_produto,
+        pct.volume_total,
+        ROUND(pct.participacao, 2)              AS participacao_percentual,
+        ROUND(a.media_avaliacao::numeric, 2)    AS satisfacao,
+        a.qtd_avaliacoes,
         CASE
-            WHEN p.volume >= COALESCE(:corte_vol, m.med_vol) AND p.satisfacao >= :corte_sat THEN 'estrelas'
-            WHEN p.volume <  COALESCE(:corte_vol, m.med_vol) AND p.satisfacao >= :corte_sat THEN 'oportunidades'
-            WHEN p.volume >= COALESCE(:corte_vol, m.med_vol) AND p.satisfacao <  :corte_sat THEN 'alerta_vermelho'
+            WHEN pct.participacao >= 50 AND a.media_avaliacao >= :corte_sat THEN 'estrelas'
+            WHEN pct.participacao <  50 AND a.media_avaliacao >= :corte_sat THEN 'oportunidades'
+            WHEN pct.participacao >= 50 AND a.media_avaliacao <  :corte_sat THEN 'alerta_vermelho'
             ELSE 'ofensores'
         END AS quadrante
-    FROM periodo p CROSS JOIN medians m
+    FROM dim_produtos p
+    JOIN pct                   ON pct.sk_produto = p.sk_produto
+    JOIN avaliacoes_por_produto a ON a.sk_produto  = p.sk_produto
+    WHERE p.ativo = 1
 """)
 
 
@@ -130,36 +150,32 @@ async def _query_periodo_matriz(
     mes: str,
     localidade: str,
     corte_satisfacao: float = 4.0,
-    corte_volume: float | None = None,
 ) -> dict:
     result = await db.execute(
         _SQL_PERIODO_MATRIZ,
-        {
-            "ano": ano,
-            "mes": mes,
-            "localidade": localidade,
-            "corte_sat": corte_satisfacao,
-            "corte_vol": corte_volume,
-        },
+        {"ano": ano, "mes": mes, "localidade": localidade, "corte_sat": corte_satisfacao},
     )
     rows = result.mappings().all()
 
     if not rows:
-        return {"items": [], "mediana_volume": 0.0}
+        return {"items": [], "volume_total": 0}
 
-    mediana_volume = float(rows[0]["mediana_volume"])
+    volume_total = int(rows[0]["volume_total"] or 0)
 
     items = [
         {
             "nome": row["nome"],
             "categoria": row["categoria"],
-            "volume": int(row["volume"]),
+            "volume_produto": int(row["volume_produto"]),
+            "volume_total": volume_total,
+            "participacao_percentual": float(row["participacao_percentual"] or 0),
             "satisfacao": float(row["satisfacao"]),
+            "qtd_avaliacoes": int(row["qtd_avaliacoes"]),
             "quadrante": row["quadrante"],
         }
         for row in rows
     ]
-    return {"items": items, "mediana_volume": mediana_volume}
+    return {"items": items, "volume_total": volume_total}
 
 
 _SQL_KPI = """
@@ -450,15 +466,14 @@ async def get_matriz_produtos(
     limite_alerta_vermelho: int = 4,
     limite_ofensores: int = 4,
     corte_satisfacao: float = 4.0,
-    corte_volume: float | None = None,
 ) -> dict:
-    atual = await _query_periodo_matriz(db, ano, mes, localidade, corte_satisfacao, corte_volume)
+    atual = await _query_periodo_matriz(db, ano, mes, localidade, corte_satisfacao)
 
     if not atual["items"]:
-        return {"items": [], "mediana_volume": 0.0}
+        return {"items": [], "volume_total": 0}
 
     ano_ant, mes_ant = _periodo_anterior(ano, mes)
-    anterior = await _query_periodo_matriz(db, ano_ant, mes_ant, localidade, corte_satisfacao, corte_volume)
+    anterior = await _query_periodo_matriz(db, ano_ant, mes_ant, localidade, corte_satisfacao)
     bloco_anterior_map = {item["nome"]: item["quadrante"] for item in anterior["items"]}
 
     for item in atual["items"]:
@@ -466,22 +481,19 @@ async def get_matriz_produtos(
         item["status"] = _calcular_status(item["satisfacao"], corte_satisfacao)
 
     quadrantes: dict[str, list] = {
-        "estrelas": [],
-        "oportunidades": [],
-        "alerta_vermelho": [],
-        "ofensores": [],
+        "estrelas": [], "oportunidades": [], "alerta_vermelho": [], "ofensores": [],
     }
     for item in atual["items"]:
         quadrantes[item["quadrante"]].append(item)
 
     # Estrelas: maior volume, desempate por maior nota
-    quadrantes["estrelas"].sort(key=lambda x: (-x["volume"], -x["satisfacao"]))
+    quadrantes["estrelas"].sort(key=lambda x: (-x["volume_produto"], -x["satisfacao"]))
     # Oportunidades: maior nota, desempate por maior volume
-    quadrantes["oportunidades"].sort(key=lambda x: (-x["satisfacao"], -x["volume"]))
+    quadrantes["oportunidades"].sort(key=lambda x: (-x["satisfacao"], -x["volume_produto"]))
     # Alerta Vermelho: maior volume, desempate por menor nota
-    quadrantes["alerta_vermelho"].sort(key=lambda x: (-x["volume"], x["satisfacao"]))
+    quadrantes["alerta_vermelho"].sort(key=lambda x: (-x["volume_produto"], x["satisfacao"]))
     # Ofensores: menor nota, desempate por menor volume
-    quadrantes["ofensores"].sort(key=lambda x: (x["satisfacao"], x["volume"]))
+    quadrantes["ofensores"].sort(key=lambda x: (x["satisfacao"], x["volume_produto"]))
 
     selecionados = (
         quadrantes["estrelas"][:limite_estrelas]
@@ -490,7 +502,7 @@ async def get_matriz_produtos(
         + quadrantes["ofensores"][:limite_ofensores]
     )
 
-    return {"items": selecionados, "mediana_volume": atual["mediana_volume"]}
+    return {"items": selecionados, "volume_total": atual["volume_total"]}
 
 
 async def get_receita_grafico(
@@ -500,9 +512,8 @@ async def get_receita_grafico(
     loc_filter = "AND dc.estado = :localidade" if localidade else ""
     params: dict = {"localidade": localidade}
 
-    if mes:
-        ano_ref = int(ano) if ano else 2025
-        params["ano"] = str(ano_ref)
+    if mes and ano:
+        params["ano"] = ano
         params["mes"] = mes
         sql = text(f"""
             SELECT dd.semana_ano,
@@ -535,6 +546,11 @@ async def get_receita_grafico(
             ano_filter = "AND dd.ano::text = :ano"
         else:
             ano_filter = ""
+        if mes:
+            params["mes"] = mes
+            mes_filter = "AND dd.mes::text = :mes"
+        else:
+            mes_filter = ""
         sql = text(f"""
             SELECT dd.ano, dd.mes,
                    SUM(fp.receita_bruta_brl) AS receita
@@ -543,6 +559,7 @@ async def get_receita_grafico(
             {loc_join}
             WHERE fp.fl_pedido_aprovado = 1
               {ano_filter}
+              {mes_filter}
               {loc_filter}
             GROUP BY dd.ano, dd.mes
             ORDER BY dd.ano DESC, dd.mes DESC

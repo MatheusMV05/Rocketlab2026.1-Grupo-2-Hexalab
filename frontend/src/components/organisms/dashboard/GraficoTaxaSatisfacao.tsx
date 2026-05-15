@@ -59,16 +59,11 @@ interface Props {
 }
 
 export function GraficoTaxaSatisfacao({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
-  const [filtros, setFiltros] = useState(filtrosGlobais)
-
-  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
-
   function handleFiltrosChange(f: FiltrosPeriodo) {
-    setFiltros(f)
     onFiltrosLocaisChange?.(f)
   }
 
-  const { data, isLoading } = useTaxaSatisfacao(filtros)
+  const { data, isLoading } = useTaxaSatisfacao(filtrosGlobais)
 
   const VALOR = data?.valor ?? 0
   const META = 70
@@ -121,7 +116,7 @@ export function GraficoTaxaSatisfacao({ filtrosGlobais, onFiltrosLocaisChange }:
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto y=13 do card, alinhado à direita — conforme SVG */}
       <div className="absolute top-[5px] right-[28px]">
-        <FiltroPeriodo filtros={filtros} onChange={handleFiltrosChange} />
+        <FiltroPeriodo filtros={filtrosGlobais} onChange={handleFiltrosChange} />
       </div>
 
       {/* Título: abaixo dos filtros — pt-[50px] posiciona abaixo do filtro (y=41) */}

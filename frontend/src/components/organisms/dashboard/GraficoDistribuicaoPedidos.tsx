@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts'
-import { useState, useEffect } from 'react'
 import { useStatusPedidos } from '../../../hooks/useDashboard'
 import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
@@ -41,16 +40,11 @@ interface Props {
 }
 
 export function GraficoDistribuicaoPedidos({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
-  const [filtros, setFiltros] = useState(filtrosGlobais)
-
-  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
-
   function handleFiltrosChange(f: FiltrosPeriodo) {
-    setFiltros(f)
     onFiltrosLocaisChange?.(f)
   }
 
-  const { data, isLoading, isError } = useStatusPedidos(filtros)
+  const { data, isLoading, isError } = useStatusPedidos(filtrosGlobais)
 
   const total = data?.items.reduce((s, i) => s + i.total, 0) ?? 0
   const tagTotal = formatarVariacao(data?.variacao_total, data?.periodo_ref)
@@ -64,7 +58,7 @@ export function GraficoDistribuicaoPedidos({ filtrosGlobais, onFiltrosLocaisChan
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto no topo direito */}
       <div className="absolute top-[9px] right-[19px]">
-        <FiltroPeriodo filtros={filtros} onChange={handleFiltrosChange} />
+        <FiltroPeriodo filtros={filtrosGlobais} onChange={handleFiltrosChange} />
       </div>
 
       {/* Cabeçalho abaixo dos filtros */}

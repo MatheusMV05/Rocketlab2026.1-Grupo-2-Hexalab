@@ -69,16 +69,19 @@ class TaxaSatisfacaoResponse(BaseModel):
 class MatrizProdutoItem(BaseModel):
     nome: str
     categoria: str
-    volume: int
+    volume_produto: int
+    volume_total: int
+    participacao_percentual: float   # 0 a 100
     satisfacao: float
-    status: str       # "bom" | "neutro" | "ruim"
-    quadrante: str    # "estrelas" | "oportunidades" | "alerta_vermelho" | "ofensores"
-    bloco_anterior: str  # quadrante no período anterior (mockado)
+    qtd_avaliacoes: int
+    status: str        # "bom" | "ruim"
+    quadrante: str     # "estrelas" | "oportunidades" | "alerta_vermelho" | "ofensores"
+    bloco_anterior: str
 
 
 class MatrizProdutosResponse(BaseModel):
     items: list[MatrizProdutoItem]
-    mediana_volume: float
+    volume_total: int
 
 
 class ReceitaGraficoItem(BaseModel):

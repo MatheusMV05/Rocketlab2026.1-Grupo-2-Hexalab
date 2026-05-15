@@ -5,8 +5,6 @@ import type { LimitesBloco } from '../../../types/dashboard'
 
 interface Props {
   limites: LimitesBloco
-  maxVolume: number
-  medianaVolume: number
   onAplicar: (limites: LimitesBloco) => void
 }
 
@@ -17,46 +15,27 @@ const ROTULOS_QUADRANTE: { chave: keyof LimitesBloco; label: string }[] = [
   { chave: 'limite_ofensores',       label: 'Ofensores' },
 ]
 
-const PADRAO: Pick<LimitesBloco, 'corte_satisfacao' | 'corte_volume'> = {
+const PADRAO: Pick<LimitesBloco, 'corte_satisfacao'> = {
   corte_satisfacao: 4.0,
-  corte_volume: null,
 }
 
-function validarCortes(
-  corteSat: number,
-  corteVol: number | null,
-  maxVolume: number,
-): string | null {
+function validarCortes(corteSat: number): string | null {
   if (corteSat < 1.0 || corteSat > 4.9)
     return 'Corte de satisfação deve estar entre 1,0 e 4,9'
-  if (corteVol !== null) {
-    if (corteVol < 1)
-      return 'Corte de volume deve ser maior que zero'
-    if (maxVolume > 0 && corteVol >= maxVolume)
-      return 'Corte de volume muito alto: todos os produtos ficariam em baixa performance'
-  }
   return null
 }
 
-export function PainelLimitesBloco({ limites, maxVolume, medianaVolume, onAplicar }: Props) {
+export function PainelLimitesBloco({ limites, onAplicar }: Props) {
   const [rascunho, setRascunho] = useState<LimitesBloco>(limites)
-  const [volumeFixo, setVolumeFixo] = useState(limites.corte_volume !== null)
-  const [corteVolInput, setCorteVolInput] = useState(
-    limites.corte_volume !== null ? String(limites.corte_volume) : String(Math.round(medianaVolume))
-  )
-
-  const corteVol = volumeFixo ? parseFloat(corteVolInput) || null : null
-  const erroValidacao = validarCortes(rascunho.corte_satisfacao, corteVol, maxVolume)
+  const erroValidacao = validarCortes(rascunho.corte_satisfacao)
 
   function handleAplicar() {
     if (erroValidacao) return
-    onAplicar({ ...rascunho, corte_volume: corteVol })
+    onAplicar(rascunho)
   }
 
   function handleRestaurar() {
     setRascunho((prev) => ({ ...prev, ...PADRAO }))
-    setVolumeFixo(false)
-    setCorteVolInput(String(Math.round(medianaVolume)))
   }
 
   return (
@@ -78,20 +57,19 @@ export function PainelLimitesBloco({ limites, maxVolume, medianaVolume, onAplica
 
       <div className="border-t border-[#f0f0f0] my-3" />
 
-      {/* Seção 2: Cortes da matriz */}
+      {/* Seção 2: Corte de satisfação */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[11px] font-semibold text-[#1d5358]">Cortes da matriz</p>
+        <p className="text-[11px] font-semibold text-[#1d5358]">Corte de satisfação</p>
         <button
           onClick={handleRestaurar}
           className="flex items-center gap-1 text-[10px] text-[#888] hover:text-[#1d5358] transition-colors"
-          title="Restaurar padrões"
+          title="Restaurar padrão"
         >
           <RotateCcw size={11} />
           Padrões
         </button>
       </div>
 
-      {/* Corte de satisfação */}
       <div className="flex flex-col gap-1 mb-3">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-[#4d4d4d]">Satisfação ≥</span>
@@ -111,47 +89,9 @@ export function PainelLimitesBloco({ limites, maxVolume, medianaVolume, onAplica
             <span className="text-[10px] text-[#888]">/ 5,0</span>
           </div>
         </div>
+        <p className="text-[10px] text-[#aaa] text-right">Corte de volume: fixo em 50%</p>
       </div>
 
-      {/* Corte de volume */}
-      <div className="flex flex-col gap-1 mb-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-[#4d4d4d]">Volume</span>
-          <button
-            onClick={() => {
-              setVolumeFixo((v) => !v)
-              if (!volumeFixo) setCorteVolInput(String(Math.round(medianaVolume)))
-            }}
-            className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-              volumeFixo
-                ? 'border-[#1d5358] text-[#1d5358] bg-[#f0f7f7]'
-                : 'border-[#e0e0e0] text-[#888] hover:border-[#1d5358] hover:text-[#1d5358]'
-            }`}
-          >
-            {volumeFixo ? 'Valor fixo' : 'Mediana dinâmica'}
-          </button>
-        </div>
-        {volumeFixo && (
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-[10px] text-[#888]">Valor de corte</span>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={corteVolInput}
-              onChange={(e) => setCorteVolInput(e.target.value)}
-              className="w-20 h-6 text-center text-[11px] border border-[#e0e0e0] rounded-[4px] focus:outline-none focus:border-[#1d5358]"
-            />
-          </div>
-        )}
-        {!volumeFixo && (
-          <p className="text-[10px] text-[#aaa] text-right">
-            atual: {Math.round(medianaVolume).toLocaleString('pt-BR')} vendas
-          </p>
-        )}
-      </div>
-
-      {/* Erro de validação */}
       {erroValidacao && (
         <p className="text-[10px] text-[#c20000] mb-2 leading-tight">{erroValidacao}</p>
       )}

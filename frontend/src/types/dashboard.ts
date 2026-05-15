@@ -66,16 +66,19 @@ export interface TaxaSatisfacaoDados {
 export interface MatrizProdutoItem {
   nome: string
   categoria: string
-  volume: number
+  volume_produto: number
+  volume_total: number
+  participacao_percentual: number  // 0 a 100
   satisfacao: number
-  status: string      // "bom" | "neutro" | "ruim"
-  quadrante: string   // "estrelas" | "oportunidades" | "alerta_vermelho" | "ofensores"
+  qtd_avaliacoes: number
+  status: string       // "bom" | "ruim"
+  quadrante: string    // "estrelas" | "oportunidades" | "alerta_vermelho" | "ofensores"
   bloco_anterior: string
 }
 
 export interface MatrizProdutosDados {
   items: MatrizProdutoItem[]
-  mediana_volume: number
+  volume_total: number
 }
 
 export interface LimitesBloco {
@@ -84,7 +87,6 @@ export interface LimitesBloco {
   limite_alerta_vermelho: number
   limite_ofensores: number
   corte_satisfacao: number
-  corte_volume: number | null
 }
 
 export interface EntregaItem {

@@ -4,13 +4,6 @@
 _entregas_overrides: dict[str, dict] = {}
 
 
-def _calcular_mediana(valores: list[float]) -> float:
-    if not valores:
-        return 0.0
-    s = sorted(valores)
-    mid = len(s) // 2
-    return s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2
-
 
 def mock_kpis() -> dict:
     return {
@@ -63,30 +56,31 @@ def mock_matriz_produtos(
     limite_ofensores: int = 4,
     localidade: str | None = None,
 ) -> dict:
-    # mediana_volume = 1750 para este mock
+    volume_total = 100000
+
     estrelas = [
-        {"nome": "Notebook Core i7",    "categoria": "Informática",      "volume": 3200, "satisfacao": 4.8, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "estrelas"},
-        {"nome": "Smartphone Samsung",  "categoria": "Eletrônicos",      "volume": 2900, "satisfacao": 4.5, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "oportunidades"},
-        {"nome": "Tablet Apple",        "categoria": "Eletrônicos",      "volume": 2600, "satisfacao": 4.3, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "estrelas"},
-        {"nome": "Fone Bluetooth",      "categoria": "Acessórios",       "volume": 2100, "satisfacao": 4.1, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "estrelas"},
+        {"nome": "Notebook Core i7",    "categoria": "Informática",      "volume_produto": 3200, "volume_total": volume_total, "participacao_percentual": 3.20, "satisfacao": 4.8, "qtd_avaliacoes": 52, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "estrelas"},
+        {"nome": "Smartphone Samsung",  "categoria": "Eletrônicos",      "volume_produto": 2900, "volume_total": volume_total, "participacao_percentual": 2.90, "satisfacao": 4.5, "qtd_avaliacoes": 48, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "oportunidades"},
+        {"nome": "Tablet Apple",        "categoria": "Eletrônicos",      "volume_produto": 2600, "volume_total": volume_total, "participacao_percentual": 2.60, "satisfacao": 4.3, "qtd_avaliacoes": 40, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "estrelas"},
+        {"nome": "Fone Bluetooth",      "categoria": "Acessórios",       "volume_produto": 2100, "volume_total": volume_total, "participacao_percentual": 2.10, "satisfacao": 4.1, "qtd_avaliacoes": 35, "status": "bom",  "quadrante": "estrelas",        "bloco_anterior": "estrelas"},
     ]
     oportunidades = [
-        {"nome": "Livro Python Pro",    "categoria": "Livros",           "volume":  800, "satisfacao": 4.9, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "oportunidades"},
-        {"nome": "Panela Elétrica",     "categoria": "Casa",             "volume":  950, "satisfacao": 4.7, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "ofensores"},
-        {"nome": "Cafeteira Premium",   "categoria": "Casa",             "volume":  700, "satisfacao": 4.5, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "oportunidades"},
-        {"nome": "Mochila Esportiva",   "categoria": "Esportes",         "volume":  600, "satisfacao": 4.2, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "oportunidades"},
+        {"nome": "Livro Python Pro",    "categoria": "Livros",           "volume_produto":  950, "volume_total": volume_total, "participacao_percentual": 0.95, "satisfacao": 4.9, "qtd_avaliacoes": 28, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "oportunidades"},
+        {"nome": "Panela Elétrica",     "categoria": "Casa",             "volume_produto":  800, "volume_total": volume_total, "participacao_percentual": 0.80, "satisfacao": 4.7, "qtd_avaliacoes": 31, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "ofensores"},
+        {"nome": "Cafeteira Premium",   "categoria": "Casa",             "volume_produto":  700, "volume_total": volume_total, "participacao_percentual": 0.70, "satisfacao": 4.5, "qtd_avaliacoes": 22, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "oportunidades"},
+        {"nome": "Mochila Esportiva",   "categoria": "Esportes",         "volume_produto":  600, "volume_total": volume_total, "participacao_percentual": 0.60, "satisfacao": 4.2, "qtd_avaliacoes": 19, "status": "bom",  "quadrante": "oportunidades",   "bloco_anterior": "oportunidades"},
     ]
     alerta = [
-        {"nome": "TV 55 OLED",          "categoria": "Eletrônicos",      "volume": 3500, "satisfacao": 2.5, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "estrelas"},
-        {"nome": "Geladeira Duplex",    "categoria": "Eletrodomésticos", "volume": 2800, "satisfacao": 2.8, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "alerta_vermelho"},
-        {"nome": "Máquina de Lavar",    "categoria": "Eletrodomésticos", "volume": 2200, "satisfacao": 3.1, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "alerta_vermelho"},
-        {"nome": "Aspirador Robô",      "categoria": "Casa",             "volume": 1900, "satisfacao": 3.5, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "estrelas"},
+        {"nome": "TV 55 OLED",          "categoria": "Eletrônicos",      "volume_produto": 3500, "volume_total": volume_total, "participacao_percentual": 3.50, "satisfacao": 2.5, "qtd_avaliacoes": 44, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "estrelas"},
+        {"nome": "Geladeira Duplex",    "categoria": "Eletrodomésticos", "volume_produto": 2800, "volume_total": volume_total, "participacao_percentual": 2.80, "satisfacao": 2.8, "qtd_avaliacoes": 38, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "alerta_vermelho"},
+        {"nome": "Máquina de Lavar",    "categoria": "Eletrodomésticos", "volume_produto": 2200, "volume_total": volume_total, "participacao_percentual": 2.20, "satisfacao": 3.1, "qtd_avaliacoes": 29, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "alerta_vermelho"},
+        {"nome": "Aspirador Robô",      "categoria": "Casa",             "volume_produto": 1900, "volume_total": volume_total, "participacao_percentual": 1.90, "satisfacao": 3.5, "qtd_avaliacoes": 25, "status": "ruim", "quadrante": "alerta_vermelho", "bloco_anterior": "estrelas"},
     ]
     ofensores = [
-        {"nome": "Cabo USB Genérico",   "categoria": "Acessórios",       "volume":  200, "satisfacao": 1.5, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "ofensores"},
-        {"nome": "Suporte Monitor",     "categoria": "Acessórios",       "volume":  350, "satisfacao": 2.0, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "ofensores"},
-        {"nome": "Teclado Sem Fio",     "categoria": "Informática",      "volume":  450, "satisfacao": 2.5, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "alerta_vermelho"},
-        {"nome": "Mouse Óptico",        "categoria": "Informática",      "volume":  600, "satisfacao": 3.2, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "ofensores"},
+        {"nome": "Cabo USB Genérico",   "categoria": "Acessórios",       "volume_produto":  200, "volume_total": volume_total, "participacao_percentual": 0.20, "satisfacao": 1.5, "qtd_avaliacoes": 12, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "ofensores"},
+        {"nome": "Suporte Monitor",     "categoria": "Acessórios",       "volume_produto":  350, "volume_total": volume_total, "participacao_percentual": 0.35, "satisfacao": 2.0, "qtd_avaliacoes": 15, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "ofensores"},
+        {"nome": "Teclado Sem Fio",     "categoria": "Informática",      "volume_produto":  450, "volume_total": volume_total, "participacao_percentual": 0.45, "satisfacao": 2.5, "qtd_avaliacoes": 18, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "alerta_vermelho"},
+        {"nome": "Mouse Óptico",        "categoria": "Informática",      "volume_produto":  600, "volume_total": volume_total, "participacao_percentual": 0.60, "satisfacao": 3.2, "qtd_avaliacoes": 20, "status": "ruim", "quadrante": "ofensores",       "bloco_anterior": "ofensores"},
     ]
     items = (
         estrelas[:limite_estrelas]
@@ -94,5 +88,4 @@ def mock_matriz_produtos(
         + alerta[:limite_alerta_vermelho]
         + ofensores[:limite_ofensores]
     )
-    mediana = 1200.0 if localidade else 1750.0
-    return {"items": items, "mediana_volume": mediana}
+    return {"items": items, "volume_total": volume_total}

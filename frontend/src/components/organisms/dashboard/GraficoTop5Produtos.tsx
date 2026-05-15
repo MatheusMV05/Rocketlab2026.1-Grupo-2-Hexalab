@@ -9,7 +9,7 @@ import {
   LabelList,
 } from 'recharts'
 import { useTopProdutos } from '../../../hooks/useDashboard'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
 import { formatarReais, formatarVariacao } from '../../../utils/formatadores'
@@ -20,17 +20,13 @@ interface Props {
 }
 
 export function GraficoTop5Produtos({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
-  const [filtros, setFiltros] = useState(filtrosGlobais)
   const [tipoDado, setTipoDado] = useState('Volume')
 
-  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
-
   function handleFiltrosChange(f: FiltrosPeriodo) {
-    setFiltros(f)
     onFiltrosLocaisChange?.(f)
   }
 
-  const { data, isLoading, isError } = useTopProdutos(filtros)
+  const { data, isLoading, isError } = useTopProdutos(filtrosGlobais)
 
   const top5 = (data?.items ?? []).slice(0, 5)
 
@@ -49,7 +45,7 @@ export function GraficoTop5Produtos({ filtrosGlobais, onFiltrosLocaisChange }: P
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto no topo direito */}
       <div className="absolute top-[9px] right-[19px]">
-        <FiltroPeriodo filtros={filtros} onChange={handleFiltrosChange} />
+        <FiltroPeriodo filtros={filtrosGlobais} onChange={handleFiltrosChange} />
       </div>
 
       {/* Cabeçalho abaixo dos filtros */}

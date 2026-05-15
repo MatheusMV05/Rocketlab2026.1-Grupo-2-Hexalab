@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { TrendingUp, ShoppingCart, DollarSign, Smile } from 'lucide-react'
 import { LayoutPrincipal } from '../../components/templates/LayoutPrincipal'
 import { CardKpi } from '../../components/molecules/dashboard/CardKpi'
@@ -15,31 +15,72 @@ import { formatarReaisCompleto, formatarVariacao } from '../../utils/formatadore
 const FILTRO_VAZIO: FiltrosPeriodo = { ano: '', mes: '', localidade: '' }
 const GRAFICOS = ['receita', 'satisfacao', 'matriz', 'distribuicao', 'top5'] as const
 type GraficoKey = typeof GRAFICOS[number]
+const LS_GLOBAIS = 'dashboard_filtros_globais'
+const LS_LOCAIS  = 'dashboard_filtros_locais'
 
 function filtrosLocaisVazios(): Record<GraficoKey, FiltrosPeriodo> {
   return Object.fromEntries(GRAFICOS.map((g) => [g, FILTRO_VAZIO])) as Record<GraficoKey, FiltrosPeriodo>
 }
 
+function loadLS<T>(key: string, fallback: T): T {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback } catch { return fallback }
+}
+
+function mergeLocal(local: FiltrosPeriodo, global: FiltrosPeriodo): FiltrosPeriodo {
+  return {
+    ano: local.ano || global.ano,
+    mes: local.mes || global.mes,
+    localidade: local.localidade || global.localidade,
+  }
+}
+
 export default function Dashboard() {
-  const [filtrosGlobais, setFiltrosGlobais] = useState<FiltrosPeriodo>(FILTRO_VAZIO)
-  const [filtrosLocais, setFiltrosLocais] = useState<Record<GraficoKey, FiltrosPeriodo>>(filtrosLocaisVazios)
+  const [filtrosGlobais, setFiltrosGlobais] = useState<FiltrosPeriodo>(
+    () => loadLS(LS_GLOBAIS, FILTRO_VAZIO)
+  )
+  const [filtrosLocais, setFiltrosLocais] = useState<Record<GraficoKey, FiltrosPeriodo>>(
+    () => loadLS(LS_LOCAIS, filtrosLocaisVazios())
+  )
+
+  useEffect(() => { localStorage.setItem(LS_GLOBAIS, JSON.stringify(filtrosGlobais)) }, [filtrosGlobais])
+  useEffect(() => { localStorage.setItem(LS_LOCAIS,  JSON.stringify(filtrosLocais))  }, [filtrosLocais])
 
   function handleGlobalChange(novosFiltros: FiltrosPeriodo) {
     setFiltrosGlobais(novosFiltros)
     setFiltrosLocais(filtrosLocaisVazios())
   }
 
-  const camposOverrideados = new Set<keyof FiltrosPeriodo>(
+  // só marca campo como overrideado se local está explicitamente definido E difere do global
+  const camposOverrideados = useMemo(() => new Set<keyof FiltrosPeriodo>(
     (Object.keys(FILTRO_VAZIO) as (keyof FiltrosPeriodo)[]).filter((campo) =>
-      GRAFICOS.some((g) => filtrosLocais[g][campo] !== filtrosGlobais[campo])
+      GRAFICOS.some((g) => {
+        const local = filtrosLocais[g][campo]
+        return local !== '' && local !== filtrosGlobais[campo]
+      })
     )
-  )
+  ), [filtrosLocais, filtrosGlobais])
 
-  const handleLocalReceita     = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, receita:      f })), [])
-  const handleLocalSatisfacao  = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, satisfacao:   f })), [])
-  const handleLocalMatriz      = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, matriz:       f })), [])
-  const handleLocalDistribuicao= useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, distribuicao: f })), [])
-  const handleLocalTop5        = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, top5:         f })), [])
+  // armazena apenas o delta: campos que diferem do global
+  const makeDelta = useCallback((f: FiltrosPeriodo): FiltrosPeriodo => ({
+    ano:        f.ano        !== filtrosGlobais.ano        ? f.ano        : '',
+    mes:        f.mes        !== filtrosGlobais.mes        ? f.mes        : '',
+    localidade: f.localidade !== filtrosGlobais.localidade ? f.localidade : '',
+  }), [filtrosGlobais])
+
+  const handleLocalReceita      = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, receita:      makeDelta(f) })), [makeDelta])
+  const handleLocalSatisfacao   = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, satisfacao:   makeDelta(f) })), [makeDelta])
+  const handleLocalMatriz       = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, matriz:       makeDelta(f) })), [makeDelta])
+  const handleLocalDistribuicao = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, distribuicao: makeDelta(f) })), [makeDelta])
+  const handleLocalTop5         = useCallback((f: FiltrosPeriodo) => setFiltrosLocais((p) => ({ ...p, top5:         makeDelta(f) })), [makeDelta])
+
+  // filtros efetivos por gráfico: local tem prioridade sobre global campo a campo
+  const efetivos = useMemo(() => ({
+    receita:      mergeLocal(filtrosLocais.receita,      filtrosGlobais),
+    satisfacao:   mergeLocal(filtrosLocais.satisfacao,   filtrosGlobais),
+    matriz:       mergeLocal(filtrosLocais.matriz,       filtrosGlobais),
+    distribuicao: mergeLocal(filtrosLocais.distribuicao, filtrosGlobais),
+    top5:         mergeLocal(filtrosLocais.top5,         filtrosGlobais),
+  }), [filtrosLocais, filtrosGlobais])
 
   const { data: kpis, isLoading: kpisLoading } = useKpis(filtrosGlobais)
 
@@ -106,19 +147,19 @@ export default function Dashboard() {
 
       {/* Linha 1: Receita Mensal (578×433) + Taxa de Satisfação (578×433) */}
       <div className="grid grid-cols-2 gap-[60px] mb-[46px]" style={{ height: 435 }}>
-        <GraficoReceitaMensal filtrosGlobais={filtrosGlobais} onFiltrosLocaisChange={handleLocalReceita} />
-        <GraficoTaxaSatisfacao filtrosGlobais={filtrosGlobais} onFiltrosLocaisChange={handleLocalSatisfacao} />
+        <GraficoReceitaMensal filtrosGlobais={efetivos.receita} onFiltrosLocaisChange={handleLocalReceita} />
+        <GraficoTaxaSatisfacao filtrosGlobais={efetivos.satisfacao} onFiltrosLocaisChange={handleLocalSatisfacao} />
       </div>
 
       {/* Linha 2: Matriz de Satisfação vs Performance — largura total */}
       <div className="mb-[44px]" style={{ height: 487 }}>
-        <MatrizSatisfacaoPerformance filtrosGlobais={filtrosGlobais} onFiltrosLocaisChange={handleLocalMatriz} />
+        <MatrizSatisfacaoPerformance filtrosGlobais={efetivos.matriz} onFiltrosLocaisChange={handleLocalMatriz} />
       </div>
 
       {/* Linha 3: Distribuição de Pedidos (578×417) + Top 5 Produtos (578×417) */}
       <div className="grid grid-cols-2 gap-[60px] mb-[43px]" style={{ height: 418 }}>
-        <GraficoDistribuicaoPedidos filtrosGlobais={filtrosGlobais} onFiltrosLocaisChange={handleLocalDistribuicao} />
-        <GraficoTop5Produtos filtrosGlobais={filtrosGlobais} onFiltrosLocaisChange={handleLocalTop5} />
+        <GraficoDistribuicaoPedidos filtrosGlobais={efetivos.distribuicao} onFiltrosLocaisChange={handleLocalDistribuicao} />
+        <GraficoTop5Produtos filtrosGlobais={efetivos.top5} onFiltrosLocaisChange={handleLocalTop5} />
       </div>
 
       {/* Linha 4: Lista de Entregas — largura total */}

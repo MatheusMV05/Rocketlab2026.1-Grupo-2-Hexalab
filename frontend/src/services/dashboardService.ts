@@ -70,7 +70,6 @@ export const dashboardService = {
         params: {
           ...params,
           mes: normalizarMes(params.mes),
-          corte_volume: params.corte_volume ?? undefined,
         },
       })
       .then((r) => r.data),

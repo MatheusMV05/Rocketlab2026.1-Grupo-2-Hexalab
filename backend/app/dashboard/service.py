@@ -115,15 +115,14 @@ async def get_matriz_produtos(
     limite_alerta_vermelho: int = 4,
     limite_ofensores: int = 4,
     corte_satisfacao: float = 4.0,
-    corte_volume: float | None = None,
 ) -> MatrizProdutosResponse:
     data = await repository.get_matriz_produtos(
         db, ano, mes, localidade,
         limite_estrelas, limite_oportunidades, limite_alerta_vermelho, limite_ofensores,
-        corte_satisfacao, corte_volume,
+        corte_satisfacao,
     )
     items = [MatrizProdutoItem(**item) for item in data["items"]]
-    return MatrizProdutosResponse(items=items, mediana_volume=data["mediana_volume"])
+    return MatrizProdutosResponse(items=items, volume_total=data["volume_total"])
 
 
 async def get_receita_grafico(
