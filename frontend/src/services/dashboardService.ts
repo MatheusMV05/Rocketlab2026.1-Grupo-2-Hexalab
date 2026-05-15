@@ -67,7 +67,11 @@ export const dashboardService = {
   } & Partial<LimitesBloco> = {}) =>
     api
       .get<MatrizProdutosDados>('/dashboard/matriz-produtos', {
-        params: { ...params, mes: normalizarMes(params.mes) },
+        params: {
+          ...params,
+          mes: normalizarMes(params.mes),
+          corte_volume: params.corte_volume ?? undefined,
+        },
       })
       .then((r) => r.data),
 

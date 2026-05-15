@@ -83,6 +83,8 @@ export interface LimitesBloco {
   limite_oportunidades: number
   limite_alerta_vermelho: number
   limite_ofensores: number
+  corte_satisfacao: number
+  corte_volume: number | null
 }
 
 export interface EntregaItem {
