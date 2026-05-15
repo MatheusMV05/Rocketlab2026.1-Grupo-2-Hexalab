@@ -39,7 +39,7 @@ class AgenteDecompositor(AgenteBase):
 		self,
 		esquema_filtrado: str,
 		pergunta: str,
-		db_path: str | Path | None = None,
+		db_connection_string: str | None = None,
 		message_history: list[Any] | None = None,
 	) -> ResultadoDecompositor:
 		"""Executa o decomposer e retorna SQL + raciocínio com tipagem forte.
@@ -57,7 +57,7 @@ class AgenteDecompositor(AgenteBase):
 
 		# Gera hints do schema e extrai valores reais apenas para colunas categoricas permitidas.
 		try:
-			generated_examples = generate_examples_from_schema(esquema_filtrado, db_path=db_path)
+			generated_examples = generate_examples_from_schema(esquema_filtrado, db_connection_string=db_connection_string)
 		except Exception:
 			generated_examples = []
 

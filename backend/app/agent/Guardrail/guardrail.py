@@ -122,10 +122,12 @@ def validar_sql_seguro(sql: str) -> bool:
     if not tabelas_na_query:
         logger.warning("Query sem tabelas detectada.")
     
+        tabela_limpa = tabela.split('.')[-1]
     for tabela in tabelas_na_query:
-        if tabela in ctes_declaradas:
+        tabela_limpa = tabela.split('.')[-1]
+        if tabela_limpa in ctes_declaradas:
             continue
-        if tabela not in TABELAS_PERMITIDAS:
+        if tabela_limpa not in TABELAS_PERMITIDAS:
             logger.error(f"SQL rejeitado: Tentativa de acesso à tabela proibida '{tabela}'.")
             return False
 

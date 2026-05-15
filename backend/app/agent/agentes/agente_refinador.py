@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
+# import sqlite3
+import psycopg2 # Alterado de sqlite3
+from psycopg2.extras import RealDictCursor
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +32,7 @@ class AgenteRefinador(AgenteBase):
         candidate_sql: str,
         question: str,
         filtered_schema: str,
-        db_path: str | Path | None = None,
+        db_connection_string: str | None = None,
         message_history: list[Any] | None = None,
     ) -> ResultadoRefinador:
         """Valida e corrige o SQL candidato com loop de retry.
@@ -52,7 +54,7 @@ class AgenteRefinador(AgenteBase):
         total_tokens = 0
         novo_historico: list[Any] = []
 
-        initial_result = self._executar_sql(current_sql, db_path)
+        initial_result = self._executar_sql(current_sql, db_connection_string)
         if initial_result["ok"]:
             return ResultadoRefinador(
                 sql=current_sql,
@@ -88,7 +90,7 @@ class AgenteRefinador(AgenteBase):
                 return ctx.deps.sistema
 
         for tentativa in range(1, self.config.max_retries + 1):
-            result = self._executar_sql(current_sql, db_path)
+            result = self._executar_sql(current_sql, db_connection_string)
 
             if result["ok"]:
                 return ResultadoRefinador(
@@ -166,25 +168,28 @@ class AgenteRefinador(AgenteBase):
         )
 
     @staticmethod
-    def _executar_sql(sql: str, db_path: str | Path | None = None) -> dict:
-        """Executa o SQL e retorna dict com ok e error.
-
-        Nunca propaga exceção.
-
-        Se db_path não for informado, considera a validação de execução como
-        opcional e retorna sucesso para evitar dependência de módulo externo.
+    def _executar_sql(sql: str, db_connection_string: str | None = None) -> dict:
+        """
+        Executa o SQL no PostgreSQL.
+        db_connection_string deve ser algo como: 
+        "postgresql://usuario:senha@localhost:5432/nome_banco"
         """
         try:
             if not (sql or "").strip():
-                return {"ok": False, "error": "SQL vazio: o decompositor não gerou consulta."}
+                return {"ok": False, "error": "SQL vazio."}
 
-            if db_path is None:
+            if db_connection_string is None:
                 return {"ok": True, "error": None}
 
-            with sqlite3.connect(str(db_path)) as conn:
-                cursor = conn.execute(sql)
-                _ = cursor.fetchall()
-                return {"ok": True, "error": None}
+            # Conexão Postgres
+            conn = psycopg2.connect(db_connection_string)
+            with conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql)
+                    # Apenas testa a execução
+                    if cursor.description:
+                        cursor.fetchall()
+            return {"ok": True, "error": None}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 

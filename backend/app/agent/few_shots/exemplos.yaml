@@ -67,7 +67,7 @@
   sql: |
     SELECT nome_produto, total_tickets_suporte, categoria
     FROM mart_desempenho_produtos
-    WHERE produto_problematico = 'true' AND total_tickets_suporte > 10
+    WHERE produto_problematico = TRUE AND total_tickets_suporte > 10
 
 # --- [CATEGORIA 2: CLIENTES E FIDELIZAÇÃO (CRM)] ---
 
@@ -132,7 +132,7 @@
   sql: |
     SELECT agente_suporte, AVG(nota_avaliacao) as media_nota
     FROM fat_tickets_suporte
-    WHERE fl_resolvido = 'true'
+    WHERE fl_resolvido = TRUE
     GROUP BY agente_suporte
     ORDER BY media_nota DESC
     LIMIT 1
@@ -143,7 +143,7 @@
   sql: |
     SELECT agente_suporte, COUNT(*) as total_resolvidos
     FROM fat_tickets_suporte
-    WHERE fl_resolvido = 'true'
+    WHERE fl_resolvido = TRUE
     GROUP BY agente_suporte
     ORDER BY total_resolvidos DESC
     LIMIT 1
@@ -152,7 +152,7 @@
   reasoning: |
     Cálculo de taxa de sucesso individual.
   sql: |
-    SELECT (COUNT(CASE WHEN fl_resolvido = 'true' THEN 1 END) * 100.0 / COUNT(*)) as taxa_sucesso
+    SELECT (COUNT(CASE WHEN fl_resolvido = TRUE THEN 1 END) * 100.0 / COUNT(*)) as taxa_sucesso
     FROM fat_tickets_suporte
     WHERE agente_suporte = 'Ana Paula Ferreira'
 
@@ -209,7 +209,7 @@
     SELECT d.nome_dia_semana, COUNT(*) as total_add_carrinho
     FROM fat_clickstream f
     JOIN dim_data d ON f.sk_data_evento = d.sk_data
-    WHERE f.fl_adicao_carrinho = 'true'
+    WHERE f.fl_adicao_carrinho = TRUE
     GROUP BY d.nome_dia_semana
     ORDER BY total_add_carrinho DESC
 
@@ -262,11 +262,11 @@
 
 - question: "Qual o mês de 2024 com o maior número de novos cadastros?"
   reasoning: |
-    Análise de crescimento mensal da base de clientes.
+    Análise de crescimento mensal da base de clientes utilizando padrões do PostgreSQL.
   sql: |
-    SELECT strftime('%m', data_cadastro) as mes, COUNT(*) as novos_clientes
+    SELECT EXTRACT(MONTH FROM data_cadastro) as mes, COUNT(*) as novos_clientes
     FROM dim_clientes
-    WHERE data_cadastro LIKE '2024%'
+    WHERE EXTRACT(YEAR FROM data_cadastro) = 2024
     GROUP BY mes
     ORDER BY novos_clientes DESC
     LIMIT 1

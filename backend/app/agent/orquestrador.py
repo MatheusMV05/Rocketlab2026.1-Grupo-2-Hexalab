@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
+import psycopg2 
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -62,7 +62,7 @@ class Orquestrador:
 
     def __init__(
         self,
-        db_path: str | Path,
+        db_connection_string: str,
         config: Config | None = None,
     ) -> None:
         """Inicializa o orquestrador com o caminho do banco e configurações.
@@ -71,7 +71,7 @@ class Orquestrador:
             db_path: Caminho para o arquivo SQLite.
             config: Configurações dos agentes. Se None, usa Config() padrão.
         """
-        self.db_path = Path(db_path)
+        self.db_connection_string = db_connection_string
         self.config = config or Config()
         self.seletor = AgenteSeletor(config=self.config)
         self.decompositor = AgenteDecompositor(config=self.config)
@@ -131,7 +131,7 @@ class Orquestrador:
 
         # Lê o esquema do banco
         try:
-            esquema_completo = ler_esquema(self.db_path)
+            esquema_completo = ler_esquema(self.db_connection_string)
         except FileNotFoundError:
             return ResultadoOrquestrador(
                 pergunta=pergunta,
@@ -141,7 +141,7 @@ class Orquestrador:
                 colunas=[],
                 sucesso=False,
                 impossivel=False,
-                erro=f"Banco de dados não encontrado: {self.db_path}",
+                erro=f"Banco de dados não encontrado: {self.db_connection_string}",
                 tokens_totais=0,
             )
 
@@ -176,7 +176,7 @@ class Orquestrador:
         resultado_decompositor = self.decompositor.run(
             esquema_filtrado=resultado_seletor.esquema_filtrado,
             pergunta=pergunta,
-            db_path=self.db_path,
+            db_connection_string=self.db_connection_string,
             message_history=message_history,
         )
         tokens_totais += resultado_decompositor.tokens_usados
@@ -209,7 +209,7 @@ class Orquestrador:
             candidate_sql=resultado_decompositor.sql,
             question=pergunta,
             filtered_schema=resultado_seletor.esquema_filtrado,
-            db_path=self.db_path,
+            db_connection_string=self.db_connection_string,
             message_history=message_history,
         )
         tokens_totais += resultado_refinador.tokens_usados
@@ -283,7 +283,7 @@ class Orquestrador:
     def _executar_sql(
         self, sql: str
     ) -> tuple[list[tuple], list[str], str | None]:
-        """Executa o SQL no banco SQLite e retorna dados, colunas e erro.
+        """Executa o SQL no banco PostgreSQL e retorna dados, colunas e erro.
 
         Nunca propaga exceção — erros são retornados como string no terceiro
         elemento da tupla.
@@ -292,11 +292,16 @@ class Orquestrador:
             Tupla (dados, colunas, erro). Se ok, erro é None.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.execute(sql)
-                colunas = [desc[0] for desc in cursor.description or []]
-                dados = cursor.fetchall()
-                return dados, colunas, None
+            with psycopg2.connect(self.db_connection_string) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql)
+                    if cursor.description:
+                        colunas = [desc[0] for desc in cursor.description]
+                        dados = cursor.fetchall()
+                    else:
+                        colunas = []
+                        dados = []
+                    return dados, colunas, None
         except Exception as e:
             logger.warning("Orquestrador._executar_sql: erro ao executar SQL: %s", e)
             return [], [], str(e)
