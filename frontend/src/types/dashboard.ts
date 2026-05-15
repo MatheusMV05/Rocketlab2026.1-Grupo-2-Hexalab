@@ -68,7 +68,8 @@ export interface MatrizProdutoItem {
   categoria: string
   volume_produto: number
   volume_total: number
-  participacao_percentual: number  // 0 a 100
+  participacao_percentual: number  // % real sobre total de vendas avaliadas (0-100)
+  participacao_rank: number        // percentil de volume entre os produtos exibidos (0-100)
   satisfacao: number
   qtd_avaliacoes: number
   status: string       // "bom" | "ruim"

@@ -71,7 +71,8 @@ class MatrizProdutoItem(BaseModel):
     categoria: str
     volume_produto: int
     volume_total: int
-    participacao_percentual: float   # 0 a 100
+    participacao_percentual: float   # % real sobre total de produtos avaliados (0-100)
+    participacao_rank: float         # percentil de volume entre os produtos exibidos (0-100)
     satisfacao: float
     qtd_avaliacoes: int
     status: str        # "bom" | "ruim"

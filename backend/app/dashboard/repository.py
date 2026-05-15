@@ -106,25 +106,36 @@ _SQL_PERIODO_MATRIZ = text("""
             t.volume_total,
             (v.volume_produto::numeric / NULLIF(t.volume_total, 0)) * 100 AS participacao
         FROM vendas_por_produto v CROSS JOIN totais t
+    ),
+    base AS (
+        SELECT
+            p.nome_produto                                                        AS nome,
+            p.categoria,
+            pct.volume_produto,
+            pct.volume_total,
+            ROUND(pct.participacao, 2)                                            AS participacao_percentual,
+            ROUND(a.media_avaliacao::numeric, 2)                                  AS satisfacao,
+            a.qtd_avaliacoes,
+            ROUND(
+                CAST(PERCENT_RANK() OVER (ORDER BY pct.volume_produto) * 100 AS numeric),
+                1
+            )                                                                     AS participacao_rank
+        FROM dim_produtos p
+        JOIN pct                    ON pct.sk_produto = p.sk_produto
+        JOIN avaliacoes_por_produto a ON a.sk_produto  = p.sk_produto
+        WHERE p.ativo = 1
     )
     SELECT
-        p.nome_produto                          AS nome,
-        p.categoria,
-        pct.volume_produto,
-        pct.volume_total,
-        ROUND(pct.participacao, 2)              AS participacao_percentual,
-        ROUND(a.media_avaliacao::numeric, 2)    AS satisfacao,
-        a.qtd_avaliacoes,
+        nome, categoria, volume_produto, volume_total,
+        participacao_percentual, participacao_rank,
+        satisfacao, qtd_avaliacoes,
         CASE
-            WHEN pct.participacao >= 50 AND a.media_avaliacao >= :corte_sat THEN 'estrelas'
-            WHEN pct.participacao <  50 AND a.media_avaliacao >= :corte_sat THEN 'oportunidades'
-            WHEN pct.participacao >= 50 AND a.media_avaliacao <  :corte_sat THEN 'alerta_vermelho'
+            WHEN participacao_rank >= 50 AND satisfacao >= :corte_sat THEN 'estrelas'
+            WHEN participacao_rank <  50 AND satisfacao >= :corte_sat THEN 'oportunidades'
+            WHEN participacao_rank >= 50 AND satisfacao <  :corte_sat THEN 'alerta_vermelho'
             ELSE 'ofensores'
         END AS quadrante
-    FROM dim_produtos p
-    JOIN pct                   ON pct.sk_produto = p.sk_produto
-    JOIN avaliacoes_por_produto a ON a.sk_produto  = p.sk_produto
-    WHERE p.ativo = 1
+    FROM base
 """)
 
 
@@ -169,6 +180,7 @@ async def _query_periodo_matriz(
             "volume_produto": int(row["volume_produto"]),
             "volume_total": volume_total,
             "participacao_percentual": float(row["participacao_percentual"] or 0),
+            "participacao_rank": float(row["participacao_rank"] or 0),
             "satisfacao": float(row["satisfacao"]),
             "qtd_avaliacoes": int(row["qtd_avaliacoes"]),
             "quadrante": row["quadrante"],

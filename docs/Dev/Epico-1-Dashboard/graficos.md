@@ -163,49 +163,64 @@ Dois percentuais são exibidos: variação da receita total dos top 5 e variaç�
 
 ## Matriz de Satisfação vs. Performance
 
-**O que mostra:** Posicionamento de cada produto em um gráfico de dois eixos — satisfação dos clientes (vertical) e volume de pedidos (horizontal) — dividido em quatro quadrantes.
+**O que mostra:** Posicionamento de cada produto em um gráfico de dispersão de dois eixos — satisfação dos clientes (vertical, escala 1–5) e percentil de volume de vendas (horizontal, escala 0–100) — dividido em quatro quadrantes.
 
 ### Como é calculado
 
 **Passo 1 — Métricas por produto:**
-Para cada produto ativo que possui avaliações no período, são calculados:
-- Volume: quantidade de pedidos distintos
-- Satisfação: média das notas dadas pelos clientes (escala de 1 a 5)
+Para cada produto ativo que possui avaliações no período, são calculados via SQL:
+- **Volume:** quantidade total de unidades vendidas em pedidos aprovados
+- **Satisfação:** média das notas dos clientes (escala 1 a 5), considerando apenas notas entre 1 e 5
+- **Percentil de volume (`participacao_rank`):** posição relativa do produto dentro do conjunto, calculada com `PERCENT_RANK() OVER (ORDER BY volume)` — varia de 0 (menor volume) a 100 (maior volume)
+- **Participação percentual:** fatia do produto no volume total do conjunto avaliado
 
 **Passo 2 — Definição dos quadrantes:**
-O sistema calcula a **mediana** de volume e de satisfação entre todos os produtos. Isso cria o ponto central da matriz. Cada produto é então classificado:
+Dois cortes dividem o espaço:
+- **Eixo X (volume):** corte fixo no percentil 50 — separa produtos de alta performance dos de baixo volume relativo
+- **Eixo Y (satisfação):** corte configurável, padrão 4,0 — ajustável pelo painel de configurações
 
 | Quadrante | Condição | Significado |
 |---|---|---|
-| **Estrelas** | Volume ≥ mediana E Satisfação ≥ mediana | Produtos que vendem bem E são bem avaliados |
-| **Oportunidades** | Volume < mediana E Satisfação ≥ mediana | Bem avaliados, mas ainda vendem pouco |
-| **Alerta Vermelho** | Volume ≥ mediana E Satisfação < mediana | Vendem muito, mas geram insatisfação |
-| **Ofensores** | Volume < mediana E Satisfação < mediana | Baixo volume e baixa satisfação |
+| **Estrelas** | `participacao_rank ≥ 50` e `satisfacao ≥ corte` | Vendem muito e são bem avaliados |
+| **Oportunidades** | `participacao_rank < 50` e `satisfacao ≥ corte` | Bem avaliados, mas ainda vendem pouco |
+| **Alerta Vermelho** | `participacao_rank ≥ 50` e `satisfacao < corte` | Vendem muito, mas geram insatisfação |
+| **Ofensores** | `participacao_rank < 50` e `satisfacao < corte` | Baixo volume e baixa satisfação |
 
-### Por que a mediana e não a média?
+### Histórico de quadrante (`bloco_anterior`)
 
-A mediana foi escolhida como ponto de corte porque ela é menos sensível a produtos extremos (um produto com vendas absurdamente altas não distorceria a divisão). Isso garante que os quadrantes sejam mais equilibrados em número de produtos.
+Cada produto exibe de qual quadrante ele vinha no período imediatamente anterior (ex.: mês anterior). Isso permite identificar produtos que melhoraram ou pioraram de posição recentemente.
 
-### Limite por quadrante
+### Limite por quadrante e critérios de ordenação
 
-Por padrão, cada quadrante exibe no máximo 4 produtos — os mais relevantes dentro de cada grupo, segundo critérios próprios:
-- **Estrelas:** prioriza satisfação mais alta, depois volume
-- **Oportunidades:** prioriza satisfação mais alta
-- **Alerta Vermelho:** prioriza satisfação mais baixa (os mais críticos primeiro), depois volume
-- **Ofensores:** prioriza volume mais alto (os mais visíveis primeiro)
+Por padrão, cada quadrante exibe no máximo 4 produtos. Quando há mais candidatos, os exibidos são escolhidos por ordem de relevância:
 
-O limite é ajustável pelo painel de configurações da matriz.
+| Quadrante | Ordenação primária | Desempate |
+|---|---|---|
+| **Estrelas** | Maior volume | Maior satisfação |
+| **Oportunidades** | Maior satisfação | Maior volume |
+| **Alerta Vermelho** | Maior volume | Menor satisfação (mais críticos primeiro) |
+| **Ofensores** | Menor satisfação | Menor volume |
+
+O limite de cada quadrante e o corte de satisfação são ajustáveis pelo painel de configurações (ícone de engrenagem no canto do gráfico).
 
 ### Cor dos pontos
 
-Cada produto é colorido de acordo com sua nota média:
-- **Verde:** nota ≥ 4,0 — satisfação boa
-- **Cinza:** nota entre 3,5 e 4,0 — satisfação neutra
-- **Vermelho:** nota < 3,5 — satisfação ruim
+A cor indica o quadrante ao qual o produto pertence — não a nota isolada:
+
+| Cor | Quadrante |
+|---|---|
+| Verde | Estrelas |
+| Âmbar | Oportunidades |
+| Vermelho | Alerta Vermelho |
+| Cinza | Ofensores |
 
 ### Grupos sobrepostos
 
-Quando dois ou mais produtos ficam em posições muito próximas no gráfico, eles são agrupados automaticamente em um único ponto. Clicar no grupo abre uma lista com todos os produtos que ele representa.
+Quando dois ou mais produtos ficam em posições muito próximas no gráfico (diferença ≤ 5 no percentil de volume e ≤ 0,2 na satisfação, dentro do mesmo quadrante), eles são agrupados automaticamente em uma única pílula com o símbolo ▾. Clicar no grupo abre um menu com todos os produtos que ele representa e, ao passar o mouse sobre cada item, aparece o tooltip detalhado.
+
+### Posicionamento de rótulos
+
+As pílulas (rótulos dos produtos) são posicionadas de forma a não se sobrepor umas às outras nem ultrapassar os limites do gráfico. Pílulas próximas à borda direita são automaticamente espelhadas: o texto e o corpo da pílula se estendem para a esquerda, enquanto o ponto colorido permanece ancorado na posição exata do produto no eixo.
 
 ---
 

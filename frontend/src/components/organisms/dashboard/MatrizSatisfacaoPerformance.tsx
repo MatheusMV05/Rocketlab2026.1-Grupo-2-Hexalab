@@ -59,6 +59,7 @@ interface ProdutoAgrupado extends ProdutoBase {
 interface ProdutoComLabel extends ProdutoAgrupado {
   labelDx: number
   labelDy: number
+  flipped: boolean  // pílula estende para esquerda, dot na borda direita
 }
 
 // ─── Helpers de agrupamento ───────────────────────────────────────────────────
@@ -69,7 +70,7 @@ function agruparPorProximidade(items: ProdutoBase[]): ProdutoAgrupado[] {
   const comIdx = items.map((item, i) => ({ item, i }))
   comIdx.sort(
     (a, b) =>
-      a.item.participacao_percentual - b.item.participacao_percentual ||
+      a.item.participacao_rank - b.item.participacao_rank ||
       a.item.satisfacao - b.item.satisfacao,
   )
 
@@ -80,13 +81,12 @@ function agruparPorProximidade(items: ProdutoBase[]): ProdutoAgrupado[] {
     if (usado.has(i)) continue
     const grupo = [comIdx[i]]
     usado.add(i)
-    const ancX = comIdx[i].item.participacao_percentual
+    const ancX = comIdx[i].item.participacao_rank
     const ancY = comIdx[i].item.satisfacao
-    // Membership uses anchor-radius: items within tolerance of the seed (not centroid)
 
     for (let j = i + 1; j < comIdx.length; j++) {
       if (usado.has(j)) continue
-      const dX = Math.abs(comIdx[j].item.participacao_percentual - ancX)
+      const dX = Math.abs(comIdx[j].item.participacao_rank - ancX)
       const dY = Math.abs(comIdx[j].item.satisfacao - ancY)
       if (dX <= X_GROUP_TOLERANCE && dY <= RATING_GROUP_TOLERANCE) {
         grupo.push(comIdx[j])
@@ -100,11 +100,11 @@ function agruparPorProximidade(items: ProdutoBase[]): ProdutoAgrupado[] {
     const members = g.map((x) => x.item)
     const principal = [...g].sort((a, b) => a.i - b.i)[0].item
     const avgSat = members.reduce((s, p) => s + p.satisfacao, 0) / members.length
-    const avgX = members.reduce((s, p) => s + p.participacao_percentual, 0) / members.length
+    const avgRank = members.reduce((s, p) => s + p.participacao_rank, 0) / members.length
     return {
       ...principal,
       satisfacao: avgSat,
-      participacao_percentual: avgX,
+      participacao_rank: avgRank,
       membros: members,
     }
   })
@@ -153,18 +153,22 @@ function calcLabelPositions(
         b.y < p.y + p.h + 2 && b.y + b.h + 2 > p.y,
     )
 
-  const inBounds = (b: Box) =>
-    b.x >= PLOT_LEFT && b.x + b.w <= PLOT_RIGHT &&
-    b.y >= PLOT_TOP && b.y + b.h <= PLOT_BOTTOM
+  const inBoundsFor = (b: Box, flipped: boolean) => {
+    const rBound = flipped ? PLOT_RIGHT + PILL_DOT_CX : PLOT_RIGHT
+    return b.x >= PLOT_LEFT && b.x + b.w <= rBound &&
+           b.y >= PLOT_TOP  && b.y + b.h <= PLOT_BOTTOM
+  }
 
   return items.map((item) => {
-    const px = toPixX(item.participacao_percentual)
+    const px = toPixX(item.participacao_rank)
     const py = toPixY(item.satisfacao)
     const isGrupo = item.membros.length > 1
     const lw = calcPillWidth(item.nome, isGrupo)
 
     const BASE_DX = -PILL_DOT_CX
     const BASE_DY = -PILL_H / 2
+    // Candidatos "flipped" usam -lw + PILL_DOT_CX para que o dot dentro da
+    // pílula (na borda direita) fique exatamente sobre o ponto de dados (px).
     const candidates: [number, number][] = [
       [BASE_DX, BASE_DY],
       [BASE_DX, BASE_DY - PILL_H - 4],
@@ -182,7 +186,7 @@ function calcLabelPositions(
 
     for (const [cdx, cdy] of candidates) {
       const box: Box = { x: px + cdx, y: py + cdy, w: lw, h: PILL_H }
-      if (inBounds(box) && !overlaps(box)) {
+      if (inBoundsFor(box, cdx < -lw / 2) && !overlaps(box)) {
         dx = cdx; dy = cdy
         placed.push(box)
         chosen = true
@@ -193,7 +197,7 @@ function calcLabelPositions(
     if (!chosen) {
       for (const [cdx, cdy] of candidates) {
         const box: Box = { x: px + cdx, y: py + cdy, w: lw, h: PILL_H }
-        if (inBounds(box)) {
+        if (inBoundsFor(box, cdx < -lw / 2)) {
           dx = cdx; dy = cdy
           placed.push(box)
           chosen = true
@@ -203,10 +207,15 @@ function calcLabelPositions(
     }
 
     if (!chosen) {
+      // Fallback: escolhe direção com base no espaço disponível à direita
+      const normalFits = px + lw - PILL_DOT_CX <= PLOT_RIGHT
+      dx = normalFits ? BASE_DX : -lw + PILL_DOT_CX
+      dy = BASE_DY
       placed.push({ x: px + dx, y: py + dy, w: lw, h: PILL_H })
     }
 
-    return { ...item, labelDx: dx, labelDy: dy }
+    const flipped = dx < -lw / 2
+    return { ...item, labelDx: dx, labelDy: dy, flipped }
   })
 }
 
@@ -358,10 +367,10 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
             <ScatterChart margin={CHART_MARGIN} onMouseLeave={clearPillHover}>
               <CartesianGrid strokeDasharray="4 4" stroke="#e8e8e8" />
 
-              <XAxis type="number" dataKey="participacao_percentual" name="Participação" domain={DOM_X}
+              <XAxis type="number" dataKey="participacao_rank" name="Percentil de Volume" domain={DOM_X}
                 tick={{ fontSize: 9, fill: '#343434' }} axisLine={false} tickLine={false}
-                tickFormatter={(v: number) => `${v}%`}>
-                <Label value="Participação no volume (%)" position="insideBottom" offset={-14} fontSize={11} fill="#343434" />
+                tickFormatter={(v: number) => `${v}`}>
+                <Label value="Percentil de Volume" position="insideBottom" offset={-14} fontSize={11} fill="#343434" />
               </XAxis>
 
               <YAxis type="number" dataKey="satisfacao" name="Satisfação" domain={DOM_Y}
@@ -410,11 +419,24 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
                   const { cx = 0, cy = 0, payload } = props
                   if (!payload) return <g />
                   const cor = COR_QUADRANTE[payload.quadrante] ?? '#b0b0b0'
-                  const { nome, labelDx: ldx, labelDy: ldy } = payload
+                  const { nome, labelDx: ldx, labelDy: ldy, flipped } = payload
                   const isGrupo = payload.membros.length > 1
                   const lw = calcPillWidth(nome, isGrupo)
-                  const grupoKey = `${payload.participacao_percentual}|${payload.satisfacao}|${payload.quadrante}`
+                  const grupoKey = `${payload.participacao_rank}|${payload.satisfacao}|${payload.quadrante}`
                   const isAberto = grupoAberto?.key === grupoKey
+
+                  // Pílula normal: dot na borda esquerda, texto à direita do dot
+                  // Pílula flipped: dot na borda direita, texto à esquerda do dot
+                  const dotCx = flipped
+                    ? cx + ldx + lw - PILL_DOT_CX
+                    : cx + ldx + PILL_DOT_CX
+                  const textY = cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1
+                  const textX = flipped
+                    ? cx + ldx + PILL_PAD_RIGHT
+                    : cx + ldx + PILL_PAD_LEFT
+                  const chevronX = flipped
+                    ? cx + ldx + PILL_PAD_RIGHT + nome.length * 6.5 + 3
+                    : cx + ldx + PILL_PAD_LEFT + nome.length * 6.5 + 3
 
                   return (
                     <g
@@ -439,10 +461,9 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
                         stroke={isAberto ? '#aaa' : '#d0d0d0'}
                         strokeWidth={1} rx={PILL_H / 2} ry={PILL_H / 2}
                       />
-                      <circle cx={cx + ldx + PILL_DOT_CX} cy={cy + ldy + PILL_H / 2} r={PILL_DOT_R} fill={cor} />
+                      <circle cx={dotCx} cy={cy + ldy + PILL_H / 2} r={PILL_DOT_R} fill={cor} />
                       <text
-                        x={cx + ldx + PILL_PAD_LEFT}
-                        y={cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1}
+                        x={textX} y={textY}
                         fontSize={LABEL_FONT} fontWeight={500} fontFamily="inherit" fill="#343434"
                         style={{ pointerEvents: 'none' }}
                       >
@@ -450,8 +471,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
                       </text>
                       {isGrupo && (
                         <text
-                          x={cx + ldx + PILL_PAD_LEFT + nome.length * 6.5 + 3}
-                          y={cy + ldy + PILL_H / 2 + LABEL_FONT / 2 - 1}
+                          x={chevronX} y={textY}
                           fontSize={13} fill="#555" fontFamily="inherit"
                           style={{ pointerEvents: 'none' }}
                         >
@@ -574,7 +594,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
           </div>
         ))}
         <span className="ml-auto text-[#888]">
-          Satisfação ≥ {limites.corte_satisfacao.toFixed(1)} · Volume ≥ 50%
+          Satisfação ≥ {limites.corte_satisfacao.toFixed(1)} · Acima da mediana de volume
         </span>
       </div>
     </div>
