@@ -9,8 +9,7 @@ from app.dashboard.router import router as dashboard_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Banco já existe populado via pipeline de dados — não criar tabelas automaticamente
     yield
 
 app = FastAPI(
@@ -31,10 +30,11 @@ app.add_middleware(
 # Exemplo: app.include_router(dashboard_router)
 from app.clientes.router import router as clientes_router
 from app.pedidos.router import router as pedidos_router
+from app.tickets.router import router as tickets_router
 app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
-app.include_router(clientes_router)
-app.include_router(produtos_router)
-app.include_router(pedidos_router)
+app.include_router(clientes_router, prefix="/api")
+app.include_router(produtos_router, prefix="/api")
+app.include_router(pedidos_router, prefix="/api")
 app.include_router(tickets_router, prefix="/api")
 
 @app.get("/health", tags=["health"])
