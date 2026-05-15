@@ -4,6 +4,14 @@
 _entregas_overrides: dict[str, dict] = {}
 
 
+def _calcular_mediana(valores: list[float]) -> float:
+    if not valores:
+        return 0.0
+    s = sorted(valores)
+    mid = len(s) // 2
+    return s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2
+
+
 def mock_kpis() -> dict:
     return {
         "receita_total": 487320.50,
@@ -53,6 +61,7 @@ def mock_matriz_produtos(
     limite_oportunidades: int = 4,
     limite_alerta_vermelho: int = 4,
     limite_ofensores: int = 4,
+    localidade: str | None = None,
 ) -> dict:
     # mediana_volume = 1750 para este mock
     estrelas = [
@@ -85,4 +94,5 @@ def mock_matriz_produtos(
         + alerta[:limite_alerta_vermelho]
         + ofensores[:limite_ofensores]
     )
-    return {"items": items, "mediana_volume": 1750.0}
+    mediana = 1200.0 if localidade else 1750.0
+    return {"items": items, "mediana_volume": mediana}
