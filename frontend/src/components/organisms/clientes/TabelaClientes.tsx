@@ -444,7 +444,7 @@ export function TabelaClientes() {
           <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.5] min-w-[150px]">Localização</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Cadastro</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Origem</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Segmento</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Situação</span>
         </div>
 
         <div className="mt-2 flex flex-col pb-2 min-w-[1000px]">

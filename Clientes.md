@@ -19,4 +19,4 @@ Este documento descreve as colunas presentes na tabela de clientes (`gold_client
 | **ultimo_pedido** | Date | Data da última compra realizada pelo cliente. |
 | **nps_medio** | Float | Nota média de satisfação (Net Promoter Score) atribuída pelo cliente. |
 | **tickets_abertos** | Integer | Quantidade de chamados de suporte/atendimento que estão atualmente em aberto. |
-| **segmento_rfm** | String | Segmentação do cliente baseada na análise de Recência, Frequência e Valor Monetário (ex: Campeão, Fiel, Em Risco, Hibernando). |
+| **segmento_rfm** | String | Situação (Segmentação do cliente baseada na análise de Recência, Frequência e Valor Monetário - ex: Campeão, Fiel, Em Risco, Hibernando). |
