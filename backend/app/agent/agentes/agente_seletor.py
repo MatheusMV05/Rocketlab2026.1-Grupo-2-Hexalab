@@ -127,11 +127,14 @@ class AgenteSeletor(AgenteBase):
             self._agent = agent
 
         historico_curto = self._resumir_historico_para_selecao(message_history)
-        chamada_llm = self._call_llm(
-            sistema=prompt_sistema,
-            usuario=pergunta,
-            message_history=historico_curto,
-        )
+        argumentos_llm: dict[str, Any] = {
+            "sistema": prompt_sistema,
+            "usuario": pergunta,
+        }
+        if historico_curto:
+            argumentos_llm["message_history"] = historico_curto
+
+        chamada_llm = self._call_llm(**argumentos_llm)
         texto_llm, tokens_usados, _ = self._desempacotar_call_llm(chamada_llm)
         logger.info("AgenteSeletor: resposta bruta LLM preview=%r", texto_llm[:500])
         

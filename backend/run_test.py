@@ -40,6 +40,8 @@ from app.agent.hints.generator import generate_examples_from_schema
 
 
 AUDITORIA_CONTEXT_MANAGER: list[dict[str, Any]] = []
+AUDITORIA_INJECAO_HISTORICO: list[dict[str, Any]] = []
+MARCADOR_CONTEXTO_DEBUG = "DEBUG_CONTEXT_MARKER_RUN_TEST_2026"
 
 
 def _extrair_texto_mensagem(mensagem: object) -> str:
@@ -161,9 +163,84 @@ def _auditar_context_manager(
 def _salvar_auditoria_context_manager() -> None:
     """Grava a auditoria acumulada em `debug_context_manager_audit.json`."""
     caminho = backend_dir / "debug_context_manager_audit.json"
+    payload = {
+        "context_manager": AUDITORIA_CONTEXT_MANAGER,
+        "injecao_historico": AUDITORIA_INJECAO_HISTORICO,
+    }
     with caminho.open("w", encoding="utf-8") as arquivo:
-        json.dump(AUDITORIA_CONTEXT_MANAGER, arquivo, ensure_ascii=False, indent=2)
+        json.dump(payload, arquivo, ensure_ascii=False, indent=2)
     print(f"\n[DEBUG CONTEXT MANAGER] Auditoria salva em: {caminho}")
+
+
+def _auditar_injecao_historico(
+    etapa: str,
+    ponto: str,
+    historico: list[object] | None,
+) -> None:
+    """Audita se o histórico foi recebido no ponto instrumentado do agente.
+
+    Usa um marcador textual único inserido no histórico sintético. A presença
+    desse marcador confirma que o contexto não apenas existe, mas é o mesmo
+    histórico de teste chegando ao agente antes/depois das rotinas de corte e
+    normalização para o PydanticAI.
+    """
+    resumo = _resumir_historico(historico)
+    texto_total = "\n".join(_extrair_texto_mensagem(mensagem) for mensagem in (historico or []))
+    marcador_presente = MARCADOR_CONTEXTO_DEBUG in texto_total
+
+    evento = {
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "etapa": etapa,
+        "ponto": ponto,
+        "status": "OK" if resumo["mensagens"] and marcador_presente else "FALHA",
+        "marcador": MARCADOR_CONTEXTO_DEBUG,
+        "marcador_presente": marcador_presente,
+        "historico": resumo,
+    }
+    AUDITORIA_INJECAO_HISTORICO.append(evento)
+
+    print(f"\n[DEBUG CONTEXT INJECTION] {etapa} :: {ponto}")
+    print("-" * 70)
+    print(f"Status: {evento['status']}")
+    print(f"Marcador presente: {marcador_presente}")
+    print(
+        "Historico recebido: "
+        f"{resumo['mensagens']} mensagens, "
+        f"{resumo['chars_aproximados']} chars, "
+        f"tipos={resumo['tipos']}"
+    )
+
+
+def _instalar_auditoria_injecao(agente: object, etapa: str) -> None:
+    """Instrumenta um agente para auditar a passagem de `message_history`.
+
+    A instrumentação é local ao `run_test`: envolve os métodos de corte e
+    normalização de histórico no objeto do agente, sem alterar o código de
+    produção. Funciona para agentes que usam `_call_llm` e para o Refinador,
+    que chama `_limitar_message_history`/`_normalizar_message_history`
+    diretamente.
+    """
+    if hasattr(agente, "_limitar_message_history"):
+        limitar_original = agente._limitar_message_history
+
+        def limitar_com_auditoria(message_history):
+            _auditar_injecao_historico(etapa, "entrada_limitar_message_history", message_history)
+            historico_limitado = limitar_original(message_history)
+            _auditar_injecao_historico(etapa, "saida_limitar_message_history", historico_limitado)
+            return historico_limitado
+
+        agente._limitar_message_history = limitar_com_auditoria
+
+    if hasattr(agente, "_normalizar_message_history"):
+        normalizar_original = agente._normalizar_message_history
+
+        def normalizar_com_auditoria(message_history, sistema=None):
+            _auditar_injecao_historico(etapa, "entrada_normalizar_message_history", message_history)
+            historico_pydantic = normalizar_original(message_history, sistema=sistema)
+            _auditar_injecao_historico(etapa, "saida_normalizar_message_history", historico_pydantic)
+            return historico_pydantic
+
+        agente._normalizar_message_history = normalizar_com_auditoria
 
 
 def _estimar_tokens(texto: str) -> int:
@@ -188,7 +265,8 @@ def _gerar_historico_longo(target_tokens: int = 7_000) -> list[dict[str, str]]:
         "Resumo antes da pergunta final: mantenha o foco em clientes premium, "
         "usando mart_cliente_360. Use receita_lifetime_brl > 1000 e "
         "dias_desde_ultimo_pedido > 90. Retorne um ranking enxuto. Esta mensagem "
-        "existe para testar se a redução de contexto preserva a intenção mais recente."
+        "existe para testar se a redução de contexto preserva a intenção mais recente. "
+        f"Marcador de auditoria: {MARCADOR_CONTEXTO_DEBUG}."
     )
 
     while total_chars < target_chars - len(resumo_final):
@@ -300,6 +378,7 @@ def run_com_debug():
     print(f"limite preventivo de historico enviado={config.input_history_max_tokens} tokens")
     print(f"timeout Mistral={config.mistral_timeout_seconds}s")
     print(f"historico de teste mira ~{target_tokens} tokens")
+    print(f"marcador de contexto auditado={MARCADOR_CONTEXTO_DEBUG}")
 
     pergunta = (
         "Liste os 10 clientes da mart_cliente_360 com receita_lifetime_brl > 1000 e dias_desde_ultimo_pedido > 90."
@@ -316,6 +395,7 @@ def run_com_debug():
     print("-" * 70)
     
     seletor = AgenteSeletor(config=config)
+    _instalar_auditoria_injecao(seletor, "AgenteSeletor")
     
     try:
         esquema_completo = ler_esquema(db_path)
@@ -376,6 +456,7 @@ def run_com_debug():
     print("-" * 70)
     
     decompositor = AgenteDecompositor(config=config)
+    _instalar_auditoria_injecao(decompositor, "AgenteDecompositor")
     resultado_decompositor = decompositor.run(
         esquema_filtrado=resultado_seletor.esquema_filtrado,
         pergunta=pergunta,
@@ -408,6 +489,7 @@ def run_com_debug():
     print("-" * 70)
     
     refinador = AgenteRefinador(config=config)
+    _instalar_auditoria_injecao(refinador, "AgenteRefinador")
     resultado_refinador = refinador.run(
         candidate_sql=resultado_decompositor.sql,
         question=pergunta,
@@ -460,6 +542,7 @@ def run_com_debug():
     print("-" * 70)
     
     interpretador = AgenteInterpretador(config=config)
+    _instalar_auditoria_injecao(interpretador, "AgenteInterpretador")
     resultado_interpretador = interpretador.run(
         pergunta=pergunta,
         sql_final=resultado_refinador.sql,

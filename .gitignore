@@ -39,3 +39,4 @@ Thumbs.db
 scripts/
 dev/
 venv312/
+activate_venv312.ps1

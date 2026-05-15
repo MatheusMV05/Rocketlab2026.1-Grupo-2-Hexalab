@@ -22,6 +22,10 @@ from app.agent.hints.generator import generate_examples_from_schema
 
 logger = logging.getLogger(__name__)
 
+# Nome mantido como ponto de injecao em testes e scripts antigos. Em producao,
+# a chamada continua usando o retriever cacheado para evitar recarregar embeddings.
+FewShotRetriever = get_cached_fewshot_retriever
+
 
 class AgenteDecompositor(AgenteBase):
 	"""Agente responsável por decompor pergunta complexa e gerar SQL final.
@@ -216,7 +220,7 @@ class AgenteDecompositor(AgenteBase):
 			disponíveis ou houver erro na recuperação.
 		"""
 		try:
-			retriever = get_cached_fewshot_retriever(path=self.config.few_shot_path)
+			retriever = FewShotRetriever(path=self.config.few_shot_path)
 			exemplos = retriever.retrieve(pergunta, k=3)
 			if isinstance(exemplos, list):
 				return exemplos

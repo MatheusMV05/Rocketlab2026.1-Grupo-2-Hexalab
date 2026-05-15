@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,7 +16,8 @@ logger = logging.getLogger(__name__)
 def rodar_teste_real():
     # 1. Inicialização
     config = Config() 
-    orquestrador = Orquestrador(db_path="tests/agente/banco_teste.db", config=config)
+    db_path = Path(__file__).resolve().parents[2] / "data" / "database.db"
+    orquestrador = Orquestrador(db_path=db_path, config=config)
     store = InMemoryTTLSessionStore()
     
     sessao_id = "teste_usuario_001"
