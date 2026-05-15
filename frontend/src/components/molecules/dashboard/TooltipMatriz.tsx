@@ -21,7 +21,7 @@ export function TooltipMatriz({ nome, categoria, volume, satisfacao, quadrante, 
       <p className="font-semibold text-[#1d5358]">{nome}</p>
       <p className="text-[#666666]">Categoria: {categoria}</p>
       <p>
-        Volume: {volume.toLocaleString('pt-BR')}
+        Volume: {volume.toLocaleString('pt-BR')} vendas
         <span className="mx-1 text-[#b0b0b0]">•</span>
         Satisfação: {satisfacao.toFixed(1)} ★
       </p>
