@@ -9,7 +9,7 @@ from app.tickets.repository import buscar_tickets
 from app.tickets.schemas import ListaTicketPaginada
 from app.tickets.service import processar_tickets
 
-roteador = APIRouter(tags=["tickets"])
+router = APIRouter(tags=["tickets"])
 
 
 def _parsear_data(valor: Optional[str], nome_campo: str) -> Optional[date]:
@@ -25,7 +25,7 @@ def _parsear_data(valor: Optional[str], nome_campo: str) -> Optional[date]:
         )
 
 
-@roteador.get("/tickets", response_model=ListaTicketPaginada)
+@router.get("/tickets", response_model=ListaTicketPaginada)
 async def listar_tickets(
     tipo_problema: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
