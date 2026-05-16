@@ -400,7 +400,17 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
 
       <div ref={chartAreaRef} className="relative" style={{ height: CHART_H }}>
         {isLoading && (
-          <div className="flex items-center justify-center h-full text-[#4d4d4d] text-sm">Carregando...</div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              border: '4px solid #e0e0e0',
+              borderTopColor: '#1d5358',
+              animation: 'spin 0.9s linear infinite',
+            }} />
+            <span className="text-[13px] text-[#898989]">Carregando matriz...</span>
+          </div>
         )}
         {isError && (
           <div className="flex items-center justify-center h-full text-[#c20000] text-sm">Erro ao carregar dados</div>

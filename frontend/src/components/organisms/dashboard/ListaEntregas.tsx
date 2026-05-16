@@ -74,8 +74,10 @@ export function ListaEntregas() {
   const [edicao, setEdicao] = useState<EdicaoEntrega>({
     cliente: '', status: '', dia: '', mes: '', ano: '',
   })
+  const [exportDropdownAberto, setExportDropdownAberto] = useState(false)
   const ordenacaoRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const exportDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -113,6 +115,22 @@ export function ListaEntregas() {
     a.download = 'entregas.csv'
     a.click()
   }
+
+  function exportarSelecao() {
+    const linhas = entregas.filter((e) => selecionados.includes(e.id))
+    const cabecalho = 'id,cliente,status,prazo'
+    const corpo = linhas.map((e) =>
+      [e.id, `"${e.cliente}"`, `"${e.status}"`, e.prazo ?? ''].join(',')
+    )
+    const csv = [cabecalho, ...corpo].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'entregas-selecao.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   const entregas = data?.items ?? []
   const totalPaginas = data?.total_paginas ?? 1
 
@@ -120,6 +138,9 @@ export function ListaEntregas() {
     function handleClickFora(e: MouseEvent) {
       if (ordenacaoRef.current && !ordenacaoRef.current.contains(e.target as Node)) {
         setOrdenacaoAberta(false)
+      }
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target as Node)) {
+        setExportDropdownAberto(false)
       }
     }
     document.addEventListener('mousedown', handleClickFora)
@@ -317,13 +338,47 @@ export function ListaEntregas() {
             <Filter size={18} strokeWidth={1.5} />
           </button>
 
-          <button
-            onClick={exportarCsv}
-            title="Exportar CSV"
-            className="flex items-center justify-center w-10 h-10 bg-[#f6f7f9] rounded-[20px] text-[#4d4d4d] hover:bg-[#dde5e6] transition-colors"
-          >
-            <Upload size={18} strokeWidth={1.5} />
-          </button>
+          <div className="relative" ref={exportDropdownRef}>
+            <button
+              onClick={() => setExportDropdownAberto((o) => !o)}
+              title="Exportar"
+              className={`flex items-center justify-center w-10 h-10 rounded-[20px] transition-colors ${
+                exportDropdownAberto
+                  ? 'bg-[#1d5358] text-white'
+                  : 'bg-[#f6f7f9] text-[#4d4d4d] hover:bg-[#dde5e6]'
+              }`}
+            >
+              <Upload size={18} strokeWidth={1.5} />
+            </button>
+
+            {exportDropdownAberto && (
+              <div className="absolute top-[calc(100%+6px)] right-0 z-20 bg-white border border-[#e0e0e0] rounded-[10px] shadow-md min-w-[180px] overflow-hidden">
+                <button
+                  onClick={() => {
+                    exportarSelecao()
+                    setExportDropdownAberto(false)
+                  }}
+                  disabled={selecionados.length === 0}
+                  className={`w-full text-left px-4 py-3 text-[13px] transition-colors ${
+                    selecionados.length === 0
+                      ? 'text-[#c0c0c0] cursor-not-allowed'
+                      : 'text-[#343434] hover:bg-[#f6f7f9]'
+                  }`}
+                >
+                  Exportar seleção
+                </button>
+                <button
+                  onClick={() => {
+                    exportarCsv()
+                    setExportDropdownAberto(false)
+                  }}
+                  className="w-full text-left px-4 py-3 text-[13px] text-[#343434] hover:bg-[#f6f7f9] transition-colors"
+                >
+                  Exportar tudo
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -562,9 +617,33 @@ export function ListaEntregas() {
 
       {/* Tabela */}
       {isLoading && (
-        <div className="flex items-center justify-center py-8 text-[#4d4d4d] text-sm">
-          Carregando...
-        </div>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-[#f6f7f9]">
+              <th className="w-px pl-3 py-[10px] rounded-l-[10px]" />
+              <th className="w-px py-[10px] pr-6 text-left text-[14px] font-semibold text-[#1d5358] whitespace-nowrap">Pedido</th>
+              <th className="py-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Cliente</th>
+              <th className="w-[160px] py-[10px] pl-[18px] text-left text-[14px] font-semibold text-[#1d5358]">Status</th>
+              <th className="w-[120px] py-[10px] pr-3 rounded-r-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Prazo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <React.Fragment key={idx}>
+                <tr className="animate-pulse">
+                  <td className="pl-3 py-[10px]"><div className="w-4 h-4 bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[10px] pr-6"><div className="h-3 w-24 bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[10px]"><div className="h-3 w-36 bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[10px] pl-[18px]"><div className="h-3 w-28 bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[10px] pr-3"><div className="h-3 w-16 bg-[#e0e0e0] rounded" /></td>
+                </tr>
+                {idx < 9 && (
+                  <tr><td colSpan={5} className="p-0"><div className="border-t border-[#e0e0e0] mx-1" /></td></tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
       )}
       {isError && (
         <div className="flex items-center justify-center py-8 text-[#c20000] text-sm">
@@ -648,7 +727,11 @@ export function ListaEntregas() {
       {/* Paginação */}
       <div className="flex items-center justify-center gap-[6px] p-[10px] flex-wrap">
         <button
-          className="flex items-center justify-center w-7 h-7 rounded-full border border-[#e0e0e0] text-[#4d4d4d] hover:bg-[#dde5e6] hover:border-[#3f7377] hover:text-[#3f7377] transition-colors disabled:opacity-30"
+          className={`flex items-center justify-center w-7 h-7 rounded-full border transition-colors ${
+            paginaAtual === 1
+              ? 'border-[#e0e0e0] text-[#e0e0e0] cursor-not-allowed'
+              : 'border-black text-black hover:bg-[#f6f7f9]'
+          }`}
           onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
           disabled={paginaAtual === 1}
         >
@@ -656,43 +739,30 @@ export function ListaEntregas() {
         </button>
 
         {(() => {
-          const JANELA = 2
-          const paginas: (number | 'reticencias')[] = []
-          const adicionar = (p: number) => { if (!paginas.includes(p)) paginas.push(p) }
-
-          adicionar(1)
-          for (let p = Math.max(2, paginaAtual - JANELA); p <= Math.min(totalPaginas - 1, paginaAtual + JANELA); p++) adicionar(p)
-          if (totalPaginas > 1) adicionar(totalPaginas)
-
-          const resultado: (number | 'reticencias')[] = []
-          let anterior = 0
-          for (const p of paginas as number[]) {
-            if (p - anterior > 1) resultado.push('reticencias')
-            resultado.push(p)
-            anterior = p
-          }
-
-          return resultado.map((p, i) =>
-            p === 'reticencias' ? (
-              <span key={`r${i}`} className="flex items-center justify-center w-7 h-7 text-[13px] text-[#898989]">…</span>
-            ) : (
-              <button
-                key={p}
-                className={`flex items-center justify-center w-7 h-7 rounded-[5px] text-[13px] font-medium transition-colors ${
-                  p === paginaAtual
-                    ? 'bg-[#e0e0e0] text-[#343434]'
-                    : 'text-[#343434] hover:bg-[#f6f7f9]'
-                }`}
-                onClick={() => setPaginaAtual(p)}
-              >
-                {p}
-              </button>
-            )
-          )
+          const JANELA = 6
+          const inicio = Math.max(1, Math.min(paginaAtual - 3, Math.max(1, totalPaginas - JANELA + 1)))
+          const fim = Math.min(totalPaginas, inicio + JANELA - 1)
+          return Array.from({ length: fim - inicio + 1 }, (_, i) => inicio + i).map((p) => (
+            <button
+              key={p}
+              className={`flex items-center justify-center w-8 h-7 rounded-[5px] text-[13px] font-medium transition-colors ${
+                p === paginaAtual
+                  ? 'bg-[#e0e0e0] text-[#343434]'
+                  : 'text-[#343434] hover:bg-[#f6f7f9]'
+              }`}
+              onClick={() => setPaginaAtual(p)}
+            >
+              {String(p).padStart(2, '0')}
+            </button>
+          ))
         })()}
 
         <button
-          className="flex items-center justify-center w-7 h-7 rounded-full border border-[#e0e0e0] text-[#4d4d4d] hover:bg-[#dde5e6] hover:border-[#3f7377] hover:text-[#3f7377] transition-colors disabled:opacity-30"
+          className={`flex items-center justify-center w-7 h-7 rounded-full border transition-colors ${
+            paginaAtual === totalPaginas
+              ? 'border-[#e0e0e0] text-[#e0e0e0] cursor-not-allowed'
+              : 'border-black text-black hover:bg-[#f6f7f9]'
+          }`}
           onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
           disabled={paginaAtual === totalPaginas}
         >
