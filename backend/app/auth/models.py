@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 from sqlalchemy import String, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
@@ -15,5 +16,9 @@ class Usuario(Base):
     perfil: Mapped[str] = mapped_column(String(50), nullable=False)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
     primeiro_acesso: Mapped[bool] = mapped_column(Boolean, default=True)
+    genero: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    pais: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    area_empresa: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    filial: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

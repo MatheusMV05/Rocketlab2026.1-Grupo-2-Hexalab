@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.auth.models import Usuario
-from app.auth.schemas import LoginRequest, GoogleLoginRequest, DefinirSenhaRequest, TokenResponse
+from app.auth.schemas import LoginRequest, GoogleLoginRequest, DefinirSenhaRequest, AtualizarPerfilRequest, TokenResponse, UsuarioResponse
 from app.auth.security import verificar_senha, hash_senha, criar_access_token, criar_refresh_token
 from app.config import settings
 from fastapi import HTTPException, status
@@ -89,3 +89,31 @@ async def definir_senha(db: AsyncSession, usuario_id: str, dados: DefinirSenhaRe
     await db.refresh(usuario)
 
     return _token_response(usuario)
+
+
+async def atualizar_perfil(db: AsyncSession, usuario_id: str, dados: AtualizarPerfilRequest) -> UsuarioResponse:
+    resultado = await db.execute(select(Usuario).where(Usuario.id == usuario_id))
+    usuario = resultado.scalar_one_or_none()
+
+    if not usuario:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado")
+
+    usuario.nome = dados.nome
+    usuario.genero = dados.genero
+    usuario.pais = dados.pais
+    usuario.area_empresa = dados.area_empresa
+    usuario.filial = dados.filial
+    await db.commit()
+    await db.refresh(usuario)
+
+    return UsuarioResponse(
+        id=usuario.id,
+        nome=usuario.nome,
+        email=usuario.email,
+        perfil=usuario.perfil,
+        primeiro_acesso=usuario.primeiro_acesso,
+        genero=usuario.genero,
+        pais=usuario.pais,
+        area_empresa=usuario.area_empresa,
+        filial=usuario.filial,
+    )

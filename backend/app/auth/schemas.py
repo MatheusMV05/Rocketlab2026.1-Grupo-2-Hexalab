@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -7,12 +8,20 @@ class LoginRequest(BaseModel):
 
 
 class GoogleLoginRequest(BaseModel):
-    credential: str  # id_token retornado pelo SDK Google
+    credential: str
 
 
 class DefinirSenhaRequest(BaseModel):
     nova_senha: str
     confirmar_senha: str
+
+
+class AtualizarPerfilRequest(BaseModel):
+    nome: str
+    genero: Optional[str] = None
+    pais: Optional[str] = None
+    area_empresa: Optional[str] = None
+    filial: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -30,3 +39,7 @@ class UsuarioResponse(BaseModel):
     email: str
     perfil: str
     primeiro_acesso: bool
+    genero: Optional[str] = None
+    pais: Optional[str] = None
+    area_empresa: Optional[str] = None
+    filial: Optional[str] = None

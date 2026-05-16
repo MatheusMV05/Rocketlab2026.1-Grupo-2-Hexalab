@@ -7,6 +7,10 @@ interface Usuario {
   email: string
   perfil: string
   primeiro_acesso: boolean
+  genero?: string | null
+  pais?: string | null
+  area_empresa?: string | null
+  filial?: string | null
 }
 
 interface AuthContextType {
@@ -15,6 +19,7 @@ interface AuthContextType {
   carregando: boolean
   login: (token: string, usuario: Usuario) => void
   logout: () => Promise<void>
+  atualizarUsuario: (dados: Partial<Usuario>) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -52,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(novoUsuario)
   }
 
+  function atualizarUsuario(dados: Partial<Usuario>) {
+    setUsuario(prev => prev ? { ...prev, ...dados } : prev)
+  }
+
   async function logout() {
     try {
       await api.post('/auth/logout')
@@ -63,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, token, carregando, login, logout }}>
+    <AuthContext.Provider value={{ usuario, token, carregando, login, logout, atualizarUsuario }}>
       {children}
     </AuthContext.Provider>
   )

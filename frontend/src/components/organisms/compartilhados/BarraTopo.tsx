@@ -1,13 +1,23 @@
 import { Search, Bell, Settings } from 'react-feather'
+import { useNavigate } from 'react-router-dom'
 import logoAgente from '../../../assets/logos/logo-agente.svg'
 import { useAssistente } from '../chat/AssistenteProvider'
+import { useAuth } from '../../../contexts/AuthContext'
 
 interface Props {
   titulo: string
 }
 
+function iniciais(nome: string): string {
+  const partes = nome.trim().split(' ')
+  if (partes.length === 1) return partes[0][0]?.toUpperCase() ?? '?'
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
 export function BarraTopo({ titulo }: Props) {
   const { abrir } = useAssistente()
+  const { usuario } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <header className="fixed left-[60px] md:left-[104px] right-0 top-0 h-[60px] md:h-[87px] bg-[#f6f7f9] z-10 flex items-center px-4 md:px-6 border-b border-[#e0e0e0]">
@@ -49,9 +59,13 @@ export function BarraTopo({ titulo }: Props) {
         </button>
 
         {/* Avatar */}
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#006733] text-white font-medium text-[16px] select-none">
-          V
-        </div>
+        <button
+          onClick={() => navigate('/perfil')}
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-[#105453] text-white font-medium text-[16px] select-none hover:opacity-90 transition-opacity"
+          title="Perfil do usuário"
+        >
+          {iniciais(usuario?.nome ?? 'U')}
+        </button>
       </div>
     </header>
   )

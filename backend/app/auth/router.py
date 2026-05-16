@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Response, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
-from app.auth.schemas import LoginRequest, GoogleLoginRequest, DefinirSenhaRequest, TokenResponse, UsuarioResponse
-from app.auth.service import login_email_senha, login_google, definir_senha, _payload_usuario, _token_response
+from app.auth.schemas import LoginRequest, GoogleLoginRequest, DefinirSenhaRequest, AtualizarPerfilRequest, TokenResponse, UsuarioResponse
+from app.auth.service import login_email_senha, login_google, definir_senha, atualizar_perfil, _payload_usuario, _token_response
 from app.auth.dependencies import get_usuario_atual
 from app.auth.models import Usuario
 from app.auth.security import verificar_token, criar_refresh_token
@@ -74,7 +74,20 @@ async def me(usuario: Usuario = Depends(get_usuario_atual)):
         email=usuario.email,
         perfil=usuario.perfil,
         primeiro_acesso=usuario.primeiro_acesso,
+        genero=usuario.genero,
+        pais=usuario.pais,
+        area_empresa=usuario.area_empresa,
+        filial=usuario.filial,
     )
+
+
+@router.put("/perfil", response_model=UsuarioResponse)
+async def atualizar_perfil_endpoint(
+    dados: AtualizarPerfilRequest,
+    db: AsyncSession = Depends(get_db),
+    usuario: Usuario = Depends(get_usuario_atual),
+):
+    return await atualizar_perfil(db, usuario.id, dados)
 
 
 @router.post("/definir-senha", response_model=TokenResponse)

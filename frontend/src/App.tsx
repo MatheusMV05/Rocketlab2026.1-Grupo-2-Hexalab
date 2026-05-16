@@ -13,6 +13,7 @@ import Pedidos from './pages/Pedidos/Pedidos'
 import Produtos from './pages/Produtos/Produtos'
 import Tickets from './pages/Tickets/Tickets'
 import Chat from './pages/Chat/Chat'
+import PerfilUsuario from './pages/Perfil/PerfilUsuario'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="/produtos" element={<RotaProtegida><Produtos /></RotaProtegida>} />
               <Route path="/tickets" element={<RotaProtegida><Tickets /></RotaProtegida>} />
               <Route path="/chat" element={<RotaProtegida><Chat /></RotaProtegida>} />
+              <Route path="/perfil" element={<RotaProtegida><PerfilUsuario /></RotaProtegida>} />
             </Routes>
             <Assistente />
           </AssistenteProvider>
