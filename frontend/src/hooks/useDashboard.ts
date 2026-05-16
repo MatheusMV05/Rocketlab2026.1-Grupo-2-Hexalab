@@ -79,7 +79,7 @@ export function useMatrizProdutos(filtros: FiltrosPeriodo, limites: LimitesBloco
       filtros.ano, filtros.mes, filtros.localidade,
       limites.limite_estrelas, limites.limite_oportunidades,
       limites.limite_alerta_vermelho, limites.limite_ofensores,
-      limites.corte_satisfacao,
+      limites.corte_satisfacao, limites.corte_volume,
     ],
     queryFn: () =>
       dashboardService.buscarMatrizProdutos({

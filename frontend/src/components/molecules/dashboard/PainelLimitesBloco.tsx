@@ -15,19 +15,22 @@ const ROTULOS_QUADRANTE: { chave: keyof LimitesBloco; label: string }[] = [
   { chave: 'limite_ofensores',       label: 'Ofensores' },
 ]
 
-const PADRAO: Pick<LimitesBloco, 'corte_satisfacao'> = {
+const PADRAO: Pick<LimitesBloco, 'corte_satisfacao' | 'corte_volume'> = {
   corte_satisfacao: 4.0,
+  corte_volume: 50,
 }
 
-function validarCortes(corteSat: number): string | null {
+function validarCortes(corteSat: number, corteVol: number): string | null {
   if (corteSat < 1.0 || corteSat > 4.9)
     return 'Corte de satisfação deve estar entre 1,0 e 4,9'
+  if (corteVol < 20 || corteVol > 80)
+    return 'Corte de volume deve estar entre 20% e 80%'
   return null
 }
 
 export function PainelLimitesBloco({ limites, onAplicar }: Props) {
   const [rascunho, setRascunho] = useState<LimitesBloco>(limites)
-  const erroValidacao = validarCortes(rascunho.corte_satisfacao)
+  const erroValidacao = validarCortes(rascunho.corte_satisfacao, rascunho.corte_volume)
 
   function handleAplicar() {
     if (erroValidacao) return
@@ -57,9 +60,9 @@ export function PainelLimitesBloco({ limites, onAplicar }: Props) {
 
       <div className="border-t border-[#f0f0f0] my-3" />
 
-      {/* Seção 2: Corte de satisfação */}
+      {/* Seção 2: Cortes */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[11px] font-semibold text-[#1d5358]">Corte de satisfação</p>
+        <p className="text-[11px] font-semibold text-[#1d5358]">Cortes</p>
         <button
           onClick={handleRestaurar}
           className="flex items-center gap-1 text-[10px] text-[#888] hover:text-[#1d5358] transition-colors"
@@ -70,7 +73,7 @@ export function PainelLimitesBloco({ limites, onAplicar }: Props) {
         </button>
       </div>
 
-      <div className="flex flex-col gap-1 mb-3">
+      <div className="flex flex-col gap-2 mb-3">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-[#4d4d4d]">Satisfação ≥</span>
           <div className="flex items-center gap-1">
@@ -89,7 +92,25 @@ export function PainelLimitesBloco({ limites, onAplicar }: Props) {
             <span className="text-[10px] text-[#888]">/ 5,0</span>
           </div>
         </div>
-        <p className="text-[10px] text-[#aaa] text-right">Corte de volume: fixo em 50%</p>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-[#4d4d4d]">Volume ≥</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min={20}
+              max={80}
+              step={5}
+              value={rascunho.corte_volume}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10)
+                if (!isNaN(v)) setRascunho((prev) => ({ ...prev, corte_volume: v }))
+              }}
+              className="w-14 h-6 text-center text-[11px] border border-[#e0e0e0] rounded-[4px] focus:outline-none focus:border-[#1d5358]"
+            />
+            <span className="text-[10px] text-[#888]">%</span>
+          </div>
+        </div>
+        <p className="text-[10px] text-[#aaa] text-right">Volume: entre 20% e 80%</p>
       </div>
 
       {erroValidacao && (

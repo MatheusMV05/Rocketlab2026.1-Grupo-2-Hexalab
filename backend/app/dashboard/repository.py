@@ -130,9 +130,9 @@ _SQL_PERIODO_MATRIZ = text("""
         participacao_percentual, participacao_rank,
         satisfacao, qtd_avaliacoes,
         CASE
-            WHEN participacao_rank >= 50 AND satisfacao >= :corte_sat THEN 'estrelas'
-            WHEN participacao_rank <  50 AND satisfacao >= :corte_sat THEN 'oportunidades'
-            WHEN participacao_rank >= 50 AND satisfacao <  :corte_sat THEN 'alerta_vermelho'
+            WHEN participacao_rank >= :corte_vol AND satisfacao >= :corte_sat THEN 'estrelas'
+            WHEN participacao_rank <  :corte_vol AND satisfacao >= :corte_sat THEN 'oportunidades'
+            WHEN participacao_rank >= :corte_vol AND satisfacao <  :corte_sat THEN 'alerta_vermelho'
             ELSE 'ofensores'
         END AS quadrante
     FROM base
@@ -161,10 +161,11 @@ async def _query_periodo_matriz(
     mes: str,
     localidade: str,
     corte_satisfacao: float = 4.0,
+    corte_volume: int = 50,
 ) -> dict:
     result = await db.execute(
         _SQL_PERIODO_MATRIZ,
-        {"ano": ano, "mes": mes, "localidade": localidade, "corte_sat": corte_satisfacao},
+        {"ano": ano, "mes": mes, "localidade": localidade, "corte_sat": corte_satisfacao, "corte_vol": corte_volume},
     )
     rows = result.mappings().all()
 
@@ -478,14 +479,15 @@ async def get_matriz_produtos(
     limite_alerta_vermelho: int = 4,
     limite_ofensores: int = 4,
     corte_satisfacao: float = 4.0,
+    corte_volume: int = 50,
 ) -> dict:
-    atual = await _query_periodo_matriz(db, ano, mes, localidade, corte_satisfacao)
+    atual = await _query_periodo_matriz(db, ano, mes, localidade, corte_satisfacao, corte_volume)
 
     if not atual["items"]:
         return {"items": [], "volume_total": 0}
 
     ano_ant, mes_ant = _periodo_anterior(ano, mes)
-    anterior = await _query_periodo_matriz(db, ano_ant, mes_ant, localidade, corte_satisfacao)
+    anterior = await _query_periodo_matriz(db, ano_ant, mes_ant, localidade, corte_satisfacao, corte_volume)
     bloco_anterior_map = {item["nome"]: item["quadrante"] for item in anterior["items"]}
 
     for item in atual["items"]:

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { Settings } from 'lucide-react'
+import { Settings, AlertCircle } from 'lucide-react'
 import {
   ScatterChart,
   Scatter,
@@ -21,13 +21,25 @@ import type { LimitesBloco, MatrizProdutoItem } from '../../../types/dashboard'
 
 const DOM_Y: [number, number] = [1, 5]
 const DOM_X: [number, number] = [0, 100]
-const CORTE_X = 50
+const LS_LIMITES = 'dashboard_matriz_limites'
 const LIMITES_PADRAO: LimitesBloco = {
   limite_estrelas: 4,
   limite_oportunidades: 4,
   limite_alerta_vermelho: 4,
   limite_ofensores: 4,
   corte_satisfacao: 4.0,
+  corte_volume: 50,
+}
+
+function loadLimites(): LimitesBloco {
+  try {
+    const s = localStorage.getItem(LS_LIMITES)
+    if (!s) return LIMITES_PADRAO
+    const parsed = JSON.parse(s) as Partial<LimitesBloco>
+    return { ...LIMITES_PADRAO, ...parsed }
+  } catch {
+    return LIMITES_PADRAO
+  }
 }
 const RATING_GROUP_TOLERANCE = 0.2
 const X_GROUP_TOLERANCE = 5
@@ -281,7 +293,7 @@ interface TooltipDrop {
 }
 
 export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
-  const [limites, setLimites] = useState<LimitesBloco>(LIMITES_PADRAO)
+  const [limites, setLimites] = useState<LimitesBloco>(loadLimites)
   const [painelAberto, setPainelAberto] = useState(false)
   const [chartWidth, setChartWidth] = useState(1000)
   const [tooltipPill, setTooltipPill] = useState<TooltipPill | null>(null)
@@ -292,6 +304,10 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
   const painelRef = useRef<HTMLDivElement>(null)
 
   const clearPillHover = useCallback(() => setTooltipPill(null), [])
+
+  useEffect(() => {
+    localStorage.setItem(LS_LIMITES, JSON.stringify(limites))
+  }, [limites])
 
   useEffect(() => {
     const el = containerRef.current
@@ -349,8 +365,36 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
       </div>
 
       <div className="mb-2 pr-4">
-        <h3 className="text-[18px] font-bold text-[#1d5358]">
+        <h3 className="text-[18px] font-bold text-[#1d5358] flex items-center gap-2">
           Matriz de Satisfação vs. Performance
+          <span className="relative group flex items-center">
+            <AlertCircle size={16} className="text-[#1d5358] opacity-60 cursor-help flex-shrink-0" />
+            <div className="
+              pointer-events-none absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2
+              w-80 rounded-lg bg-white text-[#1d2d2e] text-[12px] font-normal leading-relaxed
+              px-3 py-3 shadow-xl border border-[#e0e0e0]
+              opacity-0 group-hover:opacity-100
+              transition-opacity duration-200
+            ">
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-white" />
+              <p className="font-semibold mb-1 text-[13px]">Como a matriz funciona</p>
+              <p className="mb-2">Os produtos são posicionados por <strong>satisfação</strong> (eixo Y) e <strong>percentil de volume de vendas</strong> (eixo X), divididos em 4 quadrantes:</p>
+              <ul className="space-y-1 mb-3">
+                <li><span className="font-semibold text-[#15803D]">Estrelas</span> — alta satisfação e alto volume. Produtos de destaque.</li>
+                <li><span className="font-semibold text-[#D97706]">Oportunidades</span> — alta satisfação, baixo volume. Potencial de crescimento.</li>
+                <li><span className="font-semibold text-[#B91C1C]">Alerta Vermelho</span> — baixa satisfação, alto volume. Impacto crítico.</li>
+                <li><span className="font-semibold text-[#4B5563]">Ofensores</span> — baixa satisfação, baixo volume. Monitorar.</li>
+              </ul>
+              <div className="border-t border-[#e0e0e0] pt-2">
+                <p className="font-semibold mb-1 text-[13px]">Customizações disponíveis</p>
+                <ul className="space-y-1">
+                  <li><span className="font-semibold">Produtos por quadrante</span> — define quantos produtos são exibidos em cada quadrante.</li>
+                  <li><span className="font-semibold">Corte de satisfação</span> — nota mínima (de 1,0 a 4,9) para considerar um produto como de alta satisfação. O padrão é 4,0.</li>
+                  <li><span className="font-semibold">Corte de volume</span> — percentil mínimo (de 20% a 80%) para considerar um produto como de alto volume. O padrão é 50%.</li>
+                </ul>
+              </div>
+            </div>
+          </span>
         </h3>
       </div>
 
@@ -379,28 +423,28 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
               </YAxis>
 
               {/* Quadrantes */}
-              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={corteY} y2={DOM_Y[1]}
+              <ReferenceArea x1={DOM_X[0]} x2={limites.corte_volume} y1={corteY} y2={DOM_Y[1]}
                 fill="#FFF9C9" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="OPORTUNIDADES" corTexto="#D97706" corFundo="#FFF9C9"
                     ancoragem="top-left" />
                 )}
               />
-              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={corteY} y2={DOM_Y[1]}
+              <ReferenceArea x1={limites.corte_volume} x2={DOM_X[1]} y1={corteY} y2={DOM_Y[1]}
                 fill="#DCFCE7" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="ESTRELAS" corTexto="#15803D" corFundo="#DCFCE7"
                     ancoragem="top-right" />
                 )}
               />
-              <ReferenceArea x1={DOM_X[0]} x2={CORTE_X} y1={DOM_Y[0]} y2={corteY}
+              <ReferenceArea x1={DOM_X[0]} x2={limites.corte_volume} y1={DOM_Y[0]} y2={corteY}
                 fill="#F3F4F6" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="OFENSORES" corTexto="#4B5563" corFundo="#F3F4F6"
                     ancoragem="bottom-left" />
                 )}
               />
-              <ReferenceArea x1={CORTE_X} x2={DOM_X[1]} y1={DOM_Y[0]} y2={corteY}
+              <ReferenceArea x1={limites.corte_volume} x2={DOM_X[1]} y1={DOM_Y[0]} y2={corteY}
                 fill="#FEE2E2" fillOpacity={0.6} stroke="none"
                 label={(props) => (
                   <LabelQuadrante {...props} texto="ALERTA VERMELHO" corTexto="#B91C1C" corFundo="#FEE2E2"
@@ -409,7 +453,7 @@ export function MatrizSatisfacaoPerformance({ filtrosGlobais, onFiltrosLocaisCha
               />
 
               {/* Divisórias */}
-              <ReferenceLine x={CORTE_X} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
+              <ReferenceLine x={limites.corte_volume} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
               <ReferenceLine y={corteY} stroke="#94A3B8" strokeWidth={1} strokeDasharray="5 4" />
 
               {/* Pílulas */}

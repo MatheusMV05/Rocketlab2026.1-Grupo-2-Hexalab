@@ -115,13 +115,14 @@ async def get_matriz_produtos(
     limite_alerta_vermelho: int = 4,
     limite_ofensores: int = 4,
     corte_satisfacao: float = 4.0,
+    corte_volume: int = 50,
     db: AsyncSession = Depends(get_db),
 ):
     try:
         return await service.get_matriz_produtos(
             db, ano, mes, localidade,
             limite_estrelas, limite_oportunidades, limite_alerta_vermelho, limite_ofensores,
-            corte_satisfacao,
+            corte_satisfacao, corte_volume,
         )
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao buscar matriz de produtos.")
