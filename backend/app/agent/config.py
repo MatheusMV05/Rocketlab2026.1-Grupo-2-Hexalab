@@ -48,7 +48,7 @@ def _ler_modelo_mistral() -> str:
     (`ministral-8b-latest`). Ajuste a variável de ambiente para usar
     outro modelo em tempo de execução.
     """
-    return os.getenv("MISTRAL_MODEL", "ministral-8b-latest")
+    return os.getenv("MISTRAL_MODEL", "mistral-large-latest")
 
 
 @dataclass

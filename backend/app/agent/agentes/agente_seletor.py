@@ -128,7 +128,7 @@ class AgenteSeletor(AgenteBase):
             self._agent = agent
 
         # Chama LLM (será mockado em testes ou executará agente real se houver api_key)
-        texto_llm, tokens_usados = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+        texto_llm, tokens_usados, _ = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
         
         esquema_filtrado = ""
         tabelas_selecionadas: list[str] = []

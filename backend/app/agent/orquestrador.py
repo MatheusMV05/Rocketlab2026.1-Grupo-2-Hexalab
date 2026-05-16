@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from app.agent.agentes.agente_decompositor import AgenteDecompositor
+from app.agent.agentes.agente_interpretador import AgenteInterpretador
 from app.agent.agentes.agente_refinador import AgenteRefinador
 from app.agent.agentes.agente_seletor import AgenteSeletor
 from app.agent.config import Config
@@ -29,6 +31,8 @@ class ResultadoOrquestrador:
         impossivel: True se o LLM declarou que não consegue responder.
         erro: Mensagem de erro se algo falhou, None caso contrário.
         tokens_totais: Soma de tokens consumidos por todos os agentes.
+        resposta_natural: Resumo em linguagem natural da resposta final.
+        novo_historico: Lista de mensagens atualizada mantida pelo PydanticAI.
     """
     pergunta: str
     sql_final: str
@@ -39,18 +43,21 @@ class ResultadoOrquestrador:
     impossivel: bool
     erro: str | None
     tokens_totais: int
+    resposta_natural: str = ""
+    novo_historico: list[Any] = field(default_factory=list)
 
 
 class Orquestrador:
-    """Coordena os três agentes da pipeline MAC-SQL.
+    """Coordena os agentes da pipeline MAC-SQL com suporte a memória.
 
     Fluxo:
         1. Valida a pergunta do usuário (guardrail).
         2. Lê o esquema do banco SQLite.
         3. AgenteSeletor filtra as tabelas relevantes.
-        4. AgenteDecompositor gera o SQL candidato.
+        4. AgenteDecompositor gera o SQL candidato (injetando message_history).
         5. AgenteRefinador valida e corrige o SQL.
         6. Executa o SQL final no banco e retorna os dados.
+        7. AgenteInterpretador gera a resposta em linguagem natural.
     """
 
     def __init__(
@@ -69,18 +76,43 @@ class Orquestrador:
         self.seletor = AgenteSeletor(config=self.config)
         self.decompositor = AgenteDecompositor(config=self.config)
         self.refinador = AgenteRefinador(config=self.config)
+        self.interpretador = AgenteInterpretador(config=self.config)
 
-    def responder(self, pergunta: str) -> ResultadoOrquestrador:
+    def responder(
+        self, 
+        pergunta: str,
+        message_history: list[Any] | None = None,
+    ) -> ResultadoOrquestrador:
         """Executa o pipeline completo para uma pergunta em linguagem natural.
 
         Args:
             pergunta: Pergunta do usuário em português.
+            message_history: Histórico de mensagens ativo da aba do navegador.
 
         Returns:
             ResultadoOrquestrador com os dados finais ou informação de erro.
         """
-        # Validação de segurança da entrada
-        valido, motivo = validar_pergunta_usuario(pergunta)
+        if not isinstance(pergunta, str):
+            return ResultadoOrquestrador(
+                pergunta=str(pergunta),
+                sql_final="",
+                raciocinio="",
+                dados=[],
+                colunas=[],
+                sucesso=False,
+                impossivel=False,
+                erro="Pergunta inválida: esperado texto (str).",
+                tokens_totais=0,
+            )
+
+        # Validação de segurança da entrada.
+        validacao = validar_pergunta_usuario(pergunta)
+        if isinstance(validacao, tuple):
+            valido, motivo = validacao
+        else:
+            motivo = validacao
+            valido = not bool(motivo)
+
         if not valido:
             logger.warning("Orquestrador: pergunta rejeitada pelo guardrail: %s", motivo)
             return ResultadoOrquestrador(
@@ -121,13 +153,17 @@ class Orquestrador:
         )
         tokens_totais += resultado_seletor.tokens_usados
 
-        # Decompositor gera o SQL candidato
-        logger.info("Orquestrador: iniciando AgenteDecompositor")
+        # Decompositor gera o SQL candidato injetando o histórico da sessão
+        logger.info("Orquestrador: iniciando AgenteDecompositor com memória")
         resultado_decompositor = self.decompositor.run(
             esquema_filtrado=resultado_seletor.esquema_filtrado,
             pergunta=pergunta,
+            message_history=message_history,
         )
         tokens_totais += resultado_decompositor.tokens_usados
+
+        # Captura o histórico processado pela capability de sumarização
+        historico_atualizado = resultado_decompositor.novo_historico
 
         if not resultado_decompositor.sql:
             return ResultadoOrquestrador(
@@ -140,6 +176,7 @@ class Orquestrador:
                 impossivel=False,
                 erro="Decompositor não gerou SQL.",
                 tokens_totais=tokens_totais,
+                novo_historico=historico_atualizado,
             )
 
         # Refinador valida e corrige o SQL
@@ -148,6 +185,7 @@ class Orquestrador:
             candidate_sql=resultado_decompositor.sql,
             question=pergunta,
             filtered_schema=resultado_seletor.esquema_filtrado,
+            db_path=self.db_path,
         )
         tokens_totais += resultado_refinador.tokens_usados
 
@@ -162,6 +200,7 @@ class Orquestrador:
                 impossivel=True,
                 erro="O modelo declarou que não é possível responder com o esquema disponível.",
                 tokens_totais=tokens_totais,
+                novo_historico=historico_atualizado,
             )
 
         if not resultado_refinador.sucesso:
@@ -175,10 +214,22 @@ class Orquestrador:
                 impossivel=False,
                 erro=resultado_refinador.ultimo_erro,
                 tokens_totais=tokens_totais,
+                novo_historico=historico_atualizado,
             )
 
         # Executa o SQL final no banco
         dados, colunas, erro_execucao = self._executar_sql(resultado_refinador.sql)
+
+        # Interpretador traduz o resultado para linguagem natural
+        logger.info("Orquestrador: iniciando AgenteInterpretador")
+        resultado_interpretador = self.interpretador.run(
+            pergunta=pergunta,
+            sql_final=resultado_refinador.sql,
+            colunas=colunas,
+            dados=dados,
+            erro=erro_execucao,
+        )
+        tokens_totais += resultado_interpretador.tokens_usados
 
         return ResultadoOrquestrador(
             pergunta=pergunta,
@@ -190,6 +241,8 @@ class Orquestrador:
             impossivel=False,
             erro=erro_execucao,
             tokens_totais=tokens_totais,
+            resposta_natural=resultado_interpretador.resposta,
+            novo_historico=historico_atualizado,
         )
 
     def _executar_sql(

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sqlite3
+from pathlib import Path
 
 from pydantic_ai.models.mistral import Mistral, MistralModel
 from pydantic_ai import Agent
@@ -29,6 +31,7 @@ class AgenteRefinador(AgenteBase):
         candidate_sql: str,
         question: str,
         filtered_schema: str,
+        db_path: str | Path | None = None,
     ) -> ResultadoRefinador:
         """Valida e corrige o SQL candidato com loop de retry.
 
@@ -74,7 +77,7 @@ class AgenteRefinador(AgenteBase):
                 return ctx.deps.sistema
 
         for tentativa in range(1, self.config.max_retries + 1):
-            result = self._executar_sql(current_sql)
+            result = self._executar_sql(current_sql, db_path)
 
             if result["ok"]:
                 return ResultadoRefinador(
@@ -133,16 +136,21 @@ class AgenteRefinador(AgenteBase):
         )
 
     @staticmethod
-    def _executar_sql(sql: str) -> dict:
+    def _executar_sql(sql: str, db_path: str | Path | None = None) -> dict:
         """Executa o SQL e retorna dict com ok e error.
 
-        Stub até o executor.py chegar. Nunca propaga exceção.
+        Nunca propaga exceção.
+
+        Se db_path não for informado, considera a validação de execução como
+        opcional e retorna sucesso para evitar dependência de módulo externo.
         """
         try:
-            from app.agent.db.executor import execute_sql
-            result = execute_sql(sql)
-            return {"ok": result.ok, "error": result.error}
-        except ImportError:
-            return {"ok": False, "error": "executor.py não disponível ainda."}
+            if db_path is None:
+                return {"ok": True, "error": None}
+
+            with sqlite3.connect(str(db_path)) as conn:
+                cursor = conn.execute(sql)
+                _ = cursor.fetchall()
+                return {"ok": True, "error": None}
         except Exception as e:
             return {"ok": False, "error": str(e)}
