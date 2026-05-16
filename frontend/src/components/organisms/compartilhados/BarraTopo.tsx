@@ -1,12 +1,14 @@
-import { Link } from 'react-router-dom'
-import { Search, Bell, Settings } from 'lucide-react'
+import { Search, Bell, Settings } from 'react-feather'
 import logoAgente from '../../../assets/logos/logo-agente.svg'
+import { useAssistente } from '../chat/AssistenteProvider'
 
 interface Props {
   titulo: string
 }
 
 export function BarraTopo({ titulo }: Props) {
+  const { abrir } = useAssistente()
+
   return (
     <header className="fixed left-[104px] right-0 top-0 h-[87px] bg-[#f6f7f9] z-10 flex items-center pl-[58px] pr-[43px]">
       {/* Título da página */}

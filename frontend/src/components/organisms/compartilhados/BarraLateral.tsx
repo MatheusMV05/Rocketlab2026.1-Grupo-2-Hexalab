@@ -12,13 +12,13 @@ const itensNav = [
 
 export function BarraLateral() {
   return (
-    <aside className="fixed left-0 top-0 h-full z-20 flex flex-col" style={{ width: 104 }}>
+    <aside className="fixed left-0 top-0 h-full z-20 flex flex-col w-[60px] md:w-[104px] bg-[#f6f7f9]">
       {/* Logo VC — quadrado teal no topo */}
       <div
         className="flex items-center justify-center shrink-0 rounded-br-[5px]"
         style={{ backgroundColor: '#3f7377', width: 98, height: 85 }}
       >
-        <img src={logoVC} alt="Logo VC" className="w-[52px] h-[52px] object-contain" />
+        <img src={logoVC} alt="Logo VC" className="w-[30px] h-[30px] md:w-[52px] md:h-[52px] object-contain" />
       </div>
 
       {/* Fundo cinza claro da barra lateral abaixo do logo */}
