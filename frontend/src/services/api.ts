@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 export const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: 'http://localhost:8080/api',
   withCredentials: true, // envia/recebe cookies HttpOnly para refresh token
 })
 
@@ -24,7 +24,7 @@ api.interceptors.response.use(
       original._retried = true
       try {
         const { data } = await axios.post(
-          'http://localhost:8000/api/auth/refresh',
+          'http://localhost:8080/api/auth/refresh',
           {},
           { withCredentials: true }
         )
