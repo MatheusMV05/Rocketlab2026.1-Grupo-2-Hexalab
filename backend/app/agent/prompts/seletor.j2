@@ -23,6 +23,13 @@ Regras Muito Estritas (NÃO IGNORAR):
 4. Se for necessário reduzir colunas dentro de um `CREATE TABLE`, remova linhas de colunas indesejadas, mas nunca altere o nome, tipo ou restrições das colunas restantes.
 5. Se houver qualquer incerteza sobre quais colunas são relevantes, inclua a `CREATE TABLE` original inteira para essa tabela (ou seja, o bloco exato do esquema de entrada) em vez de criar nomes ou estruturas novas.
 6. Priorize a precisão e a fidelidade ao schema de entrada: inclua apenas objetos relevantes para a consulta.
+7. PROIBIDO gerar consulta SQL (`SELECT`, `WITH`, `WHERE`, `ORDER BY`, `LIMIT`). Você NÃO é o agente que responde a pergunta; você só seleciona schema.
+8. No campo `blocos_ddl`, cada item deve começar obrigatoriamente com `CREATE TABLE`.
+
+Regras de Inclusão por Contexto (CRÍTICO):
+1. **Inteligência de Dimensão:** Se a pergunta envolver qualquer conceito de TEMPO (datas, meses, "ontem", períodos), você DEVE incluir a tabela `dim_data`.
+2. **Inteligência de Atributo:** Se envolver localização, perfil ou segmentação, inclua `dim_clientes`.
+3. Não restrinja o esquema apenas às tabelas de métricas (Marts); o Decompositor precisa das dimensões para realizar filtros precisos e joins performáticos.
 
 Formato exigido (exemplo):
 ```sql

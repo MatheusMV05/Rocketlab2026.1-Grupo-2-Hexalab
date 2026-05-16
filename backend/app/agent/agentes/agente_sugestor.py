@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from pathlib import Path
 
 from pydantic_ai import Agent
-from pydantic_ai.models.mistral import MistralModel
 
 from app.agent.agentes.agente_base import AgenteBase
 from app.agent.config import Config
@@ -73,13 +71,10 @@ class AgenteSugestor(AgenteBase):
 		)
 
 		if self.config.api_key:
-			try:
-				asyncio.get_event_loop()
-			except RuntimeError:
-				asyncio.set_event_loop(asyncio.new_event_loop())
+			self._garantir_event_loop()
 
-			model = MistralModel(self.config.model, api_key=self.config.api_key)
-			agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoSugestorLLM)
+			model = self._criar_modelo_mistral()
+			agent = Agent(model, deps_type=ContextoAgente, output_type=ResultadoSugestorLLM)
 
 			@agent.system_prompt
 			def get_system_prompt(ctx) -> str:
@@ -87,7 +82,9 @@ class AgenteSugestor(AgenteBase):
 
 			self._agent = agent
 
-		texto_llm, tokens_usados, _ = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+		texto_llm, tokens_usados, _ = self._desempacotar_call_llm(
+			self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+		)
 		sugestoes = self._interpretar_saida_llm(texto_llm)
 
 		return ResultadoSugestor(
@@ -212,12 +209,7 @@ class AgenteSugestor(AgenteBase):
 		tabela_principal: str,
 		tabelas_adjacentes: list[str],
 	) -> str:
-		"""Monta um resumo JSON com descricoes das tabelas relevantes.
-
-		Se houver descricoes para a tabela principal ou adjacentes, retorna
-		apenas essas entradas. Caso contrario, retorna o dicionario completo
-		como fallback para manter o contexto disponivel ao LLM.
-		"""
+		"""Monta um resumo JSON com descricoes das tabelas relevantes."""
 		tabelas_usadas = {
 			self._normalizar_nome_tabela(nome)
 			for nome in [tabela_principal, *tabelas_adjacentes]
@@ -230,7 +222,4 @@ class AgenteSugestor(AgenteBase):
 			if tabela in tabelas_usadas
 		}
 
-		if resumo:
-			return json.dumps(resumo, ensure_ascii=False)
-
-		return json.dumps(self._descricao_tabelas, ensure_ascii=False)
+		return json.dumps(resumo, ensure_ascii=False)

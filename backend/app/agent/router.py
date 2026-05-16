@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.agent import AgenteSugestor, Config, Orquestrador
+from app.agent.agentes.memory.dependencies import get_session_store
 from app.config import settings
 
 router = APIRouter(prefix="/agent", tags=["agent"])
@@ -56,7 +57,11 @@ def _amostra_resultado(colunas: list[str], dados: list[tuple]) -> str:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    resultado = _orquestrador.responder(req.message)
+    resultado = _orquestrador.responder(
+        req.message,
+        session_id=req.session_id,
+        session_store=get_session_store(),
+    )
 
     answer = (
         resultado.resposta_natural
