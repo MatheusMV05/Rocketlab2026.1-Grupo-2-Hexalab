@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import re
-import psycopg2 
-from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from app.agent.db.adapters import DatabaseAdapter
 
 
 _PADRAO_CREATE_TABLE = re.compile(
@@ -119,29 +118,6 @@ def _normalizar_valor(valor: Any) -> str:
     return str(valor)
 
 
-def _extrair_valores_distintos(
-    tabela: str,
-    coluna: str,
-    limite: int,
-    db_connection_string: str | None = None,
-) -> list[str]:
-    tabela_sql = _quote_identificador(tabela)
-    coluna_sql = _quote_identificador(coluna)
-    
-    sql = (
-        f"SELECT DISTINCT {coluna_sql} "
-        f"FROM {tabela_sql} "
-        f"WHERE {coluna_sql} IS NOT NULL "
-        f"ORDER BY {coluna_sql} "
-        f"LIMIT %s" 
-    )
-
-    with psycopg2.connect(db_connection_string) as conexao:
-        with conexao.cursor() as cursor:
-            cursor.execute(sql, (limite,))
-            return [_normalizar_valor(linha[0]) for linha in cursor.fetchall()]
-
-
 def _descricao_coluna(nome_coluna: str, tipo_coluna: str) -> str:
     nome_normalizado = nome_coluna.lower()
     tipo_normalizado = tipo_coluna.lower()
@@ -164,7 +140,7 @@ def _descricao_coluna(nome_coluna: str, tipo_coluna: str) -> str:
 
 def generate_examples_from_schema(
     esquema_ddl: str,
-    db_connection_string: str | None = None,
+    db: DatabaseAdapter | None = None,
     limite_valores: int = 60,
 ) -> List[Dict[str, Any]]:
     """Gera hints do schema para o prompt.
@@ -182,19 +158,19 @@ def generate_examples_from_schema(
             valores: list[str] = []
             erro: str | None = None
 
-            if deve_listar:
-                if db_connection_string is None:
-                    erro = "db_path nao informado; valores reais nao foram extraidos."
-                else:
-                    try:
-                        valores = _extrair_valores_distintos(
-                            db_connection_string=db_connection_string,
-                            tabela=tabela,
-                            coluna=coluna,
-                            limite=limite_valores,
-                        )
-                    except Exception as exc:
-                        erro = str(exc)
+            if not deve_listar:
+                valores = []
+            elif db is None: 
+                erro = "DatabaseAdapter nao informado; valores reais nao foram extraidos."
+            else:
+                try:
+                    valores = db.distinct_values(
+                        tabela=tabela,
+                        coluna=coluna,
+                        limite=limite_valores,
+                    )
+                except Exception as exc:
+                    erro = str(exc)
 
             exemplos.append(
                 {

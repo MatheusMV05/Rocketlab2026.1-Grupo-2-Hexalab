@@ -11,6 +11,7 @@ from app.agent.agentes.agente_interpretador import AgenteInterpretador
 from app.agent.agentes.agente_refinador import AgenteRefinador
 from app.agent.agentes.agente_seletor import AgenteSeletor
 from app.agent.config import Config
+from app.agent.db.adapters import DatabaseAdapter
 from app.agent.db.leitor_esquema import ler_esquema
 from app.agent.Guardrail.guardrail import validar_pergunta_usuario
 
@@ -62,7 +63,7 @@ class Orquestrador:
 
     def __init__(
         self,
-        db_connection_string: str,
+        db: DatabaseAdapter,
         config: Config | None = None,
     ) -> None:
         """Inicializa o orquestrador com o caminho do banco e configurações.
@@ -71,7 +72,7 @@ class Orquestrador:
             db_path: Caminho para o arquivo SQLite.
             config: Configurações dos agentes. Se None, usa Config() padrão.
         """
-        self.db_connection_string = db_connection_string
+        self.db = db
         self.config = config or Config()
         self.seletor = AgenteSeletor(config=self.config)
         self.decompositor = AgenteDecompositor(config=self.config)
@@ -131,7 +132,7 @@ class Orquestrador:
 
         # Lê o esquema do banco
         try:
-            esquema_completo = ler_esquema(self.db_connection_string)
+            esquema_completo = self.db.read_schema()
         except FileNotFoundError:
             return ResultadoOrquestrador(
                 pergunta=pergunta,
@@ -141,7 +142,7 @@ class Orquestrador:
                 colunas=[],
                 sucesso=False,
                 impossivel=False,
-                erro=f"Banco de dados não encontrado: {self.db_connection_string}",
+                erro=f"Banco de dados não encontrado",
                 tokens_totais=0,
             )
 
@@ -178,8 +179,8 @@ class Orquestrador:
         resultado_decompositor = self.decompositor.run(
             esquema_filtrado=resultado_seletor.esquema_filtrado,
             pergunta=pergunta,
-            db_connection_string=self.db_connection_string,
-            message_history=historico_corrente,
+            db=self.db,
+            message_history=message_history,
         )
         tokens_totais += resultado_decompositor.tokens_usados
 
@@ -213,8 +214,8 @@ class Orquestrador:
             candidate_sql=resultado_decompositor.sql,
             question=pergunta,
             filtered_schema=resultado_seletor.esquema_filtrado,
-            db_connection_string=self.db_connection_string,
-            message_history=historico_corrente,
+            db=self.db, 
+            message_history=message_history,
         )
         tokens_totais += resultado_refinador.tokens_usados
         if resultado_refinador.novo_historico:
@@ -297,17 +298,5 @@ class Orquestrador:
         Returns:
             Tupla (dados, colunas, erro). Se ok, erro é None.
         """
-        try:
-            with psycopg2.connect(self.db_connection_string) as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(sql)
-                    if cursor.description:
-                        colunas = [desc[0] for desc in cursor.description]
-                        dados = cursor.fetchall()
-                    else:
-                        colunas = []
-                        dados = []
-                    return dados, colunas, None
-        except Exception as e:
-            logger.warning("Orquestrador._executar_sql: erro ao executar SQL: %s", e)
-            return [], [], str(e)
+
+        return self.db.execute_readonly(sql) 

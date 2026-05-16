@@ -65,6 +65,16 @@ def _ler_int_env(nome: str, padrao: int) -> int:
         return padrao
 
 
+def _ler_database_url() -> str:
+    """Lê a string de conexão do ambiente e remove o asyncpg para o psycopg2."""
+    url = os.getenv("DATABASE_URL", "postgresql://postgres:Hexalab2026!@34.151.192.232:5432/postgres")
+    
+    # Remove o driver assíncrono APENAS para os agentes da IA
+    if url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql://")
+        
+    return url
+
 @dataclass
 class Config:
     """Configuração usada pelos agentes da pipeline.
@@ -82,6 +92,7 @@ class Config:
     max_tokens: int = 99999
     max_retries: int = 3
     few_shot_path: str = "few_shots/exemplos.yaml"
+    db_connection_string: str = field(default_factory=_ler_database_url)
     mistral_timeout_seconds: float = field(
         default_factory=lambda: _ler_float_env("MISTRAL_TIMEOUT_SECONDS", 240.0)
     )

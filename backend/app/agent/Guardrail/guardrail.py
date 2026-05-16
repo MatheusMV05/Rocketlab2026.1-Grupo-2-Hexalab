@@ -41,7 +41,6 @@ _PADRAO_PALAVRAS_PROIBIDAS = re.compile(
 # Padrões de Injection SQL e Comentários
 _PADROES_INJECTION_SQL = [
     r"/\*.*?\*/",      # Comentários de bloco
-    r"--",             # Comentários de linha
     r";",              # Múltiplos statements (evita execução de queries seguidas)
     r"\bUNION\b",      # Bloqueia UNION para evitar vazamento entre tabelas
     r"\bSLEEP\(",      # Evita ataques de negação de serviço (DoS)

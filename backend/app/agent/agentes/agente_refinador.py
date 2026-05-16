@@ -32,7 +32,7 @@ class AgenteRefinador(AgenteBase):
         candidate_sql: str,
         question: str,
         filtered_schema: str,
-        db_connection_string: str | None = None,
+        db: Any = None, 
         message_history: list[Any] | None = None,
     ) -> ResultadoRefinador:
         """Valida e corrige o SQL candidato com loop de retry.
@@ -54,7 +54,7 @@ class AgenteRefinador(AgenteBase):
         total_tokens = 0
         novo_historico: list[Any] = []
 
-        initial_result = self._executar_sql(current_sql, db_connection_string)
+        initial_result = self._executar_sql(sql=current_sql, db=db)
         if initial_result["ok"]:
             return ResultadoRefinador(
                 sql=current_sql,
@@ -90,7 +90,7 @@ class AgenteRefinador(AgenteBase):
                 return ctx.deps.sistema
 
         for tentativa in range(1, self.config.max_retries + 1):
-            result = self._executar_sql(current_sql, db_connection_string)
+            result = self._executar_sql(sql=current_sql, db=db)
 
             if result["ok"]:
                 return ResultadoRefinador(
@@ -150,7 +150,7 @@ class AgenteRefinador(AgenteBase):
                     )
 
                 current_sql = extract_sql(resposta_texto) or resposta_texto.strip()
-                result = self._executar_sql(current_sql, db_connection_string)
+                result = self._executar_sql(sql=current_sql, db=db)
                 if result["ok"]:
                     return ResultadoRefinador(
                         sql=current_sql,
@@ -179,30 +179,21 @@ class AgenteRefinador(AgenteBase):
         )
 
     @staticmethod
-    def _executar_sql(sql: str, db_connection_string: str | None = None) -> dict:
-        """
-        Executa o SQL no PostgreSQL.
-        db_connection_string deve ser algo como: 
-        "postgresql://usuario:senha@localhost:5432/nome_banco"
-        """
-        try:
-            if not (sql or "").strip():
-                return {"ok": False, "error": "SQL vazio."}
+    def _executar_sql(sql: str, db: Any) -> dict:
+        """Executa o SQL utilizando o DatabaseAdapter."""
+        if not (sql or "").strip():
+            return {"ok": False, "error": "SQL vazio."}
 
-            if db_connection_string is None:
-                return {"ok": True, "error": None}
-
-            # Conexão Postgres
-            conn = psycopg2.connect(db_connection_string)
-            with conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(sql)
-                    # Apenas testa a execução
-                    if cursor.description:
-                        cursor.fetchall()
+        if db is None:
             return {"ok": True, "error": None}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
+
+        # O adapter faz a execução de leitura e retorna (dados, colunas, erro)
+        dados, colunas, erro = db.execute_readonly(sql)
+        
+        if erro:
+            return {"ok": False, "error": erro}
+            
+        return {"ok": True, "error": None}
 
     @staticmethod
     def _extrair_sql_refinado(dados: Any, resposta_serializada: str) -> str:

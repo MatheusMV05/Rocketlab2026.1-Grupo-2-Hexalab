@@ -3,7 +3,7 @@ import type { ChatRequest, ChatResponse } from '../types/agente'
 
 const api = axios.create({
   baseURL: 'http://localhost:8000/api',
-  timeout: 35_000,
+  timeout: 120_000,
 })
 
 export async function enviarPergunta(req: ChatRequest): Promise<ChatResponse> {
