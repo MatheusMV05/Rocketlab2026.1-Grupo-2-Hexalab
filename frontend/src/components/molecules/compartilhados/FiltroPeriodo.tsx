@@ -14,8 +14,30 @@ interface Props {
   onChange: (filtros: FiltrosPeriodo) => void
 }
 
+/** Exibe nome do mês no dropdown; filtros.mes deve ser '', '01', … , '12' para a API */
+function etiquetaMes(mesCodigo: string): string {
+  if (!mesCodigo?.trim()) return ''
+  const n = Number.parseInt(mesCodigo, 10)
+  if (!Number.isFinite(n) || n < 1 || n > 12) return ''
+  return MESES_FILTRO[n - 1] ?? ''
+}
+
 export function FiltroPeriodo({ filtros, onChange }: Props) {
   const temFiltro = !!(filtros.ano || filtros.mes || filtros.localidade)
+  const etiquetaMesAtual = etiquetaMes(filtros.mes)
+
+  function definirMes(nomeOuVazio: string) {
+    if (!nomeOuVazio) {
+      onChange({ ...filtros, mes: '' })
+      return
+    }
+    const idx = MESES_FILTRO.indexOf(nomeOuVazio)
+    if (idx < 0) {
+      onChange({ ...filtros, mes: '' })
+      return
+    }
+    onChange({ ...filtros, mes: String(idx + 1).padStart(2, '0') })
+  }
 
   return (
     <div className="flex items-center gap-[21px]">
@@ -29,8 +51,8 @@ export function FiltroPeriodo({ filtros, onChange }: Props) {
       <DropdownFiltro
         label="Mês"
         opcoes={MESES_FILTRO}
-        valor={filtros.mes}
-        onChange={(v) => onChange({ ...filtros, mes: v })}
+        valor={etiquetaMesAtual}
+        onChange={definirMes}
         rotulo="Mês"
       />
       <DropdownFiltro

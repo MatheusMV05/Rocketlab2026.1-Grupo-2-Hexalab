@@ -16,7 +16,8 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props
 
   useEffect(() => {
     if (aberto) setPendente(valor)
-  }, [aberto])
+  }, [aberto, valor])
+
 
   useEffect(() => {
     function fechar(e: MouseEvent) {
@@ -28,13 +29,17 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props
 
   const nomeLabel = rotulo ?? label
 
+  const mudouValor = pendente !== valor
+
   function aplicar() {
     onChange(pendente)
     setAberto(false)
   }
 
   function limpar() {
+    onChange('')
     setPendente('')
+    setAberto(false)
   }
 
   return (
@@ -94,15 +99,20 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props
           >
             <button
               onClick={limpar}
-              className="flex-1 text-[12px] text-[#3d3d3d] rounded-[8px] transition-colors hover:bg-[#d4d4d4] focus:outline-none"
-              style={{ height: 23, background: '#e0e0e0' }}
+              className="flex-1 text-[12px] text-[#343434] font-medium bg-[#e5ebeb] hover:bg-[#d1dbdb] rounded-[8px] transition-colors focus:outline-none"
+              style={{ height: 23 }}
             >
               Limpar
             </button>
             <button
               onClick={aplicar}
-              className="flex-1 text-[12px] text-[#3d3d3d] font-medium rounded-[8px] transition-colors hover:bg-[#3f7377] hover:text-white focus:outline-none"
-              style={{ height: 23, background: '#e0e0e0' }}
+              disabled={!mudouValor}
+              className={`flex-1 text-[12px] font-medium rounded-[8px] transition-colors focus:outline-none ${
+                mudouValor
+                  ? 'text-white bg-[#1c5258] hover:bg-[#154247]'
+                  : 'text-[#b3b3b3] bg-[#e5ebeb] cursor-not-allowed'
+              }`}
+              style={{ height: 23 }}
             >
               Aplicar
             </button>

@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { api } from './api'
 import type {
   KpiDados,
   VendasMensalDados,
@@ -10,10 +10,6 @@ import type {
   EntregasDados,
   ReceitaGraficoDados,
 } from '../types/dashboard'
-
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-})
 
 export const dashboardService = {
   buscarKpis: () =>
