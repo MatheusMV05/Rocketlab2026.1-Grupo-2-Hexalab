@@ -43,7 +43,7 @@ async def listar_clientes(
     query: Optional[str] = Query(None, description="Busca por nome ou e-mail"),
     estado: Optional[str] = Query(None, description="Filtro por estado"),
     pagina: int = Query(1, ge=1, description="Número da página"),
-    tamanho: int = Query(20, ge=1, le=100, description="Tamanho da página"),
+    tamanho: int = Query(20, ge=1, le=10000, description="Tamanho da página"),
     db: AsyncSession = Depends(get_db)
 ):
     """

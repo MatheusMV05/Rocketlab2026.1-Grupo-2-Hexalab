@@ -20,6 +20,7 @@ import { ModalSucesso } from '../../molecules/compartilhados/ModalSucesso'
 import { BotaoFiltro } from '../../atoms/compartilhados/BotaoFiltro'
 import { MESES_FILTRO } from '../../../constants/opcoesFiltro'
 import { useListaClientes, useLocalizacoes } from '../../../hooks/useClientes'
+import { clientesService } from '../../../services/clientesService'
 
 const ANOS_CLIENTES = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014']
 const SOURCES = ['WEB', 'APP', 'REFERRAL']
@@ -158,9 +159,66 @@ export function TabelaClientes() {
   }
 
   function confirmarExportacao() {
+    const dadosParaExportar = clientes.filter(c => selecionados.includes(c.id))
+    baixarCSV(dadosParaExportar, `clientes_selecionados_${new Date().getTime()}`)
     setModalExportar(false)
     setModalSucesso(true)
     setTimeout(() => setModalSucesso(false), 3000)
+  }
+
+  async function handleExportarLista() {
+    try {
+      // Busca todos os registros (até 10.000) respeitando os filtros atuais
+      const todosOsDados = await clientesService.listar({
+        query: termoDebounced || undefined,
+        estado: filtro.localizacao || undefined,
+        pagina: 1,
+        tamanho: 10000 
+      })
+
+      if (todosOsDados && todosOsDados.itens.length > 0) {
+        baixarCSV(todosOsDados.itens, `lista_clientes_completa_${new Date().getTime()}`)
+        setModalSucesso(true)
+        setTimeout(() => setModalSucesso(false), 3000)
+      }
+    } catch (error) {
+      console.error("Erro ao exportar lista:", error)
+      alert("Ocorreu um erro ao exportar a lista completa.")
+    } finally {
+      setHoverExportar(false)
+    }
+  }
+
+  function baixarCSV(dados: any[], nomeArquivo: string) {
+    if (dados.length === 0) return
+
+    // Mapear campos para nomes amigáveis
+    const mapeamento = dados.map(item => ({
+      ID: item.id,
+      Nome: item.nome_completo,
+      Telefone: item.telefone,
+      Cidade: item.cidade,
+      Estado: item.estado,
+      Cadastro: item.data_cadastro,
+      Origem: item.origem,
+      Situação: item.segmento_rfm || '-'
+    }))
+
+    const cabecalho = Object.keys(mapeamento[0]).join(';')
+    const linhas = mapeamento.map(item => 
+      Object.values(item).map(val => `"${val}"`).join(';')
+    ).join('\n')
+    
+    const csvContent = `\ufeff${cabecalho}\n${linhas}`
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${nomeArquivo}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   function abrirConfirmacaoEdicao() {
@@ -286,7 +344,10 @@ export function TabelaClientes() {
             {hoverExportar && (
               <div className="absolute right-0 top-[calc(100%+6px)] bg-[#e5ebeb] rounded-[8px] flex flex-col py-1 shadow-md w-[140px] z-50">
                 <div className="absolute top-[-6px] right-4 w-3 h-3 bg-[#e5ebeb] rotate-45"></div>
-                <button className="text-[11px] text-[#343434] hover:bg-[#d1dbdb] px-3 py-2 text-left transition-colors relative z-10 font-medium">
+                <button 
+                  onClick={handleExportarLista}
+                  className="text-[11px] text-[#343434] hover:bg-[#d1dbdb] px-3 py-2 text-left transition-colors relative z-10 font-medium"
+                >
                   Exportar lista
                 </button>
                 <button 
@@ -445,7 +506,7 @@ export function TabelaClientes() {
           <span className="text-[13px] font-semibold text-[#1c5258] flex-[1.2] min-w-[140px]">Localização</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Cadastro</span>
           <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[100px]">Source</span>
-          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[120px]">Segmento</span>
+          <span className="text-[13px] font-semibold text-[#1c5258] flex-1 min-w-[120px]">Situação</span>
         </div>
 
         <div className="mt-2 flex flex-col pb-2 min-w-[1100px]">
@@ -499,10 +560,7 @@ export function TabelaClientes() {
       </div>
 
       {/* Paginação */}
-      <div className="flex items-center justify-between px-6 py-4 border-t border-[#f0f0f0] bg-white shrink-0">
-        <span className="text-[13px] text-[#898989] font-medium">
-          Página <span className="text-[#111111]">{paginaAtual}</span> de {totalPaginas}
-        </span>
+      <div className="flex items-center justify-center px-6 py-4 border-t border-[#f0f0f0] bg-white shrink-0">
         
         <div className="flex items-center gap-[6px]">
           <button
@@ -671,16 +729,16 @@ export function TabelaClientes() {
             {/* Footer Botões */}
             <div className="flex items-center justify-end gap-3 mt-4 pr-2">
               <button
-                onClick={abrirConfirmacaoEdicao}
-                className="h-[36px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors"
-              >
-                Aplicar
-              </button>
-              <button
                 onClick={() => setModalEditar(false)}
                 className="h-[36px] px-6 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors"
               >
                 Cancelar
+              </button>
+              <button
+                onClick={abrirConfirmacaoEdicao}
+                className="h-[36px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors"
+              >
+                Aplicar
               </button>
             </div>
           </div>
@@ -696,16 +754,16 @@ export function TabelaClientes() {
             </h2>
             <div className="flex items-center gap-3">
               <button
-                onClick={confirmarExportacao}
-                className="h-[38px] px-5 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors"
-              >
-                Confirmar
-              </button>
-              <button
                 onClick={() => setModalExportar(false)}
                 className="h-[38px] px-5 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors"
               >
                 Cancelar
+              </button>
+              <button
+                onClick={confirmarExportacao}
+                className="h-[38px] px-5 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors"
+              >
+                Confirmar
               </button>
             </div>
           </div>
@@ -730,16 +788,16 @@ export function TabelaClientes() {
             </h2>
             <div className="flex items-center gap-3">
               <button
-                onClick={confirmarEdicao}
-                className="h-[38px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors"
-              >
-                Confirmar
-              </button>
-              <button
                 onClick={() => setModalConfirmarEdicao(false)}
                 className="h-[38px] px-6 border border-[#343434] rounded-[100px] text-[13px] font-semibold text-[#343434] hover:bg-[#f6f7f9] transition-colors"
               >
                 Cancelar
+              </button>
+              <button
+                onClick={confirmarEdicao}
+                className="h-[38px] px-6 bg-[#1c5258] rounded-[100px] text-[13px] font-semibold text-white hover:bg-[#154247] transition-colors"
+              >
+                Confirmar
               </button>
             </div>
           </div>
