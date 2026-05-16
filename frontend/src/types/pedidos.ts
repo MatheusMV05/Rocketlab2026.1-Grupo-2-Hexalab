@@ -59,3 +59,24 @@ export interface AnaliseFluxo {
   etapas: EtapaFluxo[]
   total_pedidos: number
 }
+
+export interface ProdutoNoPedido {
+  cod_produto: string
+  nome_produto: string
+  categoria: string
+  valor: number
+  quantidade: number
+}
+
+export interface PedidoDetalhe {
+  id: string
+  cod_pedido: string
+  id_cliente: string
+  nome_cliente: string
+  valor_total: number
+  data: string
+  metodo_pagamento: string
+  status: string
+  quantidade_total: number
+  produtos: ProdutoNoPedido[]
+}

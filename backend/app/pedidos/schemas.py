@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class PedidoItem(BaseModel):
     id: str
@@ -45,3 +45,39 @@ class EtapaFluxo(BaseModel):
 class AnaliseFluxo(BaseModel):
     etapas: List[EtapaFluxo]
     total_pedidos: int
+
+class PedidoCreate(BaseModel):
+    id_pedido: str
+    id_cliente: str
+    id_produto: str
+    valor: float
+    quantidade: int
+    data: str  # Formato DD-MM-YYYY
+    metodo_pagamento: str
+    status: str
+
+class PedidoUpdate(BaseModel):
+    valor: Optional[float] = None
+    quantidade: Optional[int] = None
+    metodo_pagamento: Optional[str] = None
+    status: Optional[str] = None
+    data: Optional[str] = None  # Formato DD-MM-YYYY
+
+class ProdutoNoPedido(BaseModel):
+    cod_produto: str
+    nome_produto: str
+    categoria: str
+    valor: float
+    quantidade: int
+
+class PedidoDetalhe(BaseModel):
+    id: str
+    cod_pedido: str
+    id_cliente: str
+    nome_cliente: str
+    valor_total: float
+    data: str
+    metodo_pagamento: str
+    status: str
+    quantidade_total: int
+    produtos: List[ProdutoNoPedido]

@@ -22,12 +22,18 @@ export const pedidosService = {
     return api.get<ListaPedidoPaginada>(`/pedidos/?${params}`).then((r) => r.data)
   },
 
-  obterPedido: (id: number) => 
-    api.get(`/pedidos/${id}`).then((r) => r.data),
+  obterPedido: (id: string) => 
+    api.get<PedidoDetalhe>(`/pedidos/${id}`).then((r) => r.data),
 
   buscarKpis: () =>
     api.get<KpisPedidos>('/pedidos/kpis').then((r) => r.data),
 
   buscarAnaliseFluxo: () =>
     api.get<AnaliseFluxo>('/pedidos/analise-fluxo').then((r) => r.data),
+
+  atualizarPedido: (id: string, dados: any) =>
+    api.patch(`/pedidos/${id}`, dados).then((r) => r.data),
+
+  deletarPedido: (id: string) =>
+    api.delete(`/pedidos/${id}`).then((r) => r.data),
 }

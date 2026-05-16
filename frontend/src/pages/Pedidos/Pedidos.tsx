@@ -9,16 +9,17 @@ import { PainelFiltroAvancado } from '../../components/molecules/pedidos/PainelF
 import { FiltroTag } from '../../components/atoms/compartilhados/FiltroTag'
 import { Paginacao } from '../../components/molecules/compartilhados/Paginacao'
 import { SecaoAnaliseFluxo } from '../../components/organisms/pedidos/SecaoAnaliseFluxo'
-import { GavetaPedido } from '../../components/molecules/pedidos/GavetaPedido'
+import { PedidoPerfilView } from '../../components/organisms/pedidos/PedidoPerfilView'
 import { ModalEdicaoLote } from '../../components/molecules/pedidos/ModalEdicaoLote'
+import { usePedido } from '../../hooks/usePedidos'
 import { MESES_FILTRO } from '../../constants/opcoesFiltro'
 import type { PedidoItem } from '../../types/pedidos'
 
 export default function Pedidos() {
   const [pagina, setPagina] = useState(1)
   const [painelAberto, setPainelAberto] = useState(false)
-  const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoItem | null>(null)
-  const [gavetaAberta, setGavetaAberta] = useState(false)
+  const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState<string | null>(null)
+  const [exibindoPerfil, setExibindoPerfil] = useState(false)
   const [selecionados, setSelecionados] = useState<string[]>([])
   const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false)
   const [filtros, setFiltros] = useState({
@@ -45,6 +46,7 @@ export default function Pedidos() {
     tamanho: 10,
   })
 
+  const { data: pedidoDetalhe, isLoading: isLoadingDetalhe } = usePedido(pedidoSelecionadoId || undefined)
   const { data: kpis } = useKpisPedidos()
 
   const pedidos = data?.itens ?? []
@@ -74,9 +76,21 @@ export default function Pedidos() {
   }
 
   return (
-    <LayoutPrincipal titulo="PEDIDOS">
+    <LayoutPrincipal titulo={exibindoPerfil ? "PERFIL DO PEDIDO" : "PEDIDOS"}>
       <div className="flex flex-col gap-8">
-        {/* KPI Grid */}
+        {exibindoPerfil ? (
+          <PedidoPerfilView 
+            pedidoId={pedidoSelecionadoId!}
+            pedido={pedidoDetalhe}
+            isLoading={isLoadingDetalhe}
+            onClose={() => {
+              setExibindoPerfil(false)
+              setPedidoSelecionadoId(null)
+            }}
+          />
+        ) : (
+          <>
+            {/* KPI Grid */}
         <div className="flex gap-4 overflow-x-auto pb-2">
           <CardKpi 
             titulo="Em andamento" 
@@ -197,8 +211,8 @@ export default function Pedidos() {
           selecionados={selecionados}
           onSelecionadosChange={setSelecionados}
           onRowClick={(p) => {
-            setPedidoSelecionado(p)
-            setGavetaAberta(true)
+            setPedidoSelecionadoId(p.id)
+            setExibindoPerfil(true)
           }}
         />
 
@@ -211,20 +225,8 @@ export default function Pedidos() {
 
         {/* Workflow Analysis Section */}
         <SecaoAnaliseFluxo />
-
-        {/* Side Drawer for Editing */}
-        <GavetaPedido 
-          pedido={pedidoSelecionado}
-          isOpen={gavetaAberta}
-          onClose={() => setGavetaAberta(false)}
-          onUpdateStatus={(id, status) => {
-            // Aqui chamariamos o service de update
-            console.log('Update status:', id, status)
-            if (pedidoSelecionado) {
-              setPedidoSelecionado({ ...pedidoSelecionado, status })
-            }
-          }}
-        />
+      </>
+    )}
 
         {/* Bulk Edit Modal */}
         <ModalEdicaoLote 

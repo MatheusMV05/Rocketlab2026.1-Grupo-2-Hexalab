@@ -1,5 +1,5 @@
 from typing import List, Optional, Tuple, Any
-from datetime import date
+from datetime import date, datetime
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.pedidos.models import Pedido, ClienteDim, ProdutoDim, DataDim
@@ -87,7 +87,7 @@ class PedidoRepository:
         return total, result.all()
 
     @staticmethod
-    async def obter_pedido_por_id(db: AsyncSession, pedido_id: str) -> Optional[Any]:
+    async def obter_pedido_por_id(db: AsyncSession, pedido_id: str) -> List[Any]:
         stmt = select(
             Pedido.id_pedido,
             ClienteDim.nome.label("nome_cliente"),
@@ -99,7 +99,8 @@ class PedidoRepository:
             Pedido.quantidade,
             DataDim.data_completa.label("data_pedido_txt"),
             Pedido.metodo_pagamento,
-            Pedido.status
+            Pedido.status,
+            Pedido.id_cliente
         ).outerjoin(
             ClienteDim, Pedido.sk_cliente == ClienteDim.sk_cliente
         ).outerjoin(
@@ -109,7 +110,7 @@ class PedidoRepository:
         ).where(Pedido.id_pedido == pedido_id)
 
         result = await db.execute(stmt)
-        return result.first()
+        return result.all()
 
     @staticmethod
     async def obter_kpis(db: AsyncSession) -> dict:
@@ -172,3 +173,73 @@ class PedidoRepository:
         
         result = await db.execute(stmt)
         return result.all()
+
+    @staticmethod
+    async def criar_pedido(db: AsyncSession, pedido_data: dict) -> Pedido:
+        # Tenta converter a data para sk_data_pedido (YYYYMMDD)
+        dt_str = pedido_data.get("data", "")
+        try:
+            dt_obj = datetime.strptime(dt_str, "%d-%m-%Y")
+            sk_data = int(dt_obj.strftime("%Y%m%d"))
+        except:
+            sk_data = int(datetime.now().strftime("%Y%m%d"))
+
+        novo_pedido = Pedido(
+            sk_pedido=pedido_data["id_pedido"],
+            id_pedido=pedido_data["id_pedido"],
+            id_cliente=pedido_data["id_cliente"],
+            id_produto=pedido_data["id_produto"],
+            sk_cliente=pedido_data["id_cliente"],
+            sk_produto=pedido_data["id_produto"],
+            sk_data_pedido=sk_data,
+            valor_pedido_brl=pedido_data["valor"],
+            quantidade=pedido_data["quantidade"],
+            metodo_pagamento=pedido_data["metodo_pagamento"],
+            status=pedido_data["status"]
+        )
+        db.add(novo_pedido)
+        await db.commit()
+        await db.refresh(novo_pedido)
+        return novo_pedido
+
+    @staticmethod
+    async def atualizar_pedido(db: AsyncSession, pedido_id: str, update_data: dict) -> Optional[Pedido]:
+        stmt = select(Pedido).where(Pedido.id_pedido == pedido_id)
+        result = await db.execute(stmt)
+        pedido = result.scalar_one_or_none()
+        
+        if not pedido:
+            return None
+        
+        if "data" in update_data and update_data["data"]:
+            try:
+                dt_obj = datetime.strptime(update_data["data"], "%d-%m-%Y")
+                pedido.sk_data_pedido = int(dt_obj.strftime("%Y%m%d"))
+            except:
+                pass
+
+        if "valor" in update_data and update_data["valor"] is not None:
+            pedido.valor_pedido_brl = update_data["valor"]
+        if "quantidade" in update_data and update_data["quantidade"] is not None:
+            pedido.quantidade = update_data["quantidade"]
+        if "metodo_pagamento" in update_data and update_data["metodo_pagamento"]:
+            pedido.metodo_pagamento = update_data["metodo_pagamento"]
+        if "status" in update_data and update_data["status"]:
+            pedido.status = update_data["status"]
+            
+        await db.commit()
+        await db.refresh(pedido)
+        return pedido
+
+    @staticmethod
+    async def deletar_pedido(db: AsyncSession, pedido_id: str) -> bool:
+        stmt = select(Pedido).where(Pedido.id_pedido == pedido_id)
+        result = await db.execute(stmt)
+        pedido = result.scalar_one_or_none()
+        
+        if not pedido:
+            return False
+        
+        await db.delete(pedido)
+        await db.commit()
+        return True

@@ -4,7 +4,10 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from fastapi import HTTPException
-from app.pedidos.schemas import ListaPedidoPaginada, PedidoItem, KpisPedidos, AnaliseFluxo, EtapaFluxo
+from app.pedidos.schemas import (
+    ListaPedidoPaginada, PedidoItem, KpisPedidos, AnaliseFluxo, 
+    EtapaFluxo, PedidoDetalhe, ProdutoNoPedido
+)
 from app.pedidos.repository import PedidoRepository
 
 # Configuração de um log temporário para capturar erros do banco
@@ -77,12 +80,44 @@ class PedidoService:
             raise HTTPException(status_code=500, detail=f"Erro interno ao processar pedidos: {str(e)}")
 
     @staticmethod
-    async def obter_pedido_por_id(db: AsyncSession, pedido_id: str) -> Optional[PedidoItem]:
+    async def obter_pedido_por_id(db: AsyncSession, pedido_id: str) -> Optional[PedidoDetalhe]:
         try:
-            pedido = await PedidoRepository.obter_pedido_por_id(db=db, pedido_id=pedido_id)
-            if pedido:
-                return PedidoService._map_to_pedido_item(pedido)
-            return None
+            resultados = await PedidoRepository.obter_pedido_por_id(db=db, pedido_id=pedido_id)
+            if not resultados:
+                return None
+            
+            primeiro = resultados[0]._mapping
+            
+            produtos = []
+            valor_total = 0
+            qtd_total = 0
+            
+            for r in resultados:
+                data = r._mapping
+                valor = float(data.get("valor_pedido_brl") or 0.0)
+                qtd = int(data.get("quantidade") or 0)
+                produtos.append(ProdutoNoPedido(
+                    cod_produto=str(data.get("id_produto", "")),
+                    nome_produto=data.get("nome_produto") or "Produto Desconhecido",
+                    categoria=data.get("categoria") or "Geral",
+                    valor=valor,
+                    quantidade=qtd
+                ))
+                valor_total += valor
+                qtd_total += qtd
+
+            return PedidoDetalhe(
+                id=str(primeiro.get("id_pedido", "")),
+                cod_pedido=str(primeiro.get("id_pedido", "")),
+                id_cliente=str(primeiro.get("id_cliente", "")),
+                nome_cliente=f"{primeiro.get('nome_cliente') or ''} {primeiro.get('sobrenome_cliente') or ''}".strip() or "Cliente Desconhecido",
+                valor_total=valor_total,
+                data=primeiro.get("data_pedido_txt") or "",
+                metodo_pagamento=primeiro.get("metodo_pagamento") or "N/A",
+                status=primeiro.get("status") or "Pendente",
+                quantidade_total=qtd_total,
+                produtos=produtos
+            )
         except Exception as e:
             with open(LOG_FILE, "a") as f:
                 f.write(f"Erro em obter_pedido_por_id: {str(e)}\n")
@@ -161,3 +196,35 @@ class PedidoService:
             with open(LOG_FILE, "a") as f:
                 f.write(f"Erro em obter_analise_fluxo: {str(e)}\n")
             raise HTTPException(status_code=500, detail="Erro ao obter análise de fluxo")
+
+    @staticmethod
+    async def criar_pedido(db: AsyncSession, pedido_in: any) -> PedidoDetalhe:
+        try:
+            pedido = await PedidoRepository.criar_pedido(db, pedido_in.model_dump())
+            # Após criar, buscamos novamente para vir com os Joins das dimensões
+            return await PedidoService.obter_pedido_por_id(db, pedido.id_pedido)
+        except Exception as e:
+            with open(LOG_FILE, "a") as f:
+                f.write(f"Erro em criar_pedido: {str(e)}\n")
+            raise HTTPException(status_code=500, detail=f"Erro ao criar pedido: {str(e)}")
+
+    @staticmethod
+    async def atualizar_pedido(db: AsyncSession, pedido_id: str, update_in: any) -> Optional[PedidoDetalhe]:
+        try:
+            pedido = await PedidoRepository.atualizar_pedido(db, pedido_id, update_in.model_dump(exclude_unset=True))
+            if not pedido:
+                return None
+            return await PedidoService.obter_pedido_por_id(db, pedido_id)
+        except Exception as e:
+            with open(LOG_FILE, "a") as f:
+                f.write(f"Erro em atualizar_pedido: {str(e)}\n")
+            raise HTTPException(status_code=500, detail="Erro ao atualizar pedido")
+
+    @staticmethod
+    async def deletar_pedido(db: AsyncSession, pedido_id: str) -> bool:
+        try:
+            return await PedidoRepository.deletar_pedido(db, pedido_id)
+        except Exception as e:
+            with open(LOG_FILE, "a") as f:
+                f.write(f"Erro em deletar_pedido: {str(e)}\n")
+            raise HTTPException(status_code=500, detail="Erro ao deletar pedido")

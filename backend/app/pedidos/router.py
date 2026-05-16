@@ -3,7 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, HTTPException, Query, Depends
 from app.database import get_db
 from datetime import datetime, date
-from app.pedidos.schemas import ListaPedidoPaginada, PedidoItem, KpisPedidos, AnaliseFluxo
+from app.pedidos.schemas import (
+    ListaPedidoPaginada, PedidoItem, KpisPedidos, AnaliseFluxo, 
+    PedidoCreate, PedidoUpdate, PedidoDetalhe
+)
 from app.pedidos.service import PedidoService
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
@@ -63,7 +66,7 @@ async def obter_analise_fluxo(db: AsyncSession = Depends(get_db)):
     """
     return await PedidoService.obter_analise_fluxo(db)
 
-@router.get("/{pedido_id}", response_model=PedidoItem, summary="Detalhes do Pedido")
+@router.get("/{pedido_id}", response_model=PedidoDetalhe, summary="Detalhes do Pedido")
 async def obter_pedido(pedido_id: str, db: AsyncSession = Depends(get_db)):
     """
     Obtém os detalhes completos de um pedido específico.
@@ -72,3 +75,30 @@ async def obter_pedido(pedido_id: str, db: AsyncSession = Depends(get_db)):
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     return pedido
+
+@router.post("/", response_model=PedidoDetalhe, summary="Criar Novo Pedido", status_code=201)
+async def criar_pedido(pedido_in: PedidoCreate, db: AsyncSession = Depends(get_db)):
+    """
+    Cria um novo registro de pedido no banco de dados.
+    """
+    return await PedidoService.criar_pedido(db=db, pedido_in=pedido_in)
+
+@router.patch("/{pedido_id}", response_model=PedidoDetalhe, summary="Atualizar Pedido")
+async def atualizar_pedido(pedido_id: str, update_in: PedidoUpdate, db: AsyncSession = Depends(get_db)):
+    """
+    Atualiza parcialmente os dados de um pedido existente.
+    """
+    pedido = await PedidoService.atualizar_pedido(db=db, pedido_id=pedido_id, update_in=update_in)
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    return pedido
+
+@router.delete("/{pedido_id}", summary="Deletar Pedido", status_code=204)
+async def deletar_pedido(pedido_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Remove permanentemente um pedido do banco de dados.
+    """
+    sucesso = await PedidoService.deletar_pedido(db=db, pedido_id=pedido_id)
+    if not sucesso:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    return None
