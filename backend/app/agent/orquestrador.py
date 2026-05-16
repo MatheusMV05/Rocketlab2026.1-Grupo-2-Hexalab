@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-import psycopg2 
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from app.agent.agentes.agente_decompositor import AgenteDecompositor
@@ -12,7 +10,6 @@ from app.agent.agentes.agente_refinador import AgenteRefinador
 from app.agent.agentes.agente_seletor import AgenteSeletor
 from app.agent.config import Config
 from app.agent.db.adapters import DatabaseAdapter
-from app.agent.db.leitor_esquema import ler_esquema
 from app.agent.Guardrail.guardrail import validar_pergunta_usuario
 
 logger = logging.getLogger(__name__)
