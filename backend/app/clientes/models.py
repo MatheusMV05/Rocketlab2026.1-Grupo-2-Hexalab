@@ -80,10 +80,16 @@ class TicketFato(Base):
     sk_ticket: Mapped[str] = mapped_column(String, primary_key=True)
     id_ticket: Mapped[str] = mapped_column(String)
     id_cliente: Mapped[str] = mapped_column(String)
+    sk_cliente: Mapped[Optional[str]] = mapped_column(String)
+    sk_pedido: Mapped[Optional[str]] = mapped_column(String)
     tipo_problema: Mapped[Optional[str]] = mapped_column(String)
     sk_data_abertura: Mapped[int] = mapped_column(Integer)
+    sk_data_resolucao: Mapped[Optional[int]] = mapped_column(Integer)
     tempo_resolucao_horas: Mapped[Optional[float]] = mapped_column(Float)
     nota_avaliacao: Mapped[Optional[int]] = mapped_column(Integer)
+    agente_suporte: Mapped[Optional[str]] = mapped_column(String)
+    sla_status: Mapped[Optional[str]] = mapped_column(String)
+    fl_resolvido: Mapped[Optional[int]] = mapped_column(Integer)
 
 class ProdutoDim(Base):
     __tablename__ = "dim_produtos"

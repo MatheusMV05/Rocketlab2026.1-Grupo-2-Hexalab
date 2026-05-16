@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { api } from './api'
 import type { 
   ListaClientePaginada, 
   ClientePerfil, 
@@ -7,10 +7,6 @@ import type {
   TicketCliente, 
   KpisClientes 
 } from '../types/clientes'
-
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-})
 
 export const clientesService = {
   listar: (params: { query?: string; estado?: string; pagina?: number; tamanho?: number }) =>
