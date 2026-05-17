@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import re
-import sqlite3
-from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from app.agent.db.adapters import DatabaseAdapter
 
 
 _PADRAO_CREATE_TABLE = re.compile(
@@ -119,27 +118,6 @@ def _normalizar_valor(valor: Any) -> str:
     return str(valor)
 
 
-def _extrair_valores_distintos(
-    db_path: str | Path,
-    tabela: str,
-    coluna: str,
-    limite: int,
-) -> list[str]:
-    tabela_sql = _quote_identificador(tabela)
-    coluna_sql = _quote_identificador(coluna)
-    sql = (
-        f"SELECT DISTINCT {coluna_sql} "
-        f"FROM {tabela_sql} "
-        f"WHERE {coluna_sql} IS NOT NULL "
-        f"ORDER BY {coluna_sql} "
-        f"LIMIT ?"
-    )
-
-    with sqlite3.connect(str(db_path)) as conexao:
-        cursor = conexao.execute(sql, (limite,))
-        return [_normalizar_valor(linha[0]) for linha in cursor.fetchall()]
-
-
 def _descricao_coluna(nome_coluna: str, tipo_coluna: str) -> str:
     nome_normalizado = nome_coluna.lower()
     tipo_normalizado = tipo_coluna.lower()
@@ -162,7 +140,7 @@ def _descricao_coluna(nome_coluna: str, tipo_coluna: str) -> str:
 
 def generate_examples_from_schema(
     esquema_ddl: str,
-    db_path: str | Path | None = None,
+    db: DatabaseAdapter | None = None,
     limite_valores: int = 60,
 ) -> List[Dict[str, Any]]:
     """Gera hints do schema para o prompt.
@@ -180,19 +158,19 @@ def generate_examples_from_schema(
             valores: list[str] = []
             erro: str | None = None
 
-            if deve_listar:
-                if db_path is None:
-                    erro = "db_path nao informado; valores reais nao foram extraidos."
-                else:
-                    try:
-                        valores = _extrair_valores_distintos(
-                            db_path=db_path,
-                            tabela=tabela,
-                            coluna=coluna,
-                            limite=limite_valores,
-                        )
-                    except Exception as exc:
-                        erro = str(exc)
+            if not deve_listar:
+                valores = []
+            elif db is None: 
+                erro = "DatabaseAdapter nao informado; valores reais nao foram extraidos."
+            else:
+                try:
+                    valores = db.distinct_values(
+                        tabela=tabela,
+                        coluna=coluna,
+                        limite=limite_valores,
+                    )
+                except Exception as exc:
+                    erro = str(exc)
 
             exemplos.append(
                 {
@@ -215,12 +193,12 @@ def generate_examples_from_schema(
 
 def gerar_exemplos_do_esquema(
     esquema_ddl: str,
-    db_path: str | Path | None = None,
+    db_connection_string: str | None = None, 
     limite_valores: int = 20,
 ) -> List[Dict[str, Any]]:
     """Alias em portugues para o gerador de hints do schema."""
     return generate_examples_from_schema(
         esquema_ddl=esquema_ddl,
-        db_path=db_path,
+        db_connection_string=db_connection_string, 
         limite_valores=limite_valores,
     )

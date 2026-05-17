@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import re
 import json
 import logging
-import re
-from pathlib import Path
 from typing import Any
 
 from pydantic_ai import Agent
@@ -43,7 +42,7 @@ class AgenteDecompositor(AgenteBase):
 		self,
 		esquema_filtrado: str,
 		pergunta: str,
-		db_path: str | Path | None = None,
+		db: Any = None,
 		message_history: list[Any] | None = None,
 	) -> ResultadoDecompositor:
 		"""Executa o decomposer e retorna SQL + raciocínio com tipagem forte.
@@ -61,7 +60,7 @@ class AgenteDecompositor(AgenteBase):
 
 		# Gera exemplos do schema e extrai valores reais apenas para colunas categoricas permitidas.
 		try:
-			generated_examples = generate_examples_from_schema(esquema_filtrado, db_path=db_path)
+			generated_examples = generate_examples_from_schema(esquema_filtrado, db=db)
 		except Exception:
 			generated_examples = []
 
