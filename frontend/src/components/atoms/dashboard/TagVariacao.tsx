@@ -11,7 +11,7 @@ export function TagVariacao({ valor, tipo = 'bom' }: Props) {
 
   return (
     <span
-      className={`inline-flex items-center justify-center border-2 rounded-[10px] px-2 py-[3px] text-[10px] font-semibold whitespace-nowrap ${estilos}`}
+      className={`inline-flex items-center justify-center border rounded-[10px] px-2 py-[3px] text-[10px] font-semibold whitespace-nowrap ${estilos}`}
     >
       {valor}
     </span>
