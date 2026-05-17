@@ -613,32 +613,32 @@ export function ListaEntregas() {
       )}
 
       {/* Divisor */}
-      <div className="border-t border-[#e0e0e0] mx-1" />
+      <div className="border-t-2 border-[#e0e0e0]" />
 
       {/* Tabela */}
       {isLoading && (
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse table-fixed">
           <thead>
             <tr className="bg-[#f6f7f9]">
-              <th className="w-px pl-3 py-[10px] rounded-l-[10px]" />
-              <th className="w-px py-[10px] pr-6 text-left text-[14px] font-semibold text-[#1d5358] whitespace-nowrap">Pedido</th>
-              <th className="py-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Cliente</th>
-              <th className="w-[160px] py-[10px] pl-[18px] text-left text-[14px] font-semibold text-[#1d5358]">Status</th>
-              <th className="w-[120px] py-[10px] pr-3 rounded-r-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Prazo</th>
+              <th className="w-[36px] pl-3 py-[13px] rounded-l-[10px]" />
+              <th className="w-[26%] py-[13px] px-2 text-left text-[13px] font-semibold text-[#1d5358] whitespace-nowrap">Pedido</th>
+              <th className="py-[13px] pl-8 text-left text-[13px] font-semibold text-[#1d5358]">Cliente</th>
+              <th className="w-[22%] py-[13px] pl-3 text-left text-[13px] font-semibold text-[#1d5358]">Status</th>
+              <th className="w-[13%] py-[13px] pl-2 pr-3 rounded-r-[10px] text-left text-[13px] font-semibold text-[#1d5358]">Prazo</th>
             </tr>
           </thead>
           <tbody>
             {Array.from({ length: 10 }).map((_, idx) => (
               <React.Fragment key={idx}>
                 <tr className="animate-pulse">
-                  <td className="pl-3 py-[10px]"><div className="w-4 h-4 bg-[#e0e0e0] rounded" /></td>
-                  <td className="py-[10px] pr-6"><div className="h-3 w-24 bg-[#e0e0e0] rounded" /></td>
-                  <td className="py-[10px]"><div className="h-3 w-36 bg-[#e0e0e0] rounded" /></td>
-                  <td className="py-[10px] pl-[18px]"><div className="h-3 w-28 bg-[#e0e0e0] rounded" /></td>
-                  <td className="py-[10px] pr-3"><div className="h-3 w-16 bg-[#e0e0e0] rounded" /></td>
+                  <td className="pl-3 py-[18px]"><div className="w-4 h-4 bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[18px] px-2"><div className="h-3 w-full bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[18px] pl-8"><div className="h-3 w-36 bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[18px] pl-3"><div className="h-3 w-28 bg-[#e0e0e0] rounded" /></td>
+                  <td className="py-[18px] pl-2 pr-3"><div className="h-3 w-16 bg-[#e0e0e0] rounded" /></td>
                 </tr>
                 {idx < 9 && (
-                  <tr><td colSpan={5} className="p-0"><div className="border-t border-[#e0e0e0] mx-1" /></td></tr>
+                  <tr><td colSpan={5} className="p-0"><div className="border-t border-[#e0e0e0]/30" /></td></tr>
                 )}
               </React.Fragment>
             ))}
@@ -651,10 +651,10 @@ export function ListaEntregas() {
         </div>
       )}
       {!isLoading && !isError && (
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse table-fixed">
           <thead>
             <tr className="bg-[#f6f7f9]">
-              <th className="w-px pl-3 py-[10px] rounded-l-[10px] text-left font-normal">
+              <th className="w-[36px] pl-3 py-[13px] rounded-l-[10px] text-left font-normal">
                 <button onClick={toggleTodos}>
                   {todosSelecionados ? (
                     <CheckSquare size={16} strokeWidth={1.5} className="text-[#1d5358]" />
@@ -663,10 +663,10 @@ export function ListaEntregas() {
                   )}
                 </button>
               </th>
-              <th className="w-px py-[10px] pr-6 text-left text-[14px] font-semibold text-[#1d5358] whitespace-nowrap">Pedido</th>
-              <th className="py-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Cliente</th>
-              <th className="w-[160px] py-[10px] pl-[18px] text-left text-[14px] font-semibold text-[#1d5358]">Status</th>
-              <th className="w-[120px] py-[10px] pr-3 rounded-r-[10px] text-left text-[14px] font-semibold text-[#1d5358]">Prazo</th>
+              <th className="w-[26%] py-[13px] px-2 text-left text-[13px] font-semibold text-[#1d5358] whitespace-nowrap">Pedido</th>
+              <th className="py-[13px] pl-8 text-left text-[13px] font-semibold text-[#1d5358]">Cliente</th>
+              <th className="w-[22%] py-[13px] pl-3 text-left text-[13px] font-semibold text-[#1d5358]">Status</th>
+              <th className="w-[13%] py-[13px] pl-2 pr-3 rounded-r-[10px] text-left text-[13px] font-semibold text-[#1d5358]">Prazo</th>
             </tr>
           </thead>
           <tbody>
@@ -679,41 +679,43 @@ export function ListaEntregas() {
               return (
                 <React.Fragment key={entrega.id}>
                   <tr
-                    onClick={() => toggleSelecionado(entrega.id)}
-                    className={`cursor-pointer transition-colors rounded-[8px] ${
-                      selecionado ? 'bg-[#f0f5f5]' : 'hover:bg-[#f6f7f9]'
+                    className={`transition-colors rounded-[8px] ${
+                      selecionado ? 'bg-[#f0f5f5]' : ''
                     }`}
                   >
-                    <td className="pl-3 py-[10px]">
+                    <td
+                      className="pl-3 py-[18px] cursor-pointer"
+                      onClick={() => toggleSelecionado(entrega.id)}
+                    >
                       {selecionado ? (
                         <CheckSquare size={16} strokeWidth={1.5} className="text-[#1d5358]" />
                       ) : (
                         <Square size={16} strokeWidth={1.5} className="text-[#4d4d4d]" />
                       )}
                     </td>
-                    <td className="py-[10px] pr-6 text-[14px] font-medium text-[#343434] whitespace-nowrap">
+                    <td className="py-[18px] px-2 text-[13px] font-medium text-[#343434] whitespace-nowrap overflow-hidden">
                       {entrega.id}
                     </td>
-                    <td className="py-[10px] text-[14px] font-medium text-[#343434]">
+                    <td className="py-[18px] pl-8 text-[13px] font-medium text-[#343434] overflow-hidden text-ellipsis">
                       {entrega.cliente}
                     </td>
-                    <td className="py-[10px] pl-[18px]">
+                    <td className="py-[18px] pl-3">
                       <div className="flex items-center gap-2">
                         <span
                           className="inline-block w-[10px] h-[10px] rounded-full shrink-0"
                           style={{ backgroundColor: cfg.cor }}
                         />
-                        <span className="text-[14px] font-medium text-[#343434]">{cfg.label}</span>
+                        <span className="text-[13px] font-medium text-[#343434] truncate">{cfg.label}</span>
                       </div>
                     </td>
-                    <td className="py-[10px] pr-3 text-[14px] font-medium text-[#343434]">
+                    <td className="py-[18px] pl-2 pr-3 text-[13px] font-medium text-[#343434] whitespace-nowrap">
                       {entrega.prazo}
                     </td>
                   </tr>
                   {idx < entregas.length - 1 && (
                     <tr>
                       <td colSpan={5} className="p-0">
-                        <div className="border-t border-[#e0e0e0] mx-1" />
+                        <div className="border-t border-[#e0e0e0]/30" />
                       </td>
                     </tr>
                   )}
@@ -777,10 +779,10 @@ export function ListaEntregas() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
           onClick={(e) => { if (e.target === e.currentTarget) setModalEdicaoAberto(false) }}
         >
-          <div className="bg-white rounded-[16px] shadow-xl w-full max-w-[480px] mx-4 flex flex-col gap-5 p-6 relative">
+          <div className="bg-[#F6F7F9] rounded-[10px] shadow-xl w-full max-w-[480px] mx-4 flex flex-col gap-5 p-6 relative">
             <button
               onClick={() => setModalEdicaoAberto(false)}
-              className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#f6f7f9] text-[#4d4d4d] transition-colors"
+              className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full hover:bg-white text-[#262626] transition-colors"
             >
               <X size={16} strokeWidth={2} />
             </button>
@@ -790,14 +792,14 @@ export function ListaEntregas() {
             </h2>
 
             <div className="flex flex-col gap-4">
-              {/* Lista de pedidos selecionados */}
+              {/* Lista de pedidos selecionados — somente leitura */}
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-medium text-[#343434]">
+                <label className="text-[12px] font-medium text-[#262626]">
                   Pedidos selecionados
                 </label>
-                <div className="border border-[#e0e0e0] rounded-[8px] bg-[#f6f7f9] max-h-[152px] overflow-y-auto divide-y divide-[#e0e0e0]">
+                <div className="border border-black rounded-[4px] bg-white max-h-[152px] overflow-y-auto divide-y divide-[#e0e0e0]">
                   {selecionados.map((id) => (
-                    <div key={id} className="px-3 py-2 font-mono text-[11px] text-[#898989] select-all whitespace-nowrap">
+                    <div key={id} className="px-3 py-2 font-mono text-[11px] text-[#C2C2C2] select-all whitespace-nowrap">
                       {id}
                     </div>
                   ))}
@@ -806,72 +808,72 @@ export function ListaEntregas() {
 
               {/* Cliente */}
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-medium text-[#343434]">Cliente</label>
+                <label className="text-[12px] font-medium text-[#262626]">Cliente</label>
                 <input
                   type="text"
                   value={edicao.cliente}
                   onChange={(e) => setEdicao((ed) => ({ ...ed, cliente: e.target.value }))}
-                  className="h-[42px] px-3 border border-[#d1d5db] rounded-[8px] text-[14px] text-[#343434] focus:outline-none focus:border-[#3f7377]"
+                  className="h-[38px] px-3 border border-black rounded-[4px] bg-white text-[14px] text-[#262626] focus:outline-none focus:border-[#1D5358]"
                 />
               </div>
 
               {/* Status */}
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-medium text-[#343434]">Status</label>
+                <label className="text-[12px] font-medium text-[#262626]">Status</label>
                 <div className="relative">
                   <select
                     value={edicao.status}
                     onChange={(e) => setEdicao((ed) => ({ ...ed, status: e.target.value }))}
-                    className="appearance-none w-full h-[42px] pl-3 pr-8 border border-[#d1d5db] rounded-[8px] text-[14px] text-[#343434] bg-white focus:outline-none focus:border-[#3f7377] cursor-pointer"
+                    className="appearance-none w-full h-[38px] pl-3 pr-8 border border-[#666666] rounded-[4px] text-[14px] text-[#262626] bg-white focus:outline-none focus:border-[#1D5358] cursor-pointer"
                   >
                     <option value="">Status</option>
                     {STATUS_OPCOES.map(({ valor, label }) => (
                       <option key={valor} value={label}>{label}</option>
                     ))}
                   </select>
-                  <ChevronDown size={14} strokeWidth={2} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4d4d4d] pointer-events-none" />
+                  <ChevronDown size={14} strokeWidth={2} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#262626] pointer-events-none" />
                 </div>
               </div>
 
               {/* Prazo */}
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-medium text-[#343434]">Prazo</label>
+                <label className="text-[12px] font-medium text-[#262626]">Prazo</label>
                 <div className="grid grid-cols-3 gap-2">
                   {/* Dia */}
                   <div className="relative">
                     <select
                       value={edicao.dia}
                       onChange={(e) => setEdicao((ed) => ({ ...ed, dia: e.target.value }))}
-                      className="appearance-none w-full h-[38px] pl-3 pr-7 border border-[#d1d5db] rounded-[8px] text-[13px] text-[#343434] bg-white focus:outline-none focus:border-[#3f7377] cursor-pointer"
+                      className="appearance-none w-full h-[28px] pl-3 pr-7 border border-[#666666] rounded-[4px] text-[13px] text-[#262626] bg-white focus:outline-none focus:border-[#1D5358] cursor-pointer"
                     >
                       <option value="">Dia</option>
                       {DIAS.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
-                    <ChevronDown size={12} strokeWidth={2} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4d4d4d] pointer-events-none" />
+                    <ChevronDown size={12} strokeWidth={2} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#262626] pointer-events-none" />
                   </div>
                   {/* Mês */}
                   <div className="relative">
                     <select
                       value={edicao.mes}
                       onChange={(e) => setEdicao((ed) => ({ ...ed, mes: e.target.value }))}
-                      className="appearance-none w-full h-[38px] pl-3 pr-7 border border-[#d1d5db] rounded-[8px] text-[13px] text-[#343434] bg-white focus:outline-none focus:border-[#3f7377] cursor-pointer"
+                      className="appearance-none w-full h-[28px] pl-3 pr-7 border border-[#666666] rounded-[4px] text-[13px] text-[#262626] bg-white focus:outline-none focus:border-[#1D5358] cursor-pointer"
                     >
                       <option value="">Mês</option>
                       {MESES_PRAZO.map((m) => <option key={m} value={m}>{m}</option>)}
                     </select>
-                    <ChevronDown size={12} strokeWidth={2} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4d4d4d] pointer-events-none" />
+                    <ChevronDown size={12} strokeWidth={2} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#262626] pointer-events-none" />
                   </div>
                   {/* Ano */}
                   <div className="relative">
                     <select
                       value={edicao.ano}
                       onChange={(e) => setEdicao((ed) => ({ ...ed, ano: e.target.value }))}
-                      className="appearance-none w-full h-[38px] pl-3 pr-7 border border-[#d1d5db] rounded-[8px] text-[13px] text-[#343434] bg-white focus:outline-none focus:border-[#3f7377] cursor-pointer"
+                      className="appearance-none w-full h-[28px] pl-3 pr-7 border border-[#666666] rounded-[4px] text-[13px] text-[#262626] bg-white focus:outline-none focus:border-[#1D5358] cursor-pointer"
                     >
                       <option value="">Ano</option>
                       {ANOS_PRAZO.map((a) => <option key={a} value={a}>{a}</option>)}
                     </select>
-                    <ChevronDown size={12} strokeWidth={2} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4d4d4d] pointer-events-none" />
+                    <ChevronDown size={12} strokeWidth={2} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#262626] pointer-events-none" />
                   </div>
                 </div>
               </div>
@@ -881,13 +883,13 @@ export function ListaEntregas() {
             <div className="flex items-center justify-end gap-3 pt-1">
               <button
                 onClick={() => setModalEdicaoAberto(false)}
-                className="h-[39px] px-5 border border-[#d1d5db] rounded-[100px] text-[14px] font-medium text-[#343434] hover:bg-[#f6f7f9] transition-colors"
+                className="h-[34px] px-5 border border-black rounded-[100px] text-[14px] font-medium text-[#262626] hover:bg-white transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={aplicarEdicao}
-                className="h-[39px] px-5 bg-[#3f7377] rounded-[100px] text-[14px] font-medium text-white hover:bg-[#1d5358] transition-colors"
+                className="h-[35px] px-5 bg-[#1D5358] rounded-[100px] text-[14px] font-medium text-white hover:bg-[#163f43] transition-colors"
               >
                 Aplicar
               </button>

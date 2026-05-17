@@ -15,23 +15,10 @@ import { formatarVariacao } from '../../../utils/formatadores'
 
 // Traduz valores de status do backend para os rótulos exibidos no Figma
 const ROTULOS: Record<string, string> = {
-  // snake_case do backend
-  aguardando_pagamento: 'Aguardando pagamento',
-  pagamento_aprovado: 'Pagamento aprovado',
-  em_separacao: 'Em separação',
-  em_rota: 'Em rota de entrega',
-  em_rota_de_entrega: 'Em rota de entrega',
-  entregue: 'Entregue',
-  cancelado: 'Cancelado',
-  // Variações possíveis
-  'Em rota': 'Em rota de entrega',
-  'Processando': 'Em separação',
-  processando: 'Em separação',
-  'Aguardando pagamento': 'Aguardando pagamento',
-  'Pagamento aprovado': 'Pagamento aprovado',
-  'Em separação': 'Em separação',
-  'Entregue': 'Entregue',
-  'Cancelado': 'Cancelado',
+  'Entregue': 'Aprovado',
+  'Em Processamento': 'Processando',
+  'Reembolsado': 'Reembolsavel',
+  'Cancelado': 'Recusado',
 }
 
 interface Props {
