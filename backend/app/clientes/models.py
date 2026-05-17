@@ -6,6 +6,7 @@ from app.database import Base
 class ClienteMart(Base):
     """Mapeamento da tabela consolidada de clientes (Silver/Gold)"""
     __tablename__ = "mart_cliente_360"
+    __table_args__ = {'extend_existing': True}
 
     id_cliente: Mapped[str] = mapped_column(String, primary_key=True)
     nome: Mapped[Optional[str]] = mapped_column(String)
@@ -35,6 +36,7 @@ class ClienteMart(Base):
 class ClienteDim(Base):
     """Mapeamento da dimensão de clientes para dados cadastrais extras"""
     __tablename__ = "dim_clientes"
+    __table_args__ = {'extend_existing': True}
 
     sk_cliente: Mapped[str] = mapped_column(String, primary_key=True)
     id_cliente: Mapped[str] = mapped_column(String)
@@ -56,6 +58,7 @@ class ClienteDim(Base):
 
 class PedidoFato(Base):
     __tablename__ = "fat_pedidos"
+    __table_args__ = {'extend_existing': True}
     sk_pedido: Mapped[str] = mapped_column(String, primary_key=True)
     id_pedido: Mapped[str] = mapped_column(String)
     id_cliente: Mapped[str] = mapped_column(String)
@@ -68,6 +71,7 @@ class PedidoFato(Base):
 
 class AvaliacaoFato(Base):
     __tablename__ = "fat_avaliacoes"
+    __table_args__ = {'extend_existing': True}
     sk_avaliacao: Mapped[str] = mapped_column(String, primary_key=True)
     id_pedido: Mapped[str] = mapped_column(String)
     id_cliente: Mapped[str] = mapped_column(String)
@@ -77,6 +81,7 @@ class AvaliacaoFato(Base):
 
 class TicketFato(Base):
     __tablename__ = "fat_tickets"
+    __table_args__ = {'extend_existing': True}
     sk_ticket: Mapped[str] = mapped_column(String, primary_key=True)
     id_ticket: Mapped[str] = mapped_column(String)
     id_cliente: Mapped[str] = mapped_column(String)
@@ -87,11 +92,13 @@ class TicketFato(Base):
 
 class ProdutoDim(Base):
     __tablename__ = "dim_produtos"
+    __table_args__ = {'extend_existing': True}
     sk_produto: Mapped[str] = mapped_column(String, primary_key=True)
     nome_produto: Mapped[Optional[str]] = mapped_column(String)
     categoria: Mapped[Optional[str]] = mapped_column(String)
 
 class DataDim(Base):
     __tablename__ = "dim_data"
+    __table_args__ = {'extend_existing': True}
     sk_data: Mapped[int] = mapped_column(Integer, primary_key=True)
     data_completa: Mapped[Optional[str]] = mapped_column(String)

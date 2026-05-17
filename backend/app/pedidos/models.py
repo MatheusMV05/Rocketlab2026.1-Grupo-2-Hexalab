@@ -5,6 +5,7 @@ from app.database import Base
 
 class Pedido(Base):
     __tablename__ = "fat_pedidos"
+    __table_args__ = {'extend_existing': True}
 
     sk_pedido: Mapped[str] = mapped_column(String, primary_key=True)
     id_pedido: Mapped[str] = mapped_column(String, nullable=False)
@@ -20,18 +21,21 @@ class Pedido(Base):
 
 class ClienteDim(Base):
     __tablename__ = "dim_clientes"
+    __table_args__ = {'extend_existing': True}
     sk_cliente: Mapped[str] = mapped_column(String, primary_key=True)
     nome: Mapped[str] = mapped_column(String)
     sobrenome: Mapped[str] = mapped_column(String)
 
 class ProdutoDim(Base):
     __tablename__ = "dim_produtos"
+    __table_args__ = {'extend_existing': True}
     sk_produto: Mapped[str] = mapped_column(String, primary_key=True)
     nome_produto: Mapped[str] = mapped_column(String)
     categoria: Mapped[str] = mapped_column(String)
 
 class DataDim(Base):
     __tablename__ = "dim_data"
+    __table_args__ = {'extend_existing': True}
     sk_data: Mapped[int] = mapped_column(Integer, primary_key=True)
     data_completa: Mapped[str] = mapped_column(String)
     ano: Mapped[int] = mapped_column(Integer)
