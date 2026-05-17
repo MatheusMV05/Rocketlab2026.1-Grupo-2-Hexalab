@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { LayoutPrincipal } from '../../components/templates/LayoutPrincipal'
 import { usePedidos, useKpisPedidos } from '../../hooks/usePedidos'
-import { Box, CheckCircle, Clock, RefreshCcw, FileEdit, Filter, Upload } from 'lucide-react'
+import { Box, CheckCircle, DollarSign, RefreshCcw, FileEdit, Filter, Upload } from 'lucide-react'
 import { CardKpi } from '../../components/molecules/dashboard/CardKpi'
 import { SeletorOrganizarLista } from '../../components/molecules/pedidos/SeletorOrganizarLista'
 import { TabelaPedidosPremium } from '../../components/organisms/pedidos/TabelaPedidosPremium'
@@ -95,29 +95,29 @@ export default function Pedidos() {
           <CardKpi 
             titulo="Em andamento" 
             valor={`${(kpis?.processando ?? 0).toLocaleString('pt-BR')} pedidos`}
-            variacao="Processando"
+            variacao="+12%"
             tipo="bom"
             icone={<Box size={24} />} 
           />
           <CardKpi 
             titulo="Finalizados" 
             valor={`${(kpis?.aprovados ?? 0).toLocaleString('pt-BR')} pedidos`}
-            variacao="Aprovados"
-            tipo="bom"
+            variacao="-10%"
+            tipo="ruim"
             icone={<CheckCircle size={24} />} 
           />
           <CardKpi 
-            titulo="Recusados" 
-            valor={`${(kpis?.recusados ?? 0).toLocaleString('pt-BR')} pedidos`}
-            variacao="Recusados"
+            titulo="Total receita retida" 
+            valor={kpis ? `R$ ${kpis.recusados_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+            variacao="-12%"
             tipo="ruim"
-            icone={<Clock size={24} />} 
+            icone={<DollarSign size={24} />} 
           />
           <CardKpi 
             titulo="Reembolsados" 
             valor={`${(kpis?.reembolsados ?? 0).toLocaleString('pt-BR')} pedidos`}
-            variacao="Reembolsados"
-            tipo="ruim"
+            variacao="+12%"
+            tipo="bom"
             icone={<RefreshCcw size={24} />} 
           />
         </div>
