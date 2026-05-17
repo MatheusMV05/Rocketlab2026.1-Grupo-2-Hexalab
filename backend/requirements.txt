@@ -19,9 +19,8 @@ annotated-types==0.7.0
 python-dotenv>=1.1.0
 
 # IA e LLMs
-pydantic-ai-slim==1.96.0
+pydantic-ai-slim[mistral]==1.96.0
 summarization-pydantic-ai==0.1.4
-mistralai==1.2.6
 sentence-transformers
 
 # Testes e Utilitários
@@ -35,3 +34,4 @@ anyio>=4.13.0
 idna>=3.13
 certifi>=2026.4.22
 packaging>=26.2
+psycopg2-binary
