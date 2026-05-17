@@ -7,6 +7,12 @@ export const MESES_FILTRO = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ]
 
+export const MES_PARA_NUMERO: Record<string, string> = {
+  'Janeiro': '1', 'Fevereiro': '2', 'Março': '3', 'Abril': '4',
+  'Maio': '5', 'Junho': '6', 'Julho': '7', 'Agosto': '8',
+  'Setembro': '9', 'Outubro': '10', 'Novembro': '11', 'Dezembro': '12',
+}
+
 /** Siglas usadas no filtro global de período (ex: dropdown compacto) */
 export const ESTADOS_SIGLA = [
   'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',

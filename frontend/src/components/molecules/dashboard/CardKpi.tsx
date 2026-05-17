@@ -27,7 +27,7 @@ export function CardKpi({ titulo, valor, variacao, tipo = 'bom', icone }: Props)
   }
 
   return (
-    <div className="bg-white rounded-[10px] shadow-[0px_8px_30px_0px_rgba(0,0,0,0.05)] px-5 py-[24px] flex items-center gap-4 flex-1 min-w-0">
+    <div className="bg-white rounded-[10px] shadow-[0px_8px_30px_0px_rgba(0,0,0,0.05)] px-4 flex items-center gap-4 flex-1" style={{ height: 89 }}>
       <div className="text-[#3f7377] shrink-0">{icone}</div>
       <div className="flex flex-col gap-1 min-w-0">
         <span className="text-[13px] text-[#4d4d4d] font-medium leading-none truncate">{titulo}</span>

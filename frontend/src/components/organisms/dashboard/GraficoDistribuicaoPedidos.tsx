@@ -8,44 +8,33 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts'
-import { useState, useEffect } from 'react'
 import { useStatusPedidos } from '../../../hooks/useDashboard'
 import { TagVariacao } from '../../atoms/dashboard/TagVariacao'
 import { FiltroPeriodo, type FiltrosPeriodo } from '../../molecules/compartilhados/FiltroPeriodo'
+import { formatarVariacao } from '../../../utils/formatadores'
 
 // Traduz valores de status do backend para os rótulos exibidos no Figma
 const ROTULOS: Record<string, string> = {
-  // snake_case do backend
-  aguardando_pagamento: 'Aguardando pagamento',
-  pagamento_aprovado: 'Pagamento aprovado',
-  em_separacao: 'Em separação',
-  em_rota: 'Em rota de entrega',
-  em_rota_de_entrega: 'Em rota de entrega',
-  entregue: 'Entregue',
-  cancelado: 'Cancelado',
-  // Variações possíveis
-  'Em rota': 'Em rota de entrega',
-  'Processando': 'Em separação',
-  processando: 'Em separação',
-  'Aguardando pagamento': 'Aguardando pagamento',
-  'Pagamento aprovado': 'Pagamento aprovado',
-  'Em separação': 'Em separação',
-  'Entregue': 'Entregue',
-  'Cancelado': 'Cancelado',
+  'Entregue': 'Aprovado',
+  'Em Processamento': 'Processando',
+  'Reembolsado': 'Reembolsavel',
+  'Cancelado': 'Recusado',
 }
 
 interface Props {
   filtrosGlobais: FiltrosPeriodo
+  onFiltrosLocaisChange?: (filtros: FiltrosPeriodo) => void
 }
 
-export function GraficoDistribuicaoPedidos({ filtrosGlobais }: Props) {
-  const [filtros, setFiltros] = useState(filtrosGlobais)
+export function GraficoDistribuicaoPedidos({ filtrosGlobais, onFiltrosLocaisChange }: Props) {
+  function handleFiltrosChange(f: FiltrosPeriodo) {
+    onFiltrosLocaisChange?.(f)
+  }
 
-  useEffect(() => { setFiltros(filtrosGlobais) }, [filtrosGlobais])
-
-  const { data, isLoading, isError } = useStatusPedidos()
+  const { data, isLoading, isError } = useStatusPedidos(filtrosGlobais)
 
   const total = data?.items.reduce((s, i) => s + i.total, 0) ?? 0
+  const tagTotal = formatarVariacao(data?.variacao_total, data?.periodo_ref)
 
   const dados = (data?.items ?? []).map((item) => ({
     status: ROTULOS[item.status] ?? item.status,
@@ -55,8 +44,8 @@ export function GraficoDistribuicaoPedidos({ filtrosGlobais }: Props) {
   return (
     <div className="relative bg-white border-2 border-[#e0e0e0] rounded-[5px] h-full flex flex-col">
       {/* Filtros: absoluto no topo direito */}
-      <div className="absolute top-[13px] right-[14px]">
-        <FiltroPeriodo filtros={filtros} onChange={setFiltros} />
+      <div className="absolute top-[9px] right-[19px]">
+        <FiltroPeriodo filtros={filtrosGlobais} onChange={handleFiltrosChange} />
       </div>
 
       {/* Cabeçalho abaixo dos filtros */}
@@ -67,7 +56,7 @@ export function GraficoDistribuicaoPedidos({ filtrosGlobais }: Props) {
         <div className="flex items-center gap-1 mt-1 text-[11px]">
           <span className="text-[#343434] font-medium">Total de pedidos no mês:</span>
           <span className="font-bold text-[#343434]">{total || '—'}</span>
-          {total > 0 && <TagVariacao valor="+12%/ABR" tipo="bom" />}
+          {tagTotal && <TagVariacao valor={tagTotal.valor} tipo={tagTotal.tipo} />}
         </div>
       </div>
 

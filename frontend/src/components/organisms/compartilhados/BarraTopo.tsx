@@ -10,7 +10,7 @@ export function BarraTopo({ titulo }: Props) {
   const { abrir } = useAssistente()
 
   return (
-    <header className="fixed left-[60px] md:left-[104px] right-0 top-0 h-[60px] md:h-[87px] bg-[#f6f7f9] z-10 flex items-center px-4 md:px-6 border-b border-[#e0e0e0]">
+    <header className="fixed left-[60px] md:left-[104px] right-0 top-0 h-[60px] md:h-[87px] bg-[#f6f7f9] z-10 flex items-center px-4 md:px-6">
       {/* Título da página */}
       <h1 className="text-[20px] font-semibold text-[#343434] tracking-wide mr-auto">
         {titulo}

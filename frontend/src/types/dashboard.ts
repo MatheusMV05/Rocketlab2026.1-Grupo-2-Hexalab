@@ -3,6 +3,11 @@ export interface KpiDados {
   total_pedidos: number
   ticket_medio: number
   total_clientes: number
+  variacao_receita?: number | null
+  variacao_pedidos?: number | null
+  variacao_ticket?: number | null
+  variacao_clientes?: number | null
+  periodo_ref?: string
 }
 
 export interface VendaMensalItem {
@@ -19,10 +24,14 @@ export interface TopProdutoItem {
   nome_produto: string
   categoria: string
   receita_total: number
+  total_unidades: number
 }
 
 export interface TopProdutosDados {
   items: TopProdutoItem[]
+  variacao_receita?: number | null
+  variacao_volume?: number | null
+  periodo_ref?: string
 }
 
 export interface RegiaoItem {
@@ -43,23 +52,43 @@ export interface StatusPedidoItem {
 
 export interface StatusPedidosDados {
   items: StatusPedidoItem[]
+  variacao_total?: number | null
+  periodo_ref?: string
 }
 
 export interface TaxaSatisfacaoDados {
   valor: number
-  meta: number
   total_avaliacoes: number
+  variacao?: number | null
+  periodo_ref?: string
 }
 
 export interface MatrizProdutoItem {
   nome: string
-  volume: number
+  categoria: string
+  volume_produto: number
+  volume_total: number
+  participacao_percentual: number  // % real sobre total de vendas avaliadas (0-100)
+  participacao_rank: number        // percentil de volume entre os produtos exibidos (0-100)
   satisfacao: number
-  status: string
+  qtd_avaliacoes: number
+  status: string       // "bom" | "ruim"
+  quadrante: string    // "estrelas" | "oportunidades" | "alerta_vermelho" | "ofensores"
+  bloco_anterior: string
 }
 
 export interface MatrizProdutosDados {
   items: MatrizProdutoItem[]
+  volume_total: number
+}
+
+export interface LimitesBloco {
+  limite_estrelas: number
+  limite_oportunidades: number
+  limite_alerta_vermelho: number
+  limite_ofensores: number
+  corte_satisfacao: number
+  corte_volume: number
 }
 
 export interface EntregaItem {

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Circle } from 'lucide-react'
+import { Circle, Search } from 'lucide-react'
 
 interface Props {
   label: string
@@ -7,15 +7,18 @@ interface Props {
   valor: string
   onChange: (valor: string) => void
   rotulo?: string
+  pesquisavel?: boolean
+  overrideado?: boolean
 }
 
-export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props) {
+export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo, pesquisavel = false, overrideado = false }: Props) {
   const [aberto, setAberto] = useState(false)
   const [pendente, setPendente] = useState(valor)
+  const [busca, setBusca] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (aberto) setPendente(valor)
+    if (aberto) { setPendente(valor); setBusca('') }
   }, [aberto])
 
   useEffect(() => {
@@ -46,8 +49,8 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props
         style={{ border: `2px solid ${aberto ? '#3f7377' : '#e0e0e0'}` }}
       >
         <span className="font-semibold text-[#262626]">{nomeLabel}:</span>
-        <span className={valor ? 'text-[#1d5358]' : 'text-[#262626]'}>
-          {valor || 'Todos'}
+        <span className={overrideado ? 'text-[#898989]' : (valor ? 'text-[#1d5358]' : 'text-[#262626]')}>
+          {overrideado ? '---' : (valor || 'Todos')}
         </span>
         <svg
           width="10" height="6" viewBox="0 0 10 6"
@@ -68,21 +71,42 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props
             minWidth: 180,
           }}
         >
+          {/* Campo de pesquisa (apenas quando pesquisavel=true) */}
+          {pesquisavel && (
+            <div className="px-[14px] pt-[10px] pb-[6px]" style={{ borderBottom: '1px solid #e0e0e0' }}>
+              <div className="relative">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#898989] pointer-events-none" strokeWidth={1.5} />
+                <input
+                  type="text"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar..."
+                  className="w-full h-[30px] pl-7 pr-3 border border-[#e0e0e0] rounded-[6px] text-[12px] text-[#343434] placeholder-[#898989] focus:outline-none focus:border-[#3f7377]"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Lista com scroll */}
           <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-            <Item
-              rotulo="Todos"
-              selecionado={pendente === ''}
-              onClick={() => setPendente('')}
-              comSeparador={opcoes.length > 0}
-            />
-            {opcoes.map((op, i) => (
+            {!pesquisavel && (
+              <Item
+                rotulo="Todos"
+                selecionado={pendente === ''}
+                onClick={() => setPendente('')}
+                comSeparador={opcoes.length > 0}
+              />
+            )}
+            {(pesquisavel
+              ? opcoes.filter((op) => op.toLowerCase().includes(busca.toLowerCase()))
+              : opcoes
+            ).map((op, i, arr) => (
               <Item
                 key={op}
                 rotulo={op}
                 selecionado={pendente === op}
                 onClick={() => setPendente(op)}
-                comSeparador={i < opcoes.length - 1}
+                comSeparador={i < arr.length - 1}
               />
             ))}
           </div>
@@ -101,8 +125,12 @@ export function DropdownFiltro({ label, opcoes, valor, onChange, rotulo }: Props
             </button>
             <button
               onClick={aplicar}
-              className="flex-1 text-[12px] text-[#3d3d3d] font-medium rounded-[8px] transition-colors hover:bg-[#3f7377] hover:text-white focus:outline-none"
-              style={{ height: 23, background: '#e0e0e0' }}
+              className={`flex-1 text-[12px] font-medium rounded-[8px] transition-colors focus:outline-none ${
+                pendente !== valor
+                  ? 'bg-[#1d5358] text-white hover:bg-[#0f292c]'
+                  : 'text-[#3d3d3d] hover:bg-[#3f7377] hover:text-white'
+              }`}
+              style={{ height: 23, background: pendente !== valor ? undefined : '#e0e0e0' }}
             >
               Aplicar
             </button>
