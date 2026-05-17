@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
+# import sqlite3
+import psycopg2 # Alterado de sqlite3
+from psycopg2.extras import RealDictCursor
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +32,7 @@ class AgenteRefinador(AgenteBase):
         candidate_sql: str,
         question: str,
         filtered_schema: str,
-        db_path: str | Path | None = None,
+        db: Any = None, 
         message_history: list[Any] | None = None,
     ) -> ResultadoRefinador:
         """Valida e corrige o SQL candidato com loop de retry.
@@ -52,7 +54,7 @@ class AgenteRefinador(AgenteBase):
         total_tokens = 0
         novo_historico: list[Any] = []
 
-        initial_result = self._executar_sql(current_sql, db_path)
+        initial_result = self._executar_sql(sql=current_sql, db=db)
         if initial_result["ok"]:
             return ResultadoRefinador(
                 sql=current_sql,
@@ -88,6 +90,21 @@ class AgenteRefinador(AgenteBase):
                 return ctx.deps.sistema
 
         for tentativa in range(1, self.config.max_retries + 1):
+            result = self._executar_sql(sql=current_sql, db=db)
+
+            if result["ok"]:
+                return ResultadoRefinador(
+                    sql=current_sql,
+                    raciocinio="SQL executou sem erros.",
+                    sucesso=True,
+                    impossivel=False,
+                    tentativas=tentativa,
+                    ultimo_erro=None,
+                    tokens_usados=total_tokens,
+                )
+
+            last_error = result["error"] or "Query executou mas retornou 0 linhas. Revise os filtros."
+
             prompt_sistema = self._render(
                 "refinador",
                 schema=filtered_schema,
@@ -133,7 +150,7 @@ class AgenteRefinador(AgenteBase):
                     )
 
                 current_sql = extract_sql(resposta_texto) or resposta_texto.strip()
-                result = self._executar_sql(current_sql, db_path)
+                result = self._executar_sql(sql=current_sql, db=db)
                 if result["ok"]:
                     return ResultadoRefinador(
                         sql=current_sql,
@@ -162,27 +179,21 @@ class AgenteRefinador(AgenteBase):
         )
 
     @staticmethod
-    def _executar_sql(sql: str, db_path: str | Path | None = None) -> dict:
-        """Executa o SQL e retorna dict com ok e error.
+    def _executar_sql(sql: str, db: Any) -> dict:
+        """Executa o SQL utilizando o DatabaseAdapter."""
+        if not (sql or "").strip():
+            return {"ok": False, "error": "SQL vazio."}
 
-        Nunca propaga exceção.
+        if db is None:
+            return {"ok": True, "error": None}
 
-        Se db_path não for informado, considera a validação de execução como
-        opcional e retorna sucesso para evitar dependência de módulo externo.
-        """
-        try:
-            if not (sql or "").strip():
-                return {"ok": False, "error": "SQL vazio: o decompositor não gerou consulta."}
-
-            if db_path is None:
-                return {"ok": True, "error": None}
-
-            with sqlite3.connect(str(db_path)) as conn:
-                cursor = conn.execute(sql)
-                _ = cursor.fetchall()
-                return {"ok": True, "error": None}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
+        # O adapter faz a execução de leitura e retorna (dados, colunas, erro)
+        dados, colunas, erro = db.execute_readonly(sql)
+        
+        if erro:
+            return {"ok": False, "error": erro}
+            
+        return {"ok": True, "error": None}
 
     @staticmethod
     def _extrair_sql_refinado(dados: Any, resposta_serializada: str) -> str:

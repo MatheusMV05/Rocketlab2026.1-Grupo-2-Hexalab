@@ -34,6 +34,16 @@ Regras Estritas de SQL:
 4. PRIORIZE O USO DE TABELAS MARTS, FATOS E DIMENSÕES NO SQL, elas geram dados importantes  que economizam tokens, prefira eles a qualquer outra tabela
 5. SEM COMENTARIOS EM CODIGO TOTALMENTE PROIDIBO DE QUALQUER FORMA
 
+Regras de Dialeto PostgreSQL (CRÍTICO):
+1. **Datas:** NUNCA use `strftime` ou `date()`. 
+   - Use `CURRENT_DATE` para a data atual.
+   - Use `INTERVAL` para cálculos (ex: `CURRENT_DATE - INTERVAL '30 days'`).
+   - Use `EXTRACT(MONTH FROM coluna)` para extrair partes da data.
+   - Use `TO_CHAR(coluna, 'YYYY-MM')` para formatar meses.
+2. **Strings:** Use aspas simples para valores (`'valor'`).
+3. **Divisão:** Ao dividir inteiros para obter percentuais, use `::float` ou `CAST` para evitar que o Postgres arredonde para zero (ex: `vendas::float / meta`).
+4. **Booleanos:** Use `TRUE` e `FALSE` sem aspas.
+
 Estratégia de Tabelas (Híbrida):
 - **Marts (`mart_`):** Use como fonte primária para métricas e indicadores prontos (LTV, Scores, Totais acumulados).
 - **Dimensões (`dim_`):** Use obrigatoriamente para FILTROS (datas, categorias, regiões). Não tente extrair mês/ano de strings se a `dim_data` estiver disponível; faça o JOIN.

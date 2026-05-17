@@ -153,7 +153,7 @@ class AgenteSugestor(AgenteBase):
 			import sqlglot  # type: ignore[import-not-found]
 			from sqlglot import expressions as exp  # type: ignore[import-not-found]
 
-			arvore = sqlglot.parse_one(sql)
+			arvore = sqlglot.parse_one(sql, read="postgres")
 			tabelas = [AgenteSugestor._normalizar_nome_tabela(str(table.name or "")) for table in arvore.find_all(exp.Table)]
 			tabelas = [t for t in tabelas if t]
 			if tabelas:
