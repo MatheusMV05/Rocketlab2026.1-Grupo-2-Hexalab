@@ -345,3 +345,57 @@
     JOIN dim_produtos p ON qt.sk_produto = p.sk_produto
     GROUP BY p.id_produto, p.nome_produto
     ORDER BY total_unidades_vendidas DESC
+
+# --- [CATEGORIA 6: TABELAS RESUMO (MARTS) - EXEMPLOS PRÁTICOS] ---
+
+- question: "Quais categorias têm maior receita média por produto?"
+  reasoning: |
+    Usa a mart de desempenho para identificar categorias mais rentáveis por item, sem precisar calcular tudo a partir das tabelas fato.
+  sql: |
+    SELECT categoria, AVG(receita_total_brl) as receita_media_por_produto
+    FROM mart_desempenho_produtos
+    GROUP BY categoria
+    ORDER BY receita_media_por_produto DESC
+
+- question: "Quais clientes VIP estão com queda de relacionamento (NPS abaixo de 7)?"
+  reasoning: |
+    Consulta diretamente a visão 360 para priorizar ações de retenção em clientes de alto valor.
+  sql: |
+    SELECT id_cliente, nome, sobrenome, segmento_valor, nps_medio_cliente, receita_lifetime_brl
+    FROM mart_cliente_360
+    WHERE segmento_valor = 'vip' AND nps_medio_cliente < 7
+    ORDER BY receita_lifetime_brl DESC
+
+- question: "Quais dispositivos apresentam pior conversão média e maior abandono?"
+  reasoning: |
+    Cruza dois sinais de funil (conversão e abandono) na mart de comportamento para direcionar otimizações de UX.
+  sql: |
+    SELECT dispositivos_utilizados,
+           AVG(taxa_conversao_sessao_pct) as conversao_media,
+           SUM(eventos_abandono) as total_abandonos
+    FROM mart_comportamento_digital
+    GROUP BY dispositivos_utilizados
+    ORDER BY conversao_media ASC, total_abandonos DESC
+
+- question: "Quais produtos com alta receita também têm muitos tickets de suporte?"
+  reasoning: |
+    Detecta possível risco operacional: produto vende bem, mas gera volume elevado de suporte.
+  sql: |
+    SELECT nome_produto, categoria, receita_total_brl, total_tickets_suporte
+    FROM mart_desempenho_produtos
+    WHERE receita_total_brl > 0
+    ORDER BY total_tickets_suporte DESC, receita_total_brl DESC
+    LIMIT 10
+
+- question: "Qual a taxa de clientes inativos por cidade (mais de 120 dias sem comprar)?"
+  reasoning: |
+    Usa a mart de cliente para medir risco de churn por região de forma simples e rápida.
+  sql: |
+    SELECT cidade,
+           COUNT(*) as total_clientes,
+           SUM(CASE WHEN dias_desde_ultimo_pedido > 120 THEN 1 ELSE 0 END) as clientes_inativos,
+           (SUM(CASE WHEN dias_desde_ultimo_pedido > 120 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as taxa_inativos_pct
+    FROM mart_cliente_360
+    GROUP BY cidade
+    ORDER BY taxa_inativos_pct DESC
+    LIMIT 10

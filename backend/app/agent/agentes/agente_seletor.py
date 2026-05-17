@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
-
-from pydantic_ai.models.mistral import MistralModel
+from typing import Any
+from pathlib import Path
 from pydantic_ai import Agent
 
 from app.agent.agentes.agente_base import AgenteBase
 from app.agent.contexto import ContextoAgente
+from app.agent.hints.generator import generate_examples_from_schema
 from app.agent.models.resultado import ResultadoSeletor, ResultadoSeletorLLM
 from app.agent.config import Config
 
@@ -54,7 +54,12 @@ class AgenteSeletor(AgenteBase):
     def __init__(self, config: Config | None = None) -> None:
         super().__init__(config)
 
-    def run(self, esquema_completo: str, pergunta: str) -> ResultadoSeletor:
+    def run(
+        self,
+        esquema_completo: str,
+        pergunta: str,
+        message_history: list[Any] | None = None,
+    ) -> ResultadoSeletor:
         """Filtra o esquema e retorna apenas as tabelas relevantes para a pergunta.
 
         Fluxo:
@@ -82,9 +87,6 @@ class AgenteSeletor(AgenteBase):
         
         resumo_esquema: dict[str, dict[str, object]] = {}
         try:
-            from pathlib import Path
-            import json
-
             caminho_descricoes = Path(__file__).resolve().parents[1] / "db" / "descricao_tabelas.json"
             if caminho_descricoes.exists():
                 with open(caminho_descricoes, "r", encoding="utf8") as arquivo:
@@ -113,13 +115,10 @@ class AgenteSeletor(AgenteBase):
         
         # Configura agent real apenas se houver API key
         if self.config.api_key:
-            try:
-                asyncio.get_event_loop()
-            except RuntimeError:
-                asyncio.set_event_loop(asyncio.new_event_loop())
+            self._garantir_event_loop()
 
-            model = MistralModel(self.config.model, api_key=self.config.api_key)
-            agent = Agent(model, deps_type=ContextoAgente, result_type=ResultadoSeletorLLM)
+            model = self._criar_modelo_mistral()
+            agent = Agent(model, deps_type=ContextoAgente)
 
             @agent.system_prompt
             def get_system_prompt(ctx) -> str:
@@ -127,27 +126,29 @@ class AgenteSeletor(AgenteBase):
 
             self._agent = agent
 
-        # Chama LLM (será mockado em testes ou executará agente real se houver api_key)
-        texto_llm, tokens_usados, _ = self._call_llm(sistema=prompt_sistema, usuario=pergunta)
+        historico_curto = self._resumir_historico_para_selecao(message_history)
+        argumentos_llm: dict[str, Any] = {
+            "sistema": prompt_sistema,
+            "usuario": pergunta,
+        }
+        if historico_curto:
+            argumentos_llm["message_history"] = historico_curto
+
+        chamada_llm = self._call_llm(**argumentos_llm)
+        texto_llm, tokens_usados, _ = self._desempacotar_call_llm(chamada_llm)
+        logger.info("AgenteSeletor: resposta bruta LLM preview=%r", texto_llm[:500])
         
-        esquema_filtrado = ""
-        tabelas_selecionadas: list[str] = []
-        
-        if texto_llm and _PADRAO_CREATE_TABLE.search(texto_llm):
-            tabelas_candidatas = self._extrair_tabelas(texto_llm)
-            blocos_validados: list[str] = []
-            for tabela in tabelas_candidatas:
-                if tabela in blocos_originais:
-                    blocos_validados.append(blocos_originais[tabela])
-                    tabelas_selecionadas.append(tabela)
-            if blocos_validados:
-                esquema_filtrado = "\n\n".join(blocos_validados)
-        
+        esquema_filtrado, tabelas_selecionadas = self._interpretar_saida_llm(
+            texto_llm=texto_llm,
+            blocos_originais=blocos_originais,
+        )
+
         if not esquema_filtrado:
-            logger.info("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
+            logger.warning("AgenteSeletor: saída vazia ou inválida; usando esquema completo")
             return ResultadoSeletor(
                 esquema_filtrado=esquema_completo,
                 tabelas_selecionadas=self._extrair_tabelas(esquema_completo),
+                generated_examples=[],
                 tokens_usados=tokens_usados,
             )
 
@@ -155,8 +156,81 @@ class AgenteSeletor(AgenteBase):
         return ResultadoSeletor(
             esquema_filtrado=esquema_filtrado,
             tabelas_selecionadas=tabelas_selecionadas,
+            generated_examples=[],
             tokens_usados=tokens_usados,
         )
+
+    @classmethod
+    def _interpretar_saida_llm(
+        cls,
+        texto_llm: str,
+        blocos_originais: dict[str, str],
+    ) -> tuple[str, list[str]]:
+        """Interpreta saída do seletor em JSON, DDL puro ou SQL útil.
+
+        O contrato ideal do seletor é retornar blocos `CREATE TABLE`. Se o LLM
+        responder por engano com um `SELECT`, aproveitamos as tabelas citadas no
+        SQL para retornar o DDL original correspondente, em vez de cair direto no
+        schema completo.
+        """
+        texto_llm = (texto_llm or "").strip()
+        if not texto_llm:
+            return "", []
+
+        blocos_candidatos: list[str] = []
+        try:
+            dados = ResultadoSeletorLLM.model_validate_json(texto_llm)
+            blocos_candidatos.extend(str(bloco) for bloco in dados.blocos_ddl)
+        except Exception:
+            try:
+                dados_dict = json.loads(texto_llm)
+                if isinstance(dados_dict, dict):
+                    blocos = dados_dict.get("blocos_ddl") or dados_dict.get("ddl") or []
+                    if isinstance(blocos, str):
+                        blocos_candidatos.append(blocos)
+                    elif isinstance(blocos, list):
+                        blocos_candidatos.extend(str(bloco) for bloco in blocos)
+            except Exception:
+                pass
+
+        if not blocos_candidatos and _PADRAO_CREATE_TABLE.search(texto_llm):
+            blocos_candidatos.append(texto_llm)
+
+        tabelas_selecionadas: list[str] = []
+        blocos_validados: list[str] = []
+        for bloco in blocos_candidatos:
+            for tabela in cls._extrair_tabelas(bloco):
+                if tabela in blocos_originais and tabela not in tabelas_selecionadas:
+                    tabelas_selecionadas.append(tabela)
+                    blocos_validados.append(blocos_originais[tabela])
+
+        if not blocos_validados:
+            for tabela in cls._extrair_tabelas_referenciadas_sql(texto_llm):
+                if tabela in blocos_originais and tabela not in tabelas_selecionadas:
+                    tabelas_selecionadas.append(tabela)
+                    blocos_validados.append(blocos_originais[tabela])
+
+        return "\n\n".join(blocos_validados), tabelas_selecionadas
+
+    @staticmethod
+    def _extrair_tabelas_referenciadas_sql(texto: str) -> list[str]:
+        """Extrai tabelas citadas em `FROM`/`JOIN` de uma resposta SQL.
+
+        Usado apenas como recuperação quando o seletor gera uma consulta
+        `SELECT` válida no lugar do DDL esperado. A função não valida nem executa
+        SQL; ela só coleta identificadores para mapear de volta ao schema
+        original conhecido.
+        """
+        tabelas: list[str] = []
+        for match in re.finditer(
+            r"\b(?:FROM|JOIN)\s+[`\"\[]?([A-Za-z_][A-Za-z0-9_]*)",
+            texto or "",
+            flags=re.IGNORECASE,
+        ):
+            tabela = match.group(1)
+            if tabela not in tabelas:
+                tabelas.append(tabela)
+        return tabelas
 
     @staticmethod
     def _extrair_nomes_colunas(bloco_tabela: str) -> list[str]:
@@ -200,6 +274,51 @@ class AgenteSeletor(AgenteBase):
             nome_tabela = correspondencia.group(2)
             blocos[nome_tabela] = bloco
         return blocos
+
+    @staticmethod
+    def _resumir_historico_para_selecao(
+        message_history: list[Any] | None,
+        max_messages: int = 10,
+        max_chars_por_mensagem: int = 500,
+    ) -> list[dict[str, str]] | None:
+        """Gera um histórico curto para o agente seletor.
+
+        O seletor precisa de contexto para perguntas de continuidade, como
+        "e no último mês?", mas receber o histórico completo pode contaminar a
+        escolha de tabelas. Esta função preserva apenas as últimas mensagens,
+        normaliza espaços e trunca cada conteúdo para manter a seleção focada no
+        schema e na pergunta atual.
+        """
+        if not message_history:
+            return None
+
+        mensagens = []
+        for item in message_history[-max_messages:]:
+            role, content = AgenteBase._extrair_content_message_history(item)
+            content = " ".join(content.split())
+            if not content:
+                continue
+            mensagens.append(
+                {
+                    "role": role,
+                    "content": content[:max_chars_por_mensagem],
+                }
+            )
+
+        if not mensagens:
+            return None
+
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "Resumo curto para continuidade: use apenas para resolver "
+                    "referencias como 'tambem', 'agora', 'ultimo mes', 'mesma regra'. "
+                    "A selecao de tabelas deve continuar obedecendo ao schema atual."
+                ),
+            },
+            *mensagens,
+        ]
 
     @staticmethod
     def _extrair_tabelas(esquema_ddl: str) -> list[str]:

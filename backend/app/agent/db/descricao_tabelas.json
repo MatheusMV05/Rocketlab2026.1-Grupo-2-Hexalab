@@ -1,10 +1,12 @@
 {
-  "dim_consumidores": "Dimensão de consumidores/clients com identificador `id_consumidor` e atributos como nome, segmento e informações demográficas; usada para análises por cliente.",
-  "dim_produtos": "Dimensão de produtos com `id_produto`, nome, categoria e preço; fornece atributos descritivos dos itens vendidos.",
-  "dim_vendedores": "Dimensão de vendedores/comerciais com `id_vendedor`, nome e região de atuação; usada para análises por canal ou vendedor.",
-  "fat_avaliacoes_pedidos": "Fato contendo avaliações ou métricas qualificadoras associadas a pedidos (ex.: rating, comentários agregados por pedido).",
-  "fat_itens_pedidos": "Fato de itens por pedido: uma linha por item pedido com `id_pedido`, `id_produto`, quantidade e `valor_unitario`; útil para análise de mix e unidades vendidas.",
-  "fat_pedido_total": "Fato agregada por pedido com valores totais por pedido; inclui `id_pedido`, `id_consumidor` e `valor_total`. Use para análises de receita por pedido.",
-  "fat_pedidos": "Fato (registro mestre) de pedidos com informações de cabeçalho por pedido (datas, status, cliente); complemente com `fat_itens_pedidos` para detalhe por item.",
-  "fat_totalpedidos": "(sinônimo/variante) Fato com totais por pedido — ver `fat_pedido_total`."
+  "dim_clientes": "Dimensão de clientes com identificador 'id_cliente' e dados demográficos (idade, genero, cidade, estado, pais), além de origem e antiguidade de cadastro; usada para análises por perfil de cliente.",
+  "dim_produtos": "Dimensão de produtos com 'id_produto', nome, categoria, faixa de preço, além de atributos logísticos (fornecedor, peso) e de inventário (status_estoque, estoque_disponivel).",
+  "fat_avaliacoes": "Fato contendo avaliações numéricas e em texto associadas a pedidos. Relaciona 'id_pedido', 'id_produto' e 'id_cliente' com notas, categoria NPS e satisfação.",
+  "fat_pedidos": "Fato unificada (cabeçalho e itens) de pedidos. Contém 'id_pedido', 'id_cliente', status, datas, método de pagamento, e detalhamento de itens com 'id_produto', quantidade, valor do pedido e receitas bruta/líquida.",
+  "mart_desempenho_produtos": "Tabela resumo (mart) de performance agregada por produto. Combina conversão de funil, unidades vendidas, receita total, médias de avaliação (NPS/nota) e indicadores de chamados de suporte.",
+  "mart_cliente_360": "Tabela resumo (mart) de visão consolidada por cliente. Inclui métricas RFM/LTV (total de pedidos, receita lifetime, recência), engajamento digital e score de satisfação médio. Ideal para CRM e segmentação.",
+  "mart_comportamento_digital": "Tabela resumo (mart) do comportamento digital agregado por cliente. Foca em métricas de navegação, funil (conversão/abandono de carrinho), tempo em página, canais/dispositivos utilizados e nível de engajamento.",
+  "fat_tickets": "Fato de chamados de atendimento ao cliente relacionando 'id_pedido' e 'id_cliente' com tipo de problema, agente responsável, status de SLA e tempo de resolução em horas.",
+  "fat_clickstream": "Fato granular de eventos de navegação web e app detalhando as interações por etapa de funil, tipo de evento, tempo e dispositivo associado à sessão.",
+  "dim_data": "Dimensão de calendário para análises temporais, contendo fatiamento detalhado por trimestre, semestre, dia útil e componentes da data."
 }

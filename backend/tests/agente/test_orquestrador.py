@@ -213,3 +213,70 @@ def test_tokens_totais_somados(tmp_path, monkeypatch):
     resultado = orq.responder("teste")
 
     assert resultado.tokens_totais == 600
+
+
+def test_orquestrador_carrega_atualiza_e_salva_historico_da_sessao(tmp_path, monkeypatch):
+    import sqlite3
+
+    db = tmp_path / "test.db"
+    with sqlite3.connect(db) as conn:
+        conn.execute("CREATE TABLE t (id INTEGER)")
+        conn.execute("INSERT INTO t VALUES (1)")
+
+    class StoreFake:
+        def __init__(self):
+            self.history = ["historico inicial"]
+            self.saved = None
+
+        def get_history(self, session_id):
+            return list(self.history)
+
+        def save_history(self, session_id, history):
+            self.saved = list(history)
+
+    store = StoreFake()
+    orq = Orquestrador(db_path=db, config=Config(api_key=""))
+
+    monkeypatch.setattr(
+        "app.agent.orquestrador.validar_pergunta_usuario",
+        lambda p: (True, ""),
+    )
+    monkeypatch.setattr(
+        "app.agent.orquestrador.ler_esquema",
+        lambda path: "CREATE TABLE t (id INTEGER);",
+    )
+
+    orq.seletor.run = MagicMock(return_value=ResultadoSeletor(
+        esquema_filtrado="CREATE TABLE t (id INTEGER);",
+        tabelas_selecionadas=["t"],
+        tokens_usados=0,
+    ))
+    orq.decompositor.run = MagicMock(return_value=ResultadoDecompositor(
+        sql="SELECT id FROM t",
+        raciocinio="ok",
+        tokens_usados=0,
+        novo_historico=["historico apos decompositor"],
+    ))
+    orq.refinador.run = MagicMock(return_value=ResultadoRefinador(
+        sql="SELECT id FROM t",
+        raciocinio="ok",
+        sucesso=True,
+        impossivel=False,
+        tentativas=1,
+        ultimo_erro=None,
+        tokens_usados=0,
+    ))
+    orq.interpretador.run = MagicMock(return_value=types.SimpleNamespace(
+        resposta="ok",
+        tokens_usados=0,
+        novo_historico=["historico final"],
+    ))
+
+    resultado = orq.responder("teste", session_id="s1", session_store=store)
+
+    assert resultado.novo_historico == ["historico final"]
+    assert store.saved == ["historico final"]
+    orq.seletor.run.assert_called_once()
+    assert orq.seletor.run.call_args.kwargs["message_history"] == ["historico inicial"]
+    assert orq.refinador.run.call_args.kwargs["message_history"] == ["historico apos decompositor"]
+    assert orq.interpretador.run.call_args.kwargs["message_history"] == ["historico apos decompositor"]

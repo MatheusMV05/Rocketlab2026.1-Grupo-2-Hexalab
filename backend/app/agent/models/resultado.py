@@ -9,7 +9,7 @@ agente seletor e a saída estruturada validada pelo PydanticAI.
 from dataclasses import dataclass, field
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ResultadoSeletorLLM(BaseModel):
@@ -17,6 +17,18 @@ class ResultadoSeletorLLM(BaseModel):
     blocos_ddl: list[str] = Field(
         description="Lista contendo as instruções CREATE TABLE estritamente filtradas e sintaticamente válidas."
     )
+
+    @field_validator("blocos_ddl")
+    @classmethod
+    def validar_blocos_create_table(cls, blocos: list[str]) -> list[str]:
+        """Garante que o seletor retorne apenas blocos DDL, nunca SELECT."""
+        blocos_validos = []
+        for bloco in blocos:
+            texto = str(bloco or "").strip()
+            if not texto.upper().startswith("CREATE TABLE"):
+                raise ValueError("Cada bloco do seletor deve começar com CREATE TABLE.")
+            blocos_validos.append(texto)
+        return blocos_validos
 
 
 class ResultadoDecompositorLLM(BaseModel):
@@ -71,6 +83,7 @@ class ResultadoSeletor:
     esquema_filtrado: str
     tabelas_selecionadas: list[str]
     tokens_usados: int
+    generated_examples: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -87,6 +100,7 @@ class ResultadoDecompositor:
     raciocinio: str
     tokens_usados: int
     novo_historico: list[Any] = field(default_factory=list)
+    sql_bloqueado: str = ""
 
 @dataclass
 class ResultadoRefinador:
@@ -108,6 +122,7 @@ class ResultadoRefinador:
     tentativas: int
     ultimo_erro: str | None
     tokens_usados: int
+    novo_historico: list[Any] = field(default_factory=list)
 
 
 @dataclass
@@ -134,7 +149,9 @@ class ResultadoInterpretador:
     Attributes:
         resposta: Texto final em linguagem natural para o usuario.
         tokens_usados: Total de tokens consumidos na chamada ao LLM.
+        novo_historico: Histórico atualizado da chamada, pronto para persistir.
     """
 
     resposta: str
     tokens_usados: int
+    novo_historico: list[Any] = field(default_factory=list)
