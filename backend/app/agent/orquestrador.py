@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from app.agent.agentes.agente_decompositor import AgenteDecompositor
@@ -11,7 +9,7 @@ from app.agent.agentes.agente_interpretador import AgenteInterpretador
 from app.agent.agentes.agente_refinador import AgenteRefinador
 from app.agent.agentes.agente_seletor import AgenteSeletor
 from app.agent.config import Config
-from app.agent.db.leitor_esquema import ler_esquema
+from app.agent.db.adapters import DatabaseAdapter
 from app.agent.Guardrail.guardrail import validar_pergunta_usuario
 
 logger = logging.getLogger(__name__)
@@ -62,7 +60,7 @@ class Orquestrador:
 
     def __init__(
         self,
-        db_path: str | Path,
+        db: DatabaseAdapter,
         config: Config | None = None,
     ) -> None:
         """Inicializa o orquestrador com o caminho do banco e configurações.
@@ -71,7 +69,7 @@ class Orquestrador:
             db_path: Caminho para o arquivo SQLite.
             config: Configurações dos agentes. Se None, usa Config() padrão.
         """
-        self.db_path = Path(db_path)
+        self.db = db
         self.config = config or Config()
         self.seletor = AgenteSeletor(config=self.config)
         self.decompositor = AgenteDecompositor(config=self.config)
@@ -79,9 +77,11 @@ class Orquestrador:
         self.interpretador = AgenteInterpretador(config=self.config)
 
     def responder(
-        self, 
+        self,
         pergunta: str,
         message_history: list[Any] | None = None,
+        session_id: str | None = None,
+        session_store: Any | None = None,
     ) -> ResultadoOrquestrador:
         """Executa o pipeline completo para uma pergunta em linguagem natural.
 
@@ -129,7 +129,7 @@ class Orquestrador:
 
         # Lê o esquema do banco
         try:
-            esquema_completo = ler_esquema(self.db_path)
+            esquema_completo = self.db.read_schema()
         except FileNotFoundError:
             return ResultadoOrquestrador(
                 pergunta=pergunta,
@@ -139,17 +139,35 @@ class Orquestrador:
                 colunas=[],
                 sucesso=False,
                 impossivel=False,
-                erro=f"Banco de dados não encontrado: {self.db_path}",
+                erro=f"Banco de dados não encontrado",
                 tokens_totais=0,
             )
 
         tokens_totais = 0
+
+        def salvar_historico(historico: list[Any] | None) -> None:
+            if session_store is not None and session_id and historico:
+                try:
+                    session_store.save_history(session_id, historico)
+                except Exception:
+                    logger.exception("Erro ao salvar histórico da sessão %s", session_id)
+
+        # If a session_store and session_id are provided and no explicit
+        # message_history was passed, load the history from the store.
+        if session_store is not None and session_id and not message_history:
+            try:
+                message_history = session_store.get_history(session_id)
+            except Exception:
+                logger.exception("Erro ao carregar histórico da sessão %s", session_id)
+
+        historico_corrente = message_history
 
         # Seletor filtra as tabelas relevantes
         logger.info("Orquestrador: iniciando AgenteSeletor")
         resultado_seletor = self.seletor.run(
             esquema_completo=esquema_completo,
             pergunta=pergunta,
+            message_history=historico_corrente,
         )
         tokens_totais += resultado_seletor.tokens_usados
 
@@ -158,14 +176,22 @@ class Orquestrador:
         resultado_decompositor = self.decompositor.run(
             esquema_filtrado=resultado_seletor.esquema_filtrado,
             pergunta=pergunta,
+            db=self.db,
             message_history=message_history,
         )
         tokens_totais += resultado_decompositor.tokens_usados
 
         # Captura o histórico processado pela capability de sumarização
         historico_atualizado = resultado_decompositor.novo_historico
+        if historico_atualizado:
+            historico_corrente = historico_atualizado
+
+        # Persist the updated history back to the store (if present)
+        if session_store is not None and session_id and historico_atualizado:
+            salvar_historico(historico_atualizado)
 
         if not resultado_decompositor.sql:
+            salvar_historico(historico_atualizado)
             return ResultadoOrquestrador(
                 pergunta=pergunta,
                 sql_final="",
@@ -185,11 +211,16 @@ class Orquestrador:
             candidate_sql=resultado_decompositor.sql,
             question=pergunta,
             filtered_schema=resultado_seletor.esquema_filtrado,
-            db_path=self.db_path,
+            db=self.db, 
+            message_history=message_history,
         )
         tokens_totais += resultado_refinador.tokens_usados
+        if resultado_refinador.novo_historico:
+            historico_atualizado = resultado_refinador.novo_historico
+            historico_corrente = historico_atualizado
 
         if resultado_refinador.impossivel:
+            salvar_historico(historico_atualizado)
             return ResultadoOrquestrador(
                 pergunta=pergunta,
                 sql_final=resultado_refinador.sql,
@@ -204,6 +235,7 @@ class Orquestrador:
             )
 
         if not resultado_refinador.sucesso:
+            salvar_historico(historico_atualizado)
             return ResultadoOrquestrador(
                 pergunta=pergunta,
                 sql_final=resultado_refinador.sql,
@@ -228,8 +260,15 @@ class Orquestrador:
             colunas=colunas,
             dados=dados,
             erro=erro_execucao,
+            message_history=historico_corrente,
         )
         tokens_totais += resultado_interpretador.tokens_usados
+
+        if resultado_interpretador.novo_historico:
+            historico_atualizado = resultado_interpretador.novo_historico
+            historico_corrente = historico_atualizado
+
+        salvar_historico(historico_atualizado)
 
         return ResultadoOrquestrador(
             pergunta=pergunta,
@@ -248,7 +287,7 @@ class Orquestrador:
     def _executar_sql(
         self, sql: str
     ) -> tuple[list[tuple], list[str], str | None]:
-        """Executa o SQL no banco SQLite e retorna dados, colunas e erro.
+        """Executa o SQL no banco PostgreSQL e retorna dados, colunas e erro.
 
         Nunca propaga exceção — erros são retornados como string no terceiro
         elemento da tupla.
@@ -256,12 +295,5 @@ class Orquestrador:
         Returns:
             Tupla (dados, colunas, erro). Se ok, erro é None.
         """
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.execute(sql)
-                colunas = [desc[0] for desc in cursor.description or []]
-                dados = cursor.fetchall()
-                return dados, colunas, None
-        except Exception as e:
-            logger.warning("Orquestrador._executar_sql: erro ao executar SQL: %s", e)
-            return [], [], str(e)
+
+        return self.db.execute_readonly(sql) 

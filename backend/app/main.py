@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.dashboard.router import router as dashboard_router
+from app.tickets.router import router as tickets_router
 
 
 @asynccontextmanager

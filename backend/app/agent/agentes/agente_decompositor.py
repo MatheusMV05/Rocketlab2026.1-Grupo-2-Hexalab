@@ -1,26 +1,29 @@
 from __future__ import annotations
 
-import asyncio
+import re
 import json
 import logging
-import re
 from typing import Any
 
-from pydantic_ai.models.mistral import MistralModel
 from pydantic_ai import Agent
 
 from app.agent.Guardrail.guardrail import validar_sql_seguro
 from app.agent.agentes.agente_base import AgenteBase
 from app.agent.contexto import ContextoAgente
-from app.agent.few_shots.fewshot_retriever import FewShotRetriever
+from app.agent.few_shots.fewshot_retriever import get_cached_fewshot_retriever
 from app.agent.few_shots.modelos import ExemploFewShot
 from app.agent.models.resultado import ResultadoDecompositor, ResultadoDecompositorLLM
 from app.agent.config import Config
+from app.agent.hints.generator import generate_examples_from_schema
 
 # Import relacionado a memória 
-from pydantic_ai_summarization import ContextManagerCapability
+# from pydantic_ai_summarization import ContextManagerCapability
 
 logger = logging.getLogger(__name__)
+
+# Nome mantido como ponto de injecao em testes e scripts antigos. Em producao,
+# a chamada continua usando o retriever cacheado para evitar recarregar embeddings.
+FewShotRetriever = get_cached_fewshot_retriever
 
 
 class AgenteDecompositor(AgenteBase):
@@ -39,6 +42,7 @@ class AgenteDecompositor(AgenteBase):
 		self,
 		esquema_filtrado: str,
 		pergunta: str,
+		db: Any = None,
 		message_history: list[Any] | None = None,
 	) -> ResultadoDecompositor:
 		"""Executa o decomposer e retorna SQL + raciocínio com tipagem forte.
@@ -54,11 +58,18 @@ class AgenteDecompositor(AgenteBase):
 		exemplos_brutos = self._buscar_exemplos_few_shot(pergunta)
 		exemplos_normalizados = self._normalizar_exemplos(exemplos_brutos)
 
+		# Gera exemplos do schema e extrai valores reais apenas para colunas categoricas permitidas.
+		try:
+			generated_examples = generate_examples_from_schema(esquema_filtrado, db=db)
+		except Exception:
+			generated_examples = []
+
 		prompt_sistema = self._render(
 			"decompositor",
 			schema=esquema_filtrado,
 			question=pergunta,
 			examples=exemplos_normalizados,
+			generated_examples=generated_examples,
 		)
 
 		deps = ContextoAgente(config=self.config, sistema=prompt_sistema)
@@ -68,22 +79,14 @@ class AgenteDecompositor(AgenteBase):
 		novo_historico = []
 
 		if self.config.api_key:
-			try:
-				asyncio.get_event_loop()
-			except RuntimeError:
-				asyncio.set_event_loop(asyncio.new_event_loop())
+			self._garantir_event_loop()
 
-			model = MistralModel(self.config.model, api_key=self.config.api_key)
+			model = self._criar_modelo_mistral()
 			agent = Agent(
 				model, 
 				deps_type=ContextoAgente, 
-				result_type=ResultadoDecompositorLLM,
-				capabilities=[
-                    ContextManagerCapability(
-                        max_tokens=30_000, # Limite seguro de tokens para o contexto (pode e deve ser modificado conforme a necessidade do projeto)
-                        compress_threshold=0.9  # Sumariza ao bater 90% da capacidade
-                    )
-                ]
+				output_type=ResultadoDecompositorLLM,
+				capabilities=self._criar_capabilities_memoria(),
 			)
 
 			@agent.system_prompt
@@ -92,29 +95,42 @@ class AgenteDecompositor(AgenteBase):
 
 			self._agent = agent
 
-		texto_llm, tokens_usados, novo_historico = self._call_llm(
-            sistema=prompt_sistema, 
-            usuario=pergunta,
-            message_history=message_history 
-        )
+		chamada_llm = self._call_llm(
+			sistema=prompt_sistema,
+			usuario=pergunta,
+			message_history=message_history,
+		)
+		texto_llm, tokens_usados, novo_historico = self._desempacotar_call_llm(chamada_llm)
 
 		raciocinio, sql_limpo = self._interpretar_saida_llm(texto_llm)
 
 		if not sql_limpo:
 			return ResultadoDecompositor(
 				sql="",
-				raciocinio="Raciocínio não informado pelo modelo.",
+				raciocinio=raciocinio or "Raciocínio não informado pelo modelo.",
 				tokens_usados=tokens_usados,
+				novo_historico=novo_historico,
 			)
 
 		if not validar_sql_seguro(sql_limpo):
-			logger.warning("AgenteDecompositor: SQL inválido ou inseguro detectado.")
+			logger.warning(
+				"AgenteDecompositor: SQL inválido ou inseguro detectado e bloqueado: %s",
+				sql_limpo,
+			)
 			return ResultadoDecompositor(
-				sql=sql_limpo,
-				raciocinio="SQL gerado foi considerado inseguro ou inválido. Por favor, reformule a pergunta.",
-				tokens_usados=0,
+				sql="",
+				raciocinio=(
+					"SQL gerado foi considerado inseguro ou inválido e foi bloqueado "
+					"antes de seguir para refinamento."
+				),
+				tokens_usados=tokens_usados,
+				novo_historico=novo_historico,
+				sql_bloqueado=sql_limpo,
 			)
 
+		if not raciocinio:
+			raciocinio = "Raciocínio não informado pelo modelo."
+	
 		return ResultadoDecompositor(
 			sql=sql_limpo,
 			raciocinio=raciocinio,

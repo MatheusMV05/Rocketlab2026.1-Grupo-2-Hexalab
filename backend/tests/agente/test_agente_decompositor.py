@@ -22,9 +22,10 @@ class _DummyResult:
 
 
 class _DummyAgent:
-    async def run(self, pergunta: str, deps) -> _DummyResult:
+    def run_sync(self, pergunta: str, deps, message_history=None) -> _DummyResult:
         self.pergunta = pergunta
         self.deps = deps
+        self.message_history = message_history
         return _DummyResult()
 
 

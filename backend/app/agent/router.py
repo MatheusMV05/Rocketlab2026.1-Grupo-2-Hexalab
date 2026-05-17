@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-import re
-from pathlib import Path
-
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.agent import AgenteSugestor, Config, Orquestrador
-from app.config import settings
+from app.agent.db.adapters import PostgresAdapter
+from app.agent.agentes.memory.dependencies import get_session_store
 
 router = APIRouter(prefix="/agent", tags=["agent"])
-
-_BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 
 class ChatRequest(BaseModel):
@@ -29,19 +25,12 @@ class ChatResponse(BaseModel):
     suggestions: list[str] = Field(default_factory=list)
 
 
-def _caminho_sqlite_fisico() -> Path:
-    """Extrai caminho de arquivo SQLite a partir de DATABASE_URL do Settings."""
-    bruto = re.sub(r"^sqlite\+aiosqlite:/+", "", settings.DATABASE_URL)
-    caminho = Path(bruto)
-    if not caminho.is_absolute():
-        caminho = (_BACKEND_DIR / caminho).resolve()
-    else:
-        caminho = caminho.resolve()
-    return caminho
-
-
 _config = Config()
-_orquestrador = Orquestrador(db_path=_caminho_sqlite_fisico(), config=_config)
+_db_adapter = PostgresAdapter(connection_string=_config.db_connection_string)
+_orquestrador = Orquestrador(
+    db=_db_adapter, 
+    config=_config
+)
 _sugestor = AgenteSugestor(config=_config)
 
 
@@ -56,7 +45,11 @@ def _amostra_resultado(colunas: list[str], dados: list[tuple]) -> str:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    resultado = _orquestrador.responder(req.message)
+    resultado = _orquestrador.responder(
+        req.message,
+        session_id=req.session_id,
+        session_store=get_session_store(),
+    )
 
     answer = (
         resultado.resposta_natural
