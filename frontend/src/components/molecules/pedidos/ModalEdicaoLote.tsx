@@ -141,7 +141,7 @@ export function ModalEdicaoLote({ isOpen, onClose, selectedCount, onConfirm }: P
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-      <div className={`bg-white rounded-[24px] shadow-2xl w-full transition-all duration-300 ${
+      <div className={`bg-[#F6F7F9] rounded-[24px] shadow-2xl w-full transition-all duration-300 ${
         step === 'edit' ? 'max-w-[500px]' : 'max-w-[400px]'
       } overflow-hidden`}>
         <div className="p-6 border-b border-[#f0f0f0] flex items-center justify-between">

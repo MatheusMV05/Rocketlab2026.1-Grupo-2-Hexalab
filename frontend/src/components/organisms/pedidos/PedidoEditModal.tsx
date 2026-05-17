@@ -58,7 +58,7 @@ export function PedidoEditModal({ pedido, isOpen, onClose, onSave }: Props) {
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
         
         {/* Modal Content */}
-        <div className="relative bg-white rounded-[24px] shadow-2xl w-full max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="relative bg-[#F6F7F9] rounded-[24px] shadow-2xl w-full max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
           <div className="p-6 border-b border-[#f0f0f0] flex items-center justify-between">
             <h2 className="text-[18px] font-bold text-[#1d5358]">
@@ -186,7 +186,7 @@ export function PedidoEditModal({ pedido, isOpen, onClose, onSave }: Props) {
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-[#f0f0f0] bg-white flex items-center justify-end gap-3">
+          <div className="p-6 border-t border-[#f0f0f0] bg-[#F6F7F9] flex items-center justify-end gap-3">
             <button 
               onClick={onClose}
               className="px-6 py-2.5 rounded-[12px] text-[14px] font-bold text-[#898989] hover:bg-gray-50 transition-colors border border-transparent"
